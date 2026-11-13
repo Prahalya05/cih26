@@ -4,6 +4,8 @@
 export * from "./types.ts";
 export * from "./graph.ts";
 export * from "./events.ts";
+export * from "./irt.ts";
+export * from "./tracing.ts";
 export { buildKb, EDUCATION_ORDER, SECTORS } from "./kb.ts";
 export { apply as applyRule, Evaluation, UNKNOWN } from "./jsonlogic.ts";
 export { check, evaluateAll, joined, NEXT_STAGES } from "./eligibility.ts";

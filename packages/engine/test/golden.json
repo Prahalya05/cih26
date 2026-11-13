@@ -67022,5 +67022,3114 @@
     }
    ]
   }
+ ],
+ "irt": {
+  "random": [
+   0.011704753153026104,
+   0.06195825757458806,
+   0.97690763277933,
+   0.6990287057124078,
+   0.5214452685322613
+  ],
+  "prior": [
+   0.0002572071987343461,
+   0.00044210554691518196,
+   0.0007391031830110449,
+   0.001201767474440486,
+   0.001900518420496888,
+   0.0029232097949634913,
+   0.004373047065761052,
+   0.006362745936403654,
+   0.00900412006336877,
+   0.0123929368549157,
+   0.016589888255316185,
+   0.0215997611639288,
+   0.02735210164507805,
+   0.03368749505395774,
+   0.0403536664760115,
+   0.04701468666732961,
+   0.053274619468506104,
+   0.05871423827096306,
+   0.06293652645057454,
+   0.06561428087445452,
+   0.06653194826973884,
+   0.06561428087445452,
+   0.06293652645057453,
+   0.05871423827096304,
+   0.05327461946850607,
+   0.04701468666732961,
+   0.040353666476011484,
+   0.03368749505395773,
+   0.027352101645078016,
+   0.021599761163928782,
+   0.016589888255316185,
+   0.0123929368549157,
+   0.009004120063368759,
+   0.0063627459364036425,
+   0.004373047065761048,
+   0.0029232097949634913,
+   0.001900518420496888,
+   0.001201767474440485,
+   0.0007391031830110436,
+   0.0004421055469151808,
+   0.0002572071987343461
+  ],
+  "bank": [
+   {
+    "id": "q00",
+    "a": 0.6,
+    "b": -2.0,
+    "format": "picture_choice"
+   },
+   {
+    "id": "q01",
+    "a": 0.7,
+    "b": -1.75,
+    "format": "order_steps"
+   },
+   {
+    "id": "q02",
+    "a": 0.8,
+    "b": -1.5,
+    "format": "spot_mistake"
+   },
+   {
+    "id": "q03",
+    "a": 0.9,
+    "b": -1.25,
+    "format": "picture_choice"
+   },
+   {
+    "id": "q04",
+    "a": 1.0,
+    "b": -1.0,
+    "format": "order_steps"
+   },
+   {
+    "id": "q05",
+    "a": 1.1,
+    "b": -0.75,
+    "format": "spot_mistake"
+   },
+   {
+    "id": "q06",
+    "a": 1.2,
+    "b": -0.5,
+    "format": "picture_choice"
+   },
+   {
+    "id": "q07",
+    "a": 1.3,
+    "b": -0.25,
+    "format": "order_steps"
+   },
+   {
+    "id": "q08",
+    "a": 1.4,
+    "b": 0.0,
+    "format": "spot_mistake"
+   },
+   {
+    "id": "q09",
+    "a": 0.6,
+    "b": 0.25,
+    "format": "picture_choice"
+   },
+   {
+    "id": "q10",
+    "a": 0.7,
+    "b": 0.5,
+    "format": "order_steps"
+   },
+   {
+    "id": "q11",
+    "a": 0.8,
+    "b": 0.75,
+    "format": "spot_mistake"
+   },
+   {
+    "id": "q12",
+    "a": 0.9,
+    "b": 1.0,
+    "format": "picture_choice"
+   },
+   {
+    "id": "q13",
+    "a": 1.0,
+    "b": 1.25,
+    "format": "order_steps"
+   },
+   {
+    "id": "q14",
+    "a": 1.1,
+    "b": 1.5,
+    "format": "spot_mistake"
+   },
+   {
+    "id": "q15",
+    "a": 1.2,
+    "b": 1.75,
+    "format": "picture_choice"
+   },
+   {
+    "id": "q16",
+    "a": 1.3,
+    "b": 2.0,
+    "format": "order_steps"
+   }
+  ],
+  "session": {
+   "seed": 42,
+   "truth_seed": 7,
+   "truth": 0.7,
+   "picks": [
+    {
+     "id": "q07",
+     "correct": true,
+     "eap": 0.5753966300990443,
+     "se": 1.0138408567457882
+    },
+    {
+     "id": "q06",
+     "correct": true,
+     "eap": 0.834853544654451,
+     "se": 0.9341280648900815
+    },
+    {
+     "id": "q14",
+     "correct": false,
+     "eap": 0.5506417166126776,
+     "se": 0.8355333908985123
+    },
+    {
+     "id": "q13",
+     "correct": true,
+     "eap": 0.9482451951143706,
+     "se": 0.794183707648245
+    },
+    {
+     "id": "q08",
+     "correct": true,
+     "eap": 1.1312922816196451,
+     "se": 0.7407930368089333
+    },
+    {
+     "id": "q16",
+     "correct": false,
+     "eap": 0.9584449771724965,
+     "se": 0.67756155755586
+    },
+    {
+     "id": "q15",
+     "correct": true,
+     "eap": 1.301161071337839,
+     "se": 0.6465140523402273
+    },
+    {
+     "id": "q11",
+     "correct": false,
+     "eap": 1.112117459152341,
+     "se": 0.6215968665124848
+    },
+    {
+     "id": "q10",
+     "correct": true,
+     "eap": 1.215223805922937,
+     "se": 0.6110650037314911
+    },
+    {
+     "id": "q05",
+     "correct": true,
+     "eap": 1.2613427477686974,
+     "se": 0.599572888136381
+    }
+   ],
+   "post": [
+    1.914131912402088e-16,
+    1.5560517382130658e-15,
+    1.2232986645678914e-14,
+    9.288348396757119e-14,
+    6.800778246928137e-13,
+    4.792474558226279e-12,
+    3.2428829969686824e-11,
+    2.1011340868149437e-10,
+    1.2991758823444264e-09,
+    7.635616074867086e-09,
+    4.245773244335052e-08,
+    2.221621766901327e-07,
+    1.0872750045077002e-06,
+    4.943534186172398e-06,
+    2.07306458607426e-05,
+    7.957624401780536e-05,
+    0.0002775035749922339,
+    0.0008728685272686504,
+    0.0024605829689185905,
+    0.006183586419024142,
+    0.013799499240489763,
+    0.027280972847313005,
+    0.04773030357238747,
+    0.07391665255850297,
+    0.10142871805007576,
+    0.12352804446557639,
+    0.13379806440954706,
+    0.12919995319536687,
+    0.11154117432357948,
+    0.08638572992380841,
+    0.06026366840689256,
+    0.038051974615837876,
+    0.021868560712204544,
+    0.01150920476087224,
+    0.005582903469469996,
+    0.0025124799154574414,
+    0.0010556744848468562,
+    0.00041660908073806133,
+    0.00015525746438457009,
+    5.4902203405802446e-05,
+    1.8499307147205273e-05
+   ]
+  },
+  "level_probs": [
+   2.7035257874168363e-05,
+   0.05095458982202419,
+   0.6096017362514565,
+   0.339416638668645
+  ],
+  "level_likelihood": [
+   0.037716162579651116,
+   0.2029243365574729,
+   0.34313405119649515,
+   0.2503280977794536
+  ],
+  "cuts": [
+   -1.0,
+   0.3,
+   1.5
+  ]
+ },
+ "fold": [
+  {
+   "name": "meena_said",
+   "events": [
+    {
+     "id": "01K8ZP4N000000000000000000",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "self_report",
+     "payload": {
+      "source": "voice",
+      "qid": "home",
+      "evidence": "I stitch blouses for my aunt"
+     },
+     "created_at": 1762000000000,
+     "skill_id": "sk_stitching"
+    }
+   ],
+   "opts": {
+    "now": 1762000000000,
+    "items": {
+     "it_fit_0": {
+      "id": "it_fit_0",
+      "a": 1.2,
+      "b": -1.2,
+      "format": "picture_choice"
+     },
+     "it_fit_1": {
+      "id": "it_fit_1",
+      "a": 1.2,
+      "b": -0.6,
+      "format": "picture_choice"
+     },
+     "it_fit_2": {
+      "id": "it_fit_2",
+      "a": 1.2,
+      "b": 0.0,
+      "format": "picture_choice"
+     },
+     "it_fit_3": {
+      "id": "it_fit_3",
+      "a": 1.2,
+      "b": 0.4,
+      "format": "picture_choice"
+     },
+     "it_fit_4": {
+      "id": "it_fit_4",
+      "a": 1.2,
+      "b": 0.8,
+      "format": "picture_choice"
+     },
+     "it_fit_5": {
+      "id": "it_fit_5",
+      "a": 1.2,
+      "b": 1.2,
+      "format": "picture_choice"
+     },
+     "it_fit_6": {
+      "id": "it_fit_6",
+      "a": 1.2,
+      "b": 1.6,
+      "format": "picture_choice"
+     },
+     "it_fit_7": {
+      "id": "it_fit_7",
+      "a": 1.2,
+      "b": 2.0,
+      "format": "picture_choice"
+     }
+    },
+    "rubrics": {
+     "rb_stitching": {
+      "id": "rb_stitching",
+      "skill": "sk_stitching",
+      "criteria": [
+       {
+        "id": "seams",
+        "subskill": "ss_stitch_machine"
+       },
+       {
+        "id": "edges",
+        "subskill": "ss_stitch_machine"
+       },
+       {
+        "id": "fit",
+        "subskill": "ss_stitch_fitting"
+       }
+      ]
+     }
+    }
+   },
+   "result": {
+    "units": {
+     "ss_stitch_cutting": {
+      "id": "ss_stitch_cutting",
+      "p": [
+       0.27550204214510604,
+       0.3578876509382292,
+       0.2577085627658854,
+       0.10890174415077951
+      ],
+      "level": 2,
+      "confidence": 0.7244979578548941,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 1,
+      "last_at": 1762000000000,
+      "history": [
+       {
+        "event_id": "01K8ZP4N000000000000000000",
+        "kind": "self_report",
+        "at": 1762000000000,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.7244979578548941
+       }
+      ]
+     },
+     "ss_stitch_fitting": {
+      "id": "ss_stitch_fitting",
+      "p": [
+       0.27550204214510604,
+       0.3578876509382292,
+       0.2577085627658854,
+       0.10890174415077951
+      ],
+      "level": 2,
+      "confidence": 0.7244979578548941,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 1,
+      "last_at": 1762000000000,
+      "history": [
+       {
+        "event_id": "01K8ZP4N000000000000000000",
+        "kind": "self_report",
+        "at": 1762000000000,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.7244979578548941
+       }
+      ]
+     },
+     "ss_stitch_machine": {
+      "id": "ss_stitch_machine",
+      "p": [
+       0.27550204214510604,
+       0.3578876509382292,
+       0.2577085627658854,
+       0.10890174415077951
+      ],
+      "level": 2,
+      "confidence": 0.7244979578548941,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 1,
+      "last_at": 1762000000000,
+      "history": [
+       {
+        "event_id": "01K8ZP4N000000000000000000",
+        "kind": "self_report",
+        "at": 1762000000000,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.7244979578548941
+       }
+      ]
+     },
+     "ss_stitch_measure": {
+      "id": "ss_stitch_measure",
+      "p": [
+       0.27550204214510604,
+       0.3578876509382292,
+       0.2577085627658854,
+       0.10890174415077951
+      ],
+      "level": 2,
+      "confidence": 0.7244979578548941,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 1,
+      "last_at": 1762000000000,
+      "history": [
+       {
+        "event_id": "01K8ZP4N000000000000000000",
+        "kind": "self_report",
+        "at": 1762000000000,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.7244979578548941
+       }
+      ]
+     }
+    },
+    "aptitude": {}
+   }
+  },
+  {
+   "name": "meena_test",
+   "events": [
+    {
+     "id": "01K8ZP4N000000000000000000",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "self_report",
+     "payload": {
+      "source": "voice",
+      "qid": "home",
+      "evidence": "I stitch blouses for my aunt"
+     },
+     "created_at": 1762000000000,
+     "skill_id": "sk_stitching"
+    },
+    {
+     "id": "01K928HC010000000000000001",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": true,
+      "ms": 6000
+     },
+     "created_at": 1762086400001,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_2"
+    },
+    {
+     "id": "01K928HC020000000000000002",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": true,
+      "ms": 6000
+     },
+     "created_at": 1762086400002,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_3"
+    },
+    {
+     "id": "01K928HC030000000000000003",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": true,
+      "ms": 6000
+     },
+     "created_at": 1762086400003,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_4"
+    },
+    {
+     "id": "01K928HC040000000000000004",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": false,
+      "ms": 6000
+     },
+     "created_at": 1762086400004,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_5"
+    },
+    {
+     "id": "01K928HC050000000000000005",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": true,
+      "ms": 6000
+     },
+     "created_at": 1762086400005,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_1"
+    },
+    {
+     "id": "01K928HC060000000000000006",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": false,
+      "ms": 6000
+     },
+     "created_at": 1762086400006,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_6"
+    }
+   ],
+   "opts": {
+    "now": 1762086400006,
+    "items": {
+     "it_fit_0": {
+      "id": "it_fit_0",
+      "a": 1.2,
+      "b": -1.2,
+      "format": "picture_choice"
+     },
+     "it_fit_1": {
+      "id": "it_fit_1",
+      "a": 1.2,
+      "b": -0.6,
+      "format": "picture_choice"
+     },
+     "it_fit_2": {
+      "id": "it_fit_2",
+      "a": 1.2,
+      "b": 0.0,
+      "format": "picture_choice"
+     },
+     "it_fit_3": {
+      "id": "it_fit_3",
+      "a": 1.2,
+      "b": 0.4,
+      "format": "picture_choice"
+     },
+     "it_fit_4": {
+      "id": "it_fit_4",
+      "a": 1.2,
+      "b": 0.8,
+      "format": "picture_choice"
+     },
+     "it_fit_5": {
+      "id": "it_fit_5",
+      "a": 1.2,
+      "b": 1.2,
+      "format": "picture_choice"
+     },
+     "it_fit_6": {
+      "id": "it_fit_6",
+      "a": 1.2,
+      "b": 1.6,
+      "format": "picture_choice"
+     },
+     "it_fit_7": {
+      "id": "it_fit_7",
+      "a": 1.2,
+      "b": 2.0,
+      "format": "picture_choice"
+     }
+    },
+    "rubrics": {
+     "rb_stitching": {
+      "id": "rb_stitching",
+      "skill": "sk_stitching",
+      "criteria": [
+       {
+        "id": "seams",
+        "subskill": "ss_stitch_machine"
+       },
+       {
+        "id": "edges",
+        "subskill": "ss_stitch_machine"
+       },
+       {
+        "id": "fit",
+        "subskill": "ss_stitch_fitting"
+       }
+      ]
+     }
+    }
+   },
+   "result": {
+    "units": {
+     "ss_cook_quantity": {
+      "id": "ss_cook_quantity",
+      "p": [
+       0.3737307606440913,
+       0.3131346196779543,
+       0.20875641311863619,
+       0.10437820655931809
+      ],
+      "level": 2,
+      "confidence": 0.6262692393559086,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 0,
+      "last_at": 0,
+      "history": []
+     },
+     "ss_money_counting": {
+      "id": "ss_money_counting",
+      "p": [
+       0.3737307606440913,
+       0.3131346196779543,
+       0.20875641311863619,
+       0.10437820655931809
+      ],
+      "level": 2,
+      "confidence": 0.6262692393559086,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 0,
+      "last_at": 0,
+      "history": []
+     },
+     "ss_stitch_cutting": {
+      "id": "ss_stitch_cutting",
+      "p": [
+       0.25275345397834587,
+       0.3691346050200201,
+       0.26576842923153954,
+       0.11234351177009448
+      ],
+      "level": 2,
+      "confidence": 0.7472465460216542,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 1,
+      "last_at": 1762000000000,
+      "history": [
+       {
+        "event_id": "01K8ZP4N000000000000000000",
+        "kind": "self_report",
+        "at": 1762000000000,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.7242846987133966
+       }
+      ]
+     },
+     "ss_stitch_fitting": {
+      "id": "ss_stitch_fitting",
+      "p": [
+       0.009077711939233346,
+       0.2272511603397232,
+       0.5345351452964737,
+       0.2291359824245698
+      ],
+      "level": 3,
+      "confidence": 0.7636711277210435,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 2,
+      "last_at": 1762086400006,
+      "history": [
+       {
+        "event_id": "01K8ZP4N000000000000000000",
+        "kind": "self_report",
+        "at": 1762000000000,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.7242846987133966
+       },
+       {
+        "event_id": "01K928HC060000000000000006",
+        "kind": "test",
+        "at": 1762086400006,
+        "level_before": 2,
+        "level_after": 3,
+        "confidence_after": 0.7636711277210435
+       }
+      ]
+     },
+     "ss_stitch_machine": {
+      "id": "ss_stitch_machine",
+      "p": [
+       0.17412926202380158,
+       0.40797440989657274,
+       0.29373219581782595,
+       0.12416413226179969
+      ],
+      "level": 2,
+      "confidence": 0.8258707379761984,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 1,
+      "last_at": 1762000000000,
+      "history": [
+       {
+        "event_id": "01K8ZP4N000000000000000000",
+        "kind": "self_report",
+        "at": 1762000000000,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.7242846987133966
+       }
+      ]
+     },
+     "ss_stitch_measure": {
+      "id": "ss_stitch_measure",
+      "p": [
+       0.1538984369038701,
+       0.4179682970274456,
+       0.3009275647931766,
+       0.12720570127550765
+      ],
+      "level": 2,
+      "confidence": 0.8461015630961299,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 1,
+      "last_at": 1762000000000,
+      "history": [
+       {
+        "event_id": "01K8ZP4N000000000000000000",
+        "kind": "self_report",
+        "at": 1762000000000,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.7242846987133966
+       }
+      ]
+     }
+    },
+    "aptitude": {}
+   }
+  },
+  {
+   "name": "meena_photo",
+   "events": [
+    {
+     "id": "01K8ZP4N000000000000000000",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "self_report",
+     "payload": {
+      "source": "voice",
+      "qid": "home",
+      "evidence": "I stitch blouses for my aunt"
+     },
+     "created_at": 1762000000000,
+     "skill_id": "sk_stitching"
+    },
+    {
+     "id": "01K928HC010000000000000001",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": true,
+      "ms": 6000
+     },
+     "created_at": 1762086400001,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_2"
+    },
+    {
+     "id": "01K928HC020000000000000002",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": true,
+      "ms": 6000
+     },
+     "created_at": 1762086400002,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_3"
+    },
+    {
+     "id": "01K928HC030000000000000003",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": true,
+      "ms": 6000
+     },
+     "created_at": 1762086400003,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_4"
+    },
+    {
+     "id": "01K928HC040000000000000004",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": false,
+      "ms": 6000
+     },
+     "created_at": 1762086400004,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_5"
+    },
+    {
+     "id": "01K928HC050000000000000005",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": true,
+      "ms": 6000
+     },
+     "created_at": 1762086400005,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_1"
+    },
+    {
+     "id": "01K928HC060000000000000006",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": false,
+      "ms": 6000
+     },
+     "created_at": 1762086400006,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_6"
+    },
+    {
+     "id": "01K9M9AD070000000000000007",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "work_sample",
+     "payload": {
+      "rubric_id": "rb_stitching",
+      "scorer": "ai",
+      "scores": {
+       "seams": 2,
+       "edges": 1,
+       "fit": 2
+      }
+     },
+     "created_at": 1762691200007,
+     "skill_id": "sk_stitching"
+    }
+   ],
+   "opts": {
+    "now": 1762691200007,
+    "items": {
+     "it_fit_0": {
+      "id": "it_fit_0",
+      "a": 1.2,
+      "b": -1.2,
+      "format": "picture_choice"
+     },
+     "it_fit_1": {
+      "id": "it_fit_1",
+      "a": 1.2,
+      "b": -0.6,
+      "format": "picture_choice"
+     },
+     "it_fit_2": {
+      "id": "it_fit_2",
+      "a": 1.2,
+      "b": 0.0,
+      "format": "picture_choice"
+     },
+     "it_fit_3": {
+      "id": "it_fit_3",
+      "a": 1.2,
+      "b": 0.4,
+      "format": "picture_choice"
+     },
+     "it_fit_4": {
+      "id": "it_fit_4",
+      "a": 1.2,
+      "b": 0.8,
+      "format": "picture_choice"
+     },
+     "it_fit_5": {
+      "id": "it_fit_5",
+      "a": 1.2,
+      "b": 1.2,
+      "format": "picture_choice"
+     },
+     "it_fit_6": {
+      "id": "it_fit_6",
+      "a": 1.2,
+      "b": 1.6,
+      "format": "picture_choice"
+     },
+     "it_fit_7": {
+      "id": "it_fit_7",
+      "a": 1.2,
+      "b": 2.0,
+      "format": "picture_choice"
+     }
+    },
+    "rubrics": {
+     "rb_stitching": {
+      "id": "rb_stitching",
+      "skill": "sk_stitching",
+      "criteria": [
+       {
+        "id": "seams",
+        "subskill": "ss_stitch_machine"
+       },
+       {
+        "id": "edges",
+        "subskill": "ss_stitch_machine"
+       },
+       {
+        "id": "fit",
+        "subskill": "ss_stitch_fitting"
+       }
+      ]
+     }
+    }
+   },
+   "result": {
+    "units": {
+     "ss_cook_quantity": {
+      "id": "ss_cook_quantity",
+      "p": [
+       0.3400285238176662,
+       0.3299857380911669,
+       0.21999049206077795,
+       0.10999524603038897
+      ],
+      "level": 2,
+      "confidence": 0.6599714761823339,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 0,
+      "last_at": 0,
+      "history": []
+     },
+     "ss_draw_proportion": {
+      "id": "ss_draw_proportion",
+      "p": [
+       0.3759638960138178,
+       0.31201805199309113,
+       0.20801203466206078,
+       0.10400601733103039
+      ],
+      "level": 2,
+      "confidence": 0.6240361039861824,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 0,
+      "last_at": 0,
+      "history": []
+     },
+     "ss_money_counting": {
+      "id": "ss_money_counting",
+      "p": [
+       0.3400285238176662,
+       0.3299857380911669,
+       0.21999049206077795,
+       0.10999524603038897
+      ],
+      "level": 2,
+      "confidence": 0.6599714761823339,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 0,
+      "last_at": 0,
+      "history": []
+     },
+     "ss_stitch_cutting": {
+      "id": "ss_stitch_cutting",
+      "p": [
+       0.1493729610424561,
+       0.4202796588608134,
+       0.3022844545635055,
+       0.12806292553322504
+      ],
+      "level": 2,
+      "confidence": 0.850627038957544,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 1,
+      "last_at": 1762000000000,
+      "history": [
+       {
+        "event_id": "01K8ZP4N000000000000000000",
+        "kind": "self_report",
+        "at": 1762000000000,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.7228004152630381
+       }
+      ]
+     },
+     "ss_stitch_fitting": {
+      "id": "ss_stitch_fitting",
+      "p": [
+       1.1285896571686792e-05,
+       0.02345701585624932,
+       0.6537703158638376,
+       0.3227613823833414
+      ],
+      "level": 3,
+      "confidence": 0.976531698247179,
+      "strong": true,
+      "performance": true,
+      "paid": false,
+      "n": 3,
+      "last_at": 1762691200007,
+      "history": [
+       {
+        "event_id": "01K8ZP4N000000000000000000",
+        "kind": "self_report",
+        "at": 1762000000000,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.7228004152630381
+       },
+       {
+        "event_id": "01K928HC060000000000000006",
+        "kind": "test",
+        "at": 1762086400006,
+        "level_before": 2,
+        "level_after": 3,
+        "confidence_after": 0.761997790401113
+       },
+       {
+        "event_id": "01K9M9AD070000000000000007",
+        "kind": "work_sample",
+        "at": 1762691200007,
+        "level_before": 3,
+        "level_after": 3,
+        "confidence_after": 0.976524434798906
+       }
+      ]
+     },
+     "ss_stitch_machine": {
+      "id": "ss_stitch_machine",
+      "p": [
+       0.004301836291350356,
+       0.27862744203234985,
+       0.48770270682263867,
+       0.22936801485366123
+      ],
+      "level": 3,
+      "confidence": 0.7170707216762999,
+      "strong": false,
+      "performance": true,
+      "paid": false,
+      "n": 2,
+      "last_at": 1762691200007,
+      "history": [
+       {
+        "event_id": "01K8ZP4N000000000000000000",
+        "kind": "self_report",
+        "at": 1762000000000,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.7228004152630381
+       },
+       {
+        "event_id": "01K9M9AD070000000000000007",
+        "kind": "work_sample",
+        "at": 1762691200007,
+        "level_before": 2,
+        "level_after": 3,
+        "confidence_after": 0.7170707216762999
+       }
+      ]
+     },
+     "ss_stitch_measure": {
+      "id": "ss_stitch_measure",
+      "p": [
+       0.0571638288719517,
+       0.4658385475836129,
+       0.3350525020712527,
+       0.1419451214731827
+      ],
+      "level": 2,
+      "confidence": 0.9428361711280484,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 1,
+      "last_at": 1762000000000,
+      "history": [
+       {
+        "event_id": "01K8ZP4N000000000000000000",
+        "kind": "self_report",
+        "at": 1762000000000,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.7228004152630381
+       }
+      ]
+     }
+    },
+    "aptitude": {}
+   }
+  },
+  {
+   "name": "meena_teacher",
+   "events": [
+    {
+     "id": "01K8ZP4N000000000000000000",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "self_report",
+     "payload": {
+      "source": "voice",
+      "qid": "home",
+      "evidence": "I stitch blouses for my aunt"
+     },
+     "created_at": 1762000000000,
+     "skill_id": "sk_stitching"
+    },
+    {
+     "id": "01K928HC010000000000000001",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": true,
+      "ms": 6000
+     },
+     "created_at": 1762086400001,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_2"
+    },
+    {
+     "id": "01K928HC020000000000000002",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": true,
+      "ms": 6000
+     },
+     "created_at": 1762086400002,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_3"
+    },
+    {
+     "id": "01K928HC030000000000000003",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": true,
+      "ms": 6000
+     },
+     "created_at": 1762086400003,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_4"
+    },
+    {
+     "id": "01K928HC040000000000000004",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": false,
+      "ms": 6000
+     },
+     "created_at": 1762086400004,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_5"
+    },
+    {
+     "id": "01K928HC050000000000000005",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": true,
+      "ms": 6000
+     },
+     "created_at": 1762086400005,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_1"
+    },
+    {
+     "id": "01K928HC060000000000000006",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": false,
+      "ms": 6000
+     },
+     "created_at": 1762086400006,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_6"
+    },
+    {
+     "id": "01K9M9AD070000000000000007",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "work_sample",
+     "payload": {
+      "rubric_id": "rb_stitching",
+      "scorer": "ai",
+      "scores": {
+       "seams": 2,
+       "edges": 1,
+       "fit": 2
+      }
+     },
+     "created_at": 1762691200007,
+     "skill_id": "sk_stitching"
+    },
+    {
+     "id": "01KA6A3E080000000000000008",
+     "student_id": "meena",
+     "device_id": "phone_teacher",
+     "kind": "rating",
+     "payload": {
+      "scores": {
+       "seams": 2,
+       "edges": 2,
+       "fit": 2
+      }
+     },
+     "created_at": 1763296000008,
+     "rater_id": "teacher_1",
+     "refers_to": "01K9M9AD070000000000000007"
+    }
+   ],
+   "opts": {
+    "now": 1763296000008,
+    "items": {
+     "it_fit_0": {
+      "id": "it_fit_0",
+      "a": 1.2,
+      "b": -1.2,
+      "format": "picture_choice"
+     },
+     "it_fit_1": {
+      "id": "it_fit_1",
+      "a": 1.2,
+      "b": -0.6,
+      "format": "picture_choice"
+     },
+     "it_fit_2": {
+      "id": "it_fit_2",
+      "a": 1.2,
+      "b": 0.0,
+      "format": "picture_choice"
+     },
+     "it_fit_3": {
+      "id": "it_fit_3",
+      "a": 1.2,
+      "b": 0.4,
+      "format": "picture_choice"
+     },
+     "it_fit_4": {
+      "id": "it_fit_4",
+      "a": 1.2,
+      "b": 0.8,
+      "format": "picture_choice"
+     },
+     "it_fit_5": {
+      "id": "it_fit_5",
+      "a": 1.2,
+      "b": 1.2,
+      "format": "picture_choice"
+     },
+     "it_fit_6": {
+      "id": "it_fit_6",
+      "a": 1.2,
+      "b": 1.6,
+      "format": "picture_choice"
+     },
+     "it_fit_7": {
+      "id": "it_fit_7",
+      "a": 1.2,
+      "b": 2.0,
+      "format": "picture_choice"
+     }
+    },
+    "rubrics": {
+     "rb_stitching": {
+      "id": "rb_stitching",
+      "skill": "sk_stitching",
+      "criteria": [
+       {
+        "id": "seams",
+        "subskill": "ss_stitch_machine"
+       },
+       {
+        "id": "edges",
+        "subskill": "ss_stitch_machine"
+       },
+       {
+        "id": "fit",
+        "subskill": "ss_stitch_fitting"
+       }
+      ]
+     }
+    }
+   },
+   "result": {
+    "units": {
+     "ss_cook_quantity": {
+      "id": "ss_cook_quantity",
+      "p": [
+       0.34041173217135273,
+       0.32979413391432366,
+       0.21986275594288243,
+       0.10993137797144122
+      ],
+      "level": 2,
+      "confidence": 0.6595882678286473,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 0,
+      "last_at": 0,
+      "history": []
+     },
+     "ss_draw_proportion": {
+      "id": "ss_draw_proportion",
+      "p": [
+       0.37612127442383775,
+       0.3119393627880811,
+       0.20795957519205407,
+       0.10397978759602704
+      ],
+      "level": 2,
+      "confidence": 0.6238787255761622,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 0,
+      "last_at": 0,
+      "history": []
+     },
+     "ss_money_counting": {
+      "id": "ss_money_counting",
+      "p": [
+       0.34041173217135273,
+       0.32979413391432366,
+       0.21986275594288243,
+       0.10993137797144122
+      ],
+      "level": 2,
+      "confidence": 0.6595882678286473,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 0,
+      "last_at": 0,
+      "history": []
+     },
+     "ss_stitch_cutting": {
+      "id": "ss_stitch_cutting",
+      "p": [
+       0.15096774259153203,
+       0.4195661590838322,
+       0.30146891224980465,
+       0.12799718607483104
+      ],
+      "level": 2,
+      "confidence": 0.8490322574084679,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 1,
+      "last_at": 1762000000000,
+      "history": [
+       {
+        "event_id": "01K8ZP4N000000000000000000",
+        "kind": "self_report",
+        "at": 1762000000000,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.7213310218282177
+       }
+      ]
+     },
+     "ss_stitch_fitting": {
+      "id": "ss_stitch_fitting",
+      "p": [
+       1.336195339171666e-06,
+       0.010015444763037387,
+       0.6297215910930496,
+       0.36026162794857386
+      ],
+      "level": 3,
+      "confidence": 0.9899832190416235,
+      "strong": true,
+      "performance": true,
+      "paid": false,
+      "n": 4,
+      "last_at": 1763296000008,
+      "history": [
+       {
+        "event_id": "01K8ZP4N000000000000000000",
+        "kind": "self_report",
+        "at": 1762000000000,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.7213310218282177
+       },
+       {
+        "event_id": "01K928HC060000000000000006",
+        "kind": "test",
+        "at": 1762086400006,
+        "level_before": 2,
+        "level_after": 3,
+        "confidence_after": 0.7603235489196272
+       },
+       {
+        "event_id": "01K9M9AD070000000000000007",
+        "kind": "work_sample",
+        "at": 1762691200007,
+        "level_before": 3,
+        "level_after": 3,
+        "confidence_after": 0.9759577603746417
+       },
+       {
+        "event_id": "01KA6A3E080000000000000008",
+        "kind": "confirmation",
+        "at": 1763296000008,
+        "level_before": 3,
+        "level_after": 3,
+        "confidence_after": 0.9899832190416235
+       }
+      ]
+     },
+     "ss_stitch_machine": {
+      "id": "ss_stitch_machine",
+      "p": [
+       3.103499590793546e-05,
+       0.03001587865148695,
+       0.6329271557513705,
+       0.3370259306012347
+      ],
+      "level": 3,
+      "confidence": 0.9699530863526051,
+      "strong": true,
+      "performance": true,
+      "paid": false,
+      "n": 3,
+      "last_at": 1763296000008,
+      "history": [
+       {
+        "event_id": "01K8ZP4N000000000000000000",
+        "kind": "self_report",
+        "at": 1762000000000,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.7213310218282177
+       },
+       {
+        "event_id": "01K9M9AD070000000000000007",
+        "kind": "work_sample",
+        "at": 1762691200007,
+        "level_before": 2,
+        "level_after": 3,
+        "confidence_after": 0.7157569781580629
+       },
+       {
+        "event_id": "01KA6A3E080000000000000008",
+        "kind": "confirmation",
+        "at": 1763296000008,
+        "level_before": 3,
+        "level_after": 3,
+        "confidence_after": 0.9699530863526051
+       }
+      ]
+     },
+     "ss_stitch_measure": {
+      "id": "ss_stitch_measure",
+      "p": [
+       0.058226192544322826,
+       0.4653962386847637,
+       0.3343989852465979,
+       0.14197858352431567
+      ],
+      "level": 2,
+      "confidence": 0.9417738074556772,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 1,
+      "last_at": 1762000000000,
+      "history": [
+       {
+        "event_id": "01K8ZP4N000000000000000000",
+        "kind": "self_report",
+        "at": 1762000000000,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.7213310218282177
+       }
+      ]
+     }
+    },
+    "aptitude": {}
+   }
+  },
+  {
+   "name": "meena_orders",
+   "events": [
+    {
+     "id": "01K8ZP4N000000000000000000",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "self_report",
+     "payload": {
+      "source": "voice",
+      "qid": "home",
+      "evidence": "I stitch blouses for my aunt"
+     },
+     "created_at": 1762000000000,
+     "skill_id": "sk_stitching"
+    },
+    {
+     "id": "01K928HC010000000000000001",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": true,
+      "ms": 6000
+     },
+     "created_at": 1762086400001,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_2"
+    },
+    {
+     "id": "01K928HC020000000000000002",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": true,
+      "ms": 6000
+     },
+     "created_at": 1762086400002,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_3"
+    },
+    {
+     "id": "01K928HC030000000000000003",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": true,
+      "ms": 6000
+     },
+     "created_at": 1762086400003,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_4"
+    },
+    {
+     "id": "01K928HC040000000000000004",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": false,
+      "ms": 6000
+     },
+     "created_at": 1762086400004,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_5"
+    },
+    {
+     "id": "01K928HC050000000000000005",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": true,
+      "ms": 6000
+     },
+     "created_at": 1762086400005,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_1"
+    },
+    {
+     "id": "01K928HC060000000000000006",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "item_response",
+     "payload": {
+      "correct": false,
+      "ms": 6000
+     },
+     "created_at": 1762086400006,
+     "subskill_id": "ss_stitch_fitting",
+     "item_id": "it_fit_6"
+    },
+    {
+     "id": "01K9M9AD070000000000000007",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "work_sample",
+     "payload": {
+      "rubric_id": "rb_stitching",
+      "scorer": "ai",
+      "scores": {
+       "seams": 2,
+       "edges": 1,
+       "fit": 2
+      }
+     },
+     "created_at": 1762691200007,
+     "skill_id": "sk_stitching"
+    },
+    {
+     "id": "01KA6A3E080000000000000008",
+     "student_id": "meena",
+     "device_id": "phone_teacher",
+     "kind": "rating",
+     "payload": {
+      "scores": {
+       "seams": 2,
+       "edges": 2,
+       "fit": 2
+      }
+     },
+     "created_at": 1763296000008,
+     "rater_id": "teacher_1",
+     "refers_to": "01K9M9AD070000000000000007"
+    },
+    {
+     "id": "01KAK631090000000000000009",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "order",
+     "payload": {
+      "amount_inr": 350
+     },
+     "created_at": 1763728000009,
+     "skill_id": "sk_stitching"
+    },
+    {
+     "id": "01KANRFR0A000000000000000A",
+     "student_id": "meena",
+     "device_id": "buyer_link",
+     "kind": "rating",
+     "payload": {
+      "on_time": true,
+      "quality": true,
+      "rehire": true
+     },
+     "created_at": 1763814400010,
+     "rater_id": "buyer_0",
+     "refers_to": "01KAK631090000000000000009"
+    },
+    {
+     "id": "01KAXFNX0B000000000000000B",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "order",
+     "payload": {
+      "amount_inr": 350
+     },
+     "created_at": 1764073600011,
+     "skill_id": "sk_stitching"
+    },
+    {
+     "id": "01KB022M0C000000000000000C",
+     "student_id": "meena",
+     "device_id": "buyer_link",
+     "kind": "rating",
+     "payload": {
+      "on_time": true,
+      "quality": true,
+      "rehire": true
+     },
+     "created_at": 1764160000012,
+     "rater_id": "buyer_1",
+     "refers_to": "01KAXFNX0B000000000000000B"
+    },
+    {
+     "id": "01KB7S8S0D000000000000000D",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "order",
+     "payload": {
+      "amount_inr": 350
+     },
+     "created_at": 1764419200013,
+     "skill_id": "sk_stitching"
+    },
+    {
+     "id": "01KBABNG0E000000000000000E",
+     "student_id": "meena",
+     "device_id": "buyer_link",
+     "kind": "rating",
+     "payload": {
+      "on_time": true,
+      "quality": true,
+      "rehire": true
+     },
+     "created_at": 1764505600014,
+     "rater_id": "buyer_2",
+     "refers_to": "01KB7S8S0D000000000000000D"
+    },
+    {
+     "id": "01KBJ2VN0F000000000000000F",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "order",
+     "payload": {
+      "amount_inr": 350
+     },
+     "created_at": 1764764800015,
+     "skill_id": "sk_stitching"
+    },
+    {
+     "id": "01KBMN8C0G000000000000000G",
+     "student_id": "meena",
+     "device_id": "buyer_link",
+     "kind": "rating",
+     "payload": {
+      "on_time": true,
+      "quality": true,
+      "rehire": true
+     },
+     "created_at": 1764851200016,
+     "rater_id": "buyer_3",
+     "refers_to": "01KBJ2VN0F000000000000000F"
+    },
+    {
+     "id": "01KBWCEH0H000000000000000H",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "order",
+     "payload": {
+      "amount_inr": 350
+     },
+     "created_at": 1765110400017,
+     "skill_id": "sk_stitching"
+    },
+    {
+     "id": "01KBYYV80J000000000000000J",
+     "student_id": "meena",
+     "device_id": "buyer_link",
+     "kind": "rating",
+     "payload": {
+      "on_time": true,
+      "quality": true,
+      "rehire": true
+     },
+     "created_at": 1765196800018,
+     "rater_id": "buyer_4",
+     "refers_to": "01KBWCEH0H000000000000000H"
+    }
+   ],
+   "opts": {
+    "now": 1765196800018,
+    "items": {
+     "it_fit_0": {
+      "id": "it_fit_0",
+      "a": 1.2,
+      "b": -1.2,
+      "format": "picture_choice"
+     },
+     "it_fit_1": {
+      "id": "it_fit_1",
+      "a": 1.2,
+      "b": -0.6,
+      "format": "picture_choice"
+     },
+     "it_fit_2": {
+      "id": "it_fit_2",
+      "a": 1.2,
+      "b": 0.0,
+      "format": "picture_choice"
+     },
+     "it_fit_3": {
+      "id": "it_fit_3",
+      "a": 1.2,
+      "b": 0.4,
+      "format": "picture_choice"
+     },
+     "it_fit_4": {
+      "id": "it_fit_4",
+      "a": 1.2,
+      "b": 0.8,
+      "format": "picture_choice"
+     },
+     "it_fit_5": {
+      "id": "it_fit_5",
+      "a": 1.2,
+      "b": 1.2,
+      "format": "picture_choice"
+     },
+     "it_fit_6": {
+      "id": "it_fit_6",
+      "a": 1.2,
+      "b": 1.6,
+      "format": "picture_choice"
+     },
+     "it_fit_7": {
+      "id": "it_fit_7",
+      "a": 1.2,
+      "b": 2.0,
+      "format": "picture_choice"
+     }
+    },
+    "rubrics": {
+     "rb_stitching": {
+      "id": "rb_stitching",
+      "skill": "sk_stitching",
+      "criteria": [
+       {
+        "id": "seams",
+        "subskill": "ss_stitch_machine"
+       },
+       {
+        "id": "edges",
+        "subskill": "ss_stitch_machine"
+       },
+       {
+        "id": "fit",
+        "subskill": "ss_stitch_fitting"
+       }
+      ]
+     }
+    }
+   },
+   "result": {
+    "units": {
+     "ss_cook_quantity": {
+      "id": "ss_cook_quantity",
+      "p": [
+       0.34160097812250034,
+       0.32919951093874983,
+       0.21946634062583326,
+       0.10973317031291663
+      ],
+      "level": 2,
+      "confidence": 0.6583990218774998,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 0,
+      "last_at": 0,
+      "history": []
+     },
+     "ss_draw_proportion": {
+      "id": "ss_draw_proportion",
+      "p": [
+       0.37660930311060564,
+       0.31169534844469715,
+       0.20779689896313147,
+       0.10389844948156574
+      ],
+      "level": 2,
+      "confidence": 0.6233906968893943,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 0,
+      "last_at": 0,
+      "history": []
+     },
+     "ss_money_counting": {
+      "id": "ss_money_counting",
+      "p": [
+       0.34160097812250034,
+       0.32919951093874983,
+       0.21946634062583326,
+       0.10973317031291663
+      ],
+      "level": 2,
+      "confidence": 0.6583990218774998,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 0,
+      "last_at": 0,
+      "history": []
+     },
+     "ss_stitch_cutting": {
+      "id": "ss_stitch_cutting",
+      "p": [
+       1.0959435279734863e-15,
+       1.5081861219487728e-06,
+       0.19556923133349438,
+       0.8044292604803825
+      ],
+      "level": 4,
+      "confidence": 0.8044292604803825,
+      "strong": true,
+      "performance": true,
+      "paid": true,
+      "n": 11,
+      "last_at": 1765196800018,
+      "history": [
+       {
+        "event_id": "01K8ZP4N000000000000000000",
+        "kind": "self_report",
+        "at": 1762000000000,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.7168092184582109
+       },
+       {
+        "event_id": "01KAK631090000000000000009",
+        "kind": "order",
+        "at": 1763728000009,
+        "level_before": 2,
+        "level_after": 3,
+        "confidence_after": 0.5809567665399672
+       },
+       {
+        "event_id": "01KANRFR0A000000000000000A",
+        "kind": "order_confirmed",
+        "at": 1763814400010,
+        "level_before": 3,
+        "level_after": 3,
+        "confidence_after": 0.9408321530029746
+       },
+       {
+        "event_id": "01KAXFNX0B000000000000000B",
+        "kind": "order",
+        "at": 1764073600011,
+        "level_before": 3,
+        "level_after": 3,
+        "confidence_after": 0.9506994471396186
+       },
+       {
+        "event_id": "01KB022M0C000000000000000C",
+        "kind": "order_confirmed",
+        "at": 1764160000012,
+        "level_before": 3,
+        "level_after": 4,
+        "confidence_after": 0.543623453207604
+       },
+       {
+        "event_id": "01KB7S8S0D000000000000000D",
+        "kind": "order",
+        "at": 1764419200013,
+        "level_before": 4,
+        "level_after": 3,
+        "confidence_after": 0.9960280310306566
+       },
+       {
+        "event_id": "01KBABNG0E000000000000000E",
+        "kind": "order_confirmed",
+        "at": 1764505600014,
+        "level_before": 3,
+        "level_after": 4,
+        "confidence_after": 0.6456301680540582
+       },
+       {
+        "event_id": "01KBJ2VN0F000000000000000F",
+        "kind": "order",
+        "at": 1764764800015,
+        "level_before": 4,
+        "level_after": 4,
+        "confidence_after": 0.5859199350038314
+       },
+       {
+        "event_id": "01KBMN8C0G000000000000000G",
+        "kind": "order_confirmed",
+        "at": 1764851200016,
+        "level_before": 4,
+        "level_after": 4,
+        "confidence_after": 0.7329265624914271
+       },
+       {
+        "event_id": "01KBWCEH0H000000000000000H",
+        "kind": "order",
+        "at": 1765110400017,
+        "level_before": 4,
+        "level_after": 4,
+        "confidence_after": 0.6795209713892094
+       },
+       {
+        "event_id": "01KBYYV80J000000000000000J",
+        "kind": "order_confirmed",
+        "at": 1765196800018,
+        "level_before": 4,
+        "level_after": 4,
+        "confidence_after": 0.8044292604803825
+       }
+      ]
+     },
+     "ss_stitch_fitting": {
+      "id": "ss_stitch_fitting",
+      "p": [
+       6.576141691145781e-21,
+       1.9503929122488416e-08,
+       0.1726652862503227,
+       0.8273346942457482
+      ],
+      "level": 4,
+      "confidence": 0.8273346942457482,
+      "strong": true,
+      "performance": true,
+      "paid": true,
+      "n": 14,
+      "last_at": 1765196800018,
+      "history": [
+       {
+        "event_id": "01K8ZP4N000000000000000000",
+        "kind": "self_report",
+        "at": 1762000000000,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.7168092184582109
+       },
+       {
+        "event_id": "01K928HC060000000000000006",
+        "kind": "test",
+        "at": 1762086400006,
+        "level_before": 2,
+        "level_after": 3,
+        "confidence_after": 0.7550560398878318
+       },
+       {
+        "event_id": "01K9M9AD070000000000000007",
+        "kind": "work_sample",
+        "at": 1762691200007,
+        "level_before": 3,
+        "level_after": 3,
+        "confidence_after": 0.9741151046094125
+       },
+       {
+        "event_id": "01KA6A3E080000000000000008",
+        "kind": "confirmation",
+        "at": 1763296000008,
+        "level_before": 3,
+        "level_after": 3,
+        "confidence_after": 0.9890196209086225
+       },
+       {
+        "event_id": "01KAK631090000000000000009",
+        "kind": "order",
+        "at": 1763728000009,
+        "level_before": 3,
+        "level_after": 3,
+        "confidence_after": 0.9911647839048001
+       },
+       {
+        "event_id": "01KANRFR0A000000000000000A",
+        "kind": "order_confirmed",
+        "at": 1763814400010,
+        "level_before": 3,
+        "level_after": 3,
+        "confidence_after": 0.9991543540446757
+       },
+       {
+        "event_id": "01KAXFNX0B000000000000000B",
+        "kind": "order",
+        "at": 1764073600011,
+        "level_before": 3,
+        "level_after": 3,
+        "confidence_after": 0.9992907921221694
+       },
+       {
+        "event_id": "01KB022M0C000000000000000C",
+        "kind": "order_confirmed",
+        "at": 1764160000012,
+        "level_before": 3,
+        "level_after": 4,
+        "confidence_after": 0.5854151589047019
+       },
+       {
+        "event_id": "01KB7S8S0D000000000000000D",
+        "kind": "order",
+        "at": 1764419200013,
+        "level_before": 4,
+        "level_after": 4,
+        "confidence_after": 0.524122348643341
+       },
+       {
+        "event_id": "01KBABNG0E000000000000000E",
+        "kind": "order_confirmed",
+        "at": 1764505600014,
+        "level_before": 4,
+        "level_after": 4,
+        "confidence_after": 0.6807918281126181
+       },
+       {
+        "event_id": "01KBJ2VN0F000000000000000F",
+        "kind": "order",
+        "at": 1764764800015,
+        "level_before": 4,
+        "level_after": 4,
+        "confidence_after": 0.6231066256256049
+       },
+       {
+        "event_id": "01KBMN8C0G000000000000000G",
+        "kind": "order_confirmed",
+        "at": 1764851200016,
+        "level_before": 4,
+        "level_after": 4,
+        "confidence_after": 0.7620269111629886
+       },
+       {
+        "event_id": "01KBWCEH0H000000000000000H",
+        "kind": "order",
+        "at": 1765110400017,
+        "level_before": 4,
+        "level_after": 4,
+        "confidence_after": 0.7119239603430544
+       },
+       {
+        "event_id": "01KBYYV80J000000000000000J",
+        "kind": "order_confirmed",
+        "at": 1765196800018,
+        "level_before": 4,
+        "level_after": 4,
+        "confidence_after": 0.8273346942457482
+       }
+      ]
+     },
+     "ss_stitch_machine": {
+      "id": "ss_stitch_machine",
+      "p": [
+       1.4948604296311311e-19,
+       5.971253282528831e-08,
+       0.18180685058556045,
+       0.8181930897019067
+      ],
+      "level": 4,
+      "confidence": 0.8181930897019067,
+      "strong": true,
+      "performance": true,
+      "paid": true,
+      "n": 13,
+      "last_at": 1765196800018,
+      "history": [
+       {
+        "event_id": "01K8ZP4N000000000000000000",
+        "kind": "self_report",
+        "at": 1762000000000,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.7168092184582109
+       },
+       {
+        "event_id": "01K9M9AD070000000000000007",
+        "kind": "work_sample",
+        "at": 1762691200007,
+        "level_before": 2,
+        "level_after": 3,
+        "confidence_after": 0.7116408667947063
+       },
+       {
+        "event_id": "01KA6A3E080000000000000008",
+        "kind": "confirmation",
+        "at": 1763296000008,
+        "level_before": 3,
+        "level_after": 3,
+        "confidence_after": 0.9678642587885249
+       },
+       {
+        "event_id": "01KAK631090000000000000009",
+        "kind": "order",
+        "at": 1763728000009,
+        "level_before": 3,
+        "level_after": 3,
+        "confidence_after": 0.9741812309982177
+       },
+       {
+        "event_id": "01KANRFR0A000000000000000A",
+        "kind": "order_confirmed",
+        "at": 1763814400010,
+        "level_before": 3,
+        "level_after": 3,
+        "confidence_after": 0.9974650824968142
+       },
+       {
+        "event_id": "01KAXFNX0B000000000000000B",
+        "kind": "order",
+        "at": 1764073600011,
+        "level_before": 3,
+        "level_after": 3,
+        "confidence_after": 0.9978834492132437
+       },
+       {
+        "event_id": "01KB022M0C000000000000000C",
+        "kind": "order_confirmed",
+        "at": 1764160000012,
+        "level_before": 3,
+        "level_after": 4,
+        "confidence_after": 0.5693145146942877
+       },
+       {
+        "event_id": "01KB7S8S0D000000000000000D",
+        "kind": "order",
+        "at": 1764419200013,
+        "level_before": 4,
+        "level_after": 4,
+        "confidence_after": 0.5079131320033137
+       },
+       {
+        "event_id": "01KBABNG0E000000000000000E",
+        "kind": "order_confirmed",
+        "at": 1764505600014,
+        "level_before": 4,
+        "level_after": 4,
+        "confidence_after": 0.6666612229892968
+       },
+       {
+        "event_id": "01KBJ2VN0F000000000000000F",
+        "kind": "order",
+        "at": 1764764800015,
+        "level_before": 4,
+        "level_after": 4,
+        "confidence_after": 0.6080519264585101
+       },
+       {
+        "event_id": "01KBMN8C0G000000000000000G",
+        "kind": "order_confirmed",
+        "at": 1764851200016,
+        "level_before": 4,
+        "level_after": 4,
+        "confidence_after": 0.7503537015039885
+       },
+       {
+        "event_id": "01KBWCEH0H000000000000000H",
+        "kind": "order",
+        "at": 1765110400017,
+        "level_before": 4,
+        "level_after": 4,
+        "confidence_after": 0.6988561652737372
+       },
+       {
+        "event_id": "01KBYYV80J000000000000000J",
+        "kind": "order_confirmed",
+        "at": 1765196800018,
+        "level_before": 4,
+        "level_after": 4,
+        "confidence_after": 0.8181930897019067
+       }
+      ]
+     },
+     "ss_stitch_measure": {
+      "id": "ss_stitch_measure",
+      "p": [
+       3.8951669916458493e-16,
+       1.4503861867209131e-06,
+       0.19551516586510156,
+       0.8044833837487114
+      ],
+      "level": 4,
+      "confidence": 0.8044833837487114,
+      "strong": true,
+      "performance": true,
+      "paid": true,
+      "n": 11,
+      "last_at": 1765196800018,
+      "history": [
+       {
+        "event_id": "01K8ZP4N000000000000000000",
+        "kind": "self_report",
+        "at": 1762000000000,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.7168092184582109
+       },
+       {
+        "event_id": "01KAK631090000000000000009",
+        "kind": "order",
+        "at": 1763728000009,
+        "level_before": 2,
+        "level_after": 3,
+        "confidence_after": 0.6070290867963044
+       },
+       {
+        "event_id": "01KANRFR0A000000000000000A",
+        "kind": "order_confirmed",
+        "at": 1763814400010,
+        "level_before": 3,
+        "level_after": 3,
+        "confidence_after": 0.9431863370462452
+       },
+       {
+        "event_id": "01KAXFNX0B000000000000000B",
+        "kind": "order",
+        "at": 1764073600011,
+        "level_before": 3,
+        "level_after": 3,
+        "confidence_after": 0.9525572030384439
+       },
+       {
+        "event_id": "01KB022M0C000000000000000C",
+        "kind": "order_confirmed",
+        "at": 1764160000012,
+        "level_before": 3,
+        "level_after": 4,
+        "confidence_after": 0.5438068731938328
+       },
+       {
+        "event_id": "01KB7S8S0D000000000000000D",
+        "kind": "order",
+        "at": 1764419200013,
+        "level_before": 4,
+        "level_after": 3,
+        "confidence_after": 0.996179381714771
+       },
+       {
+        "event_id": "01KBABNG0E000000000000000E",
+        "kind": "order_confirmed",
+        "at": 1764505600014,
+        "level_before": 3,
+        "level_after": 4,
+        "confidence_after": 0.6457189957111942
+       },
+       {
+        "event_id": "01KBJ2VN0F000000000000000F",
+        "kind": "order",
+        "at": 1764764800015,
+        "level_before": 4,
+        "level_after": 4,
+        "confidence_after": 0.5860111648746568
+       },
+       {
+        "event_id": "01KBMN8C0G000000000000000G",
+        "kind": "order_confirmed",
+        "at": 1764851200016,
+        "level_before": 4,
+        "level_after": 4,
+        "confidence_after": 0.7329952225077206
+       },
+       {
+        "event_id": "01KBWCEH0H000000000000000H",
+        "kind": "order",
+        "at": 1765110400017,
+        "level_before": 4,
+        "level_after": 4,
+        "confidence_after": 0.6795966111163743
+       },
+       {
+        "event_id": "01KBYYV80J000000000000000J",
+        "kind": "order_confirmed",
+        "at": 1765196800018,
+        "level_before": 4,
+        "level_after": 4,
+        "confidence_after": 0.8044833837487114
+       }
+      ]
+     }
+    },
+    "aptitude": {}
+   }
+  },
+  {
+   "name": "aptitude",
+   "events": [
+    {
+     "id": "01K9PVQ4000000000000000000",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "aptitude_response",
+     "payload": {
+      "domain": "apt_spatial",
+      "correct": true,
+      "ms": 4000,
+      "b": -1,
+      "a": 1.3
+     },
+     "created_at": 1762777600000,
+     "item_id": "apt_sp_0"
+    },
+    {
+     "id": "01K9PVQ4010000000000000001",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "aptitude_response",
+     "payload": {
+      "domain": "apt_spatial",
+      "correct": true,
+      "ms": 4000,
+      "b": 0,
+      "a": 1.3
+     },
+     "created_at": 1762777600001,
+     "item_id": "apt_sp_1"
+    },
+    {
+     "id": "01K9PVQ4020000000000000002",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "aptitude_response",
+     "payload": {
+      "domain": "apt_spatial",
+      "correct": true,
+      "ms": 4000,
+      "b": 0.5,
+      "a": 1.3
+     },
+     "created_at": 1762777600002,
+     "item_id": "apt_sp_2"
+    },
+    {
+     "id": "01K9PVQ4030000000000000003",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "aptitude_response",
+     "payload": {
+      "domain": "apt_spatial",
+      "correct": true,
+      "ms": 4000,
+      "b": 1,
+      "a": 1.3
+     },
+     "created_at": 1762777600003,
+     "item_id": "apt_sp_3"
+    },
+    {
+     "id": "01K9PVQ4040000000000000004",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "aptitude_response",
+     "payload": {
+      "domain": "apt_spatial",
+      "correct": false,
+      "ms": 4000,
+      "b": 1.5,
+      "a": 1.3
+     },
+     "created_at": 1762777600004,
+     "item_id": "apt_sp_4"
+    },
+    {
+     "id": "01K9PVQ4050000000000000005",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "aptitude_response",
+     "payload": {
+      "domain": "apt_spatial",
+      "correct": true,
+      "ms": 4000,
+      "b": 1.2,
+      "a": 1.3
+     },
+     "created_at": 1762777600005,
+     "item_id": "apt_sp_5"
+    },
+    {
+     "id": "01K9PVQ4060000000000000006",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "aptitude_response",
+     "payload": {
+      "domain": "apt_numeric",
+      "correct": true,
+      "ms": 4000,
+      "b": -1
+     },
+     "created_at": 1762777600006,
+     "item_id": "apt_nu_0"
+    },
+    {
+     "id": "01K9PVQ4070000000000000007",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "aptitude_response",
+     "payload": {
+      "domain": "apt_numeric",
+      "correct": false,
+      "ms": 4000,
+      "b": 0
+     },
+     "created_at": 1762777600007,
+     "item_id": "apt_nu_1"
+    },
+    {
+     "id": "01K9PVQ4080000000000000008",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "aptitude_response",
+     "payload": {
+      "domain": "apt_numeric",
+      "correct": true,
+      "ms": 4000,
+      "b": -0.5
+     },
+     "created_at": 1762777600008,
+     "item_id": "apt_nu_2"
+    },
+    {
+     "id": "01K9PVQ4090000000000000009",
+     "student_id": "meena",
+     "device_id": "phone_meena",
+     "kind": "aptitude_response",
+     "payload": {
+      "domain": "apt_numeric",
+      "correct": false,
+      "ms": 4000,
+      "b": 0.5
+     },
+     "created_at": 1762777600009,
+     "item_id": "apt_nu_3"
+    }
+   ],
+   "opts": {
+    "now": 1762864000000
+   },
+   "result": {
+    "units": {},
+    "aptitude": {
+     "apt_numeric": {
+      "theta": -0.11417870380104873,
+      "se": 0.7374362723151219,
+      "n": 4
+     },
+     "apt_spatial": {
+      "theta": 1.2870571536308313,
+      "se": 0.6063445195707581,
+      "n": 6
+     }
+    }
+   }
+  },
+  {
+   "name": "retraction",
+   "events": [
+    {
+     "id": "01K8ZP4N000000000000000000",
+     "student_id": "kavya",
+     "device_id": "phone_meena",
+     "kind": "self_report",
+     "payload": {
+      "source": "tap",
+      "qid": "home"
+     },
+     "created_at": 1762000000000,
+     "skill_id": "sk_cooking"
+    },
+    {
+     "id": "01K8ZP4N010000000000000001",
+     "student_id": "kavya",
+     "device_id": "phone_meena",
+     "kind": "self_report",
+     "payload": {
+      "source": "tap",
+      "qid": "home",
+      "retracted": true
+     },
+     "created_at": 1762000000001,
+     "skill_id": "sk_cooking"
+    },
+    {
+     "id": "01K8ZP4N020000000000000002",
+     "student_id": "kavya",
+     "device_id": "phone_meena",
+     "kind": "self_report",
+     "payload": {
+      "source": "tap",
+      "qid": "free_time"
+     },
+     "created_at": 1762000000002,
+     "skill_id": "sk_drawing"
+    },
+    {
+     "id": "01K928HC030000000000000003",
+     "student_id": "kavya",
+     "device_id": "phone_meena",
+     "kind": "family_report",
+     "payload": {
+      "source": "voice"
+     },
+     "created_at": 1762086400003,
+     "subskill_id": "ss_draw_colour"
+    },
+    {
+     "id": "01K97DAT040000000000000004",
+     "student_id": "kavya",
+     "device_id": "phone_meena",
+     "kind": "task",
+     "payload": {
+      "score": 0.8
+     },
+     "created_at": 1762259200004,
+     "subskill_id": "ss_money_pricing"
+    },
+    {
+     "id": "01K99ZQH050000000000000005",
+     "student_id": "kavya",
+     "device_id": "phone_meena",
+     "kind": "taster",
+     "payload": {
+      "levels": {
+       "ss_care_firstaid": 3,
+       "ss_care_listening": 2
+      }
+     },
+     "created_at": 1762345600005,
+     "rater_id": "mentor_1"
+    },
+    {
+     "id": "01K9CJ48060000000000000006",
+     "student_id": "kavya",
+     "device_id": "phone_meena",
+     "kind": "rating",
+     "payload": {
+      "level": 4
+     },
+     "created_at": 1762432000006,
+     "rater_id": "teacher_1",
+     "subskill_id": "ss_teach_explain"
+    },
+    {
+     "id": "01K9CJ48070000000000000007",
+     "student_id": "kavya",
+     "device_id": "phone_meena",
+     "kind": "rating",
+     "payload": {
+      "endorse": true
+     },
+     "created_at": 1762432000007,
+     "rater_id": "teacher_lenient",
+     "skill_id": "sk_driving"
+    }
+   ],
+   "opts": {
+    "now": 1796560000000,
+    "raterWeights": {
+     "teacher_lenient": 0.1
+    }
+   },
+   "result": {
+    "units": {
+     "sk_driving": {
+      "id": "sk_driving",
+      "p": [
+       0.2404799498110869,
+       0.3502352534241882,
+       0.2834244490451005,
+       0.1258603477196243
+      ],
+      "level": 2,
+      "confidence": 0.759520050188913,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 1,
+      "last_at": 1762432000007,
+      "history": [
+       {
+        "event_id": "01K9CJ48070000000000000007",
+        "kind": "endorse",
+        "at": 1762432000007,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.759520050188913
+       }
+      ]
+     },
+     "ss_care_firstaid": {
+      "id": "ss_care_firstaid",
+      "p": [
+       0.0018376564317463622,
+       0.11454253798581697,
+       0.8454389595871644,
+       0.03818084599527232
+      ],
+      "level": 3,
+      "confidence": 0.8836198055824367,
+      "strong": true,
+      "performance": true,
+      "paid": false,
+      "n": 1,
+      "last_at": 1762345600005,
+      "history": [
+       {
+        "event_id": "01K99ZQH050000000000000005",
+        "kind": "taster",
+        "at": 1762345600005,
+        "level_before": 2,
+        "level_after": 3,
+        "confidence_after": 0.8836198055824367
+       }
+      ]
+     },
+     "ss_care_hygiene": {
+      "id": "ss_care_hygiene",
+      "p": [
+       0.21593871281378316,
+       0.39203064359310846,
+       0.26135376239540564,
+       0.13067688119770282
+      ],
+      "level": 2,
+      "confidence": 0.7840612871862169,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 0,
+      "last_at": 0,
+      "history": []
+     },
+     "ss_care_listening": {
+      "id": "ss_care_listening",
+      "p": [
+       0.10197174685110733,
+       0.8467356339068625,
+       0.05098587342555366,
+       0.0003067458164765265
+      ],
+      "level": 2,
+      "confidence": 0.8980282531488927,
+      "strong": false,
+      "performance": true,
+      "paid": false,
+      "n": 1,
+      "last_at": 1762345600005,
+      "history": [
+       {
+        "event_id": "01K99ZQH050000000000000005",
+        "kind": "taster",
+        "at": 1762345600005,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.8980282531488928
+       }
+      ]
+     },
+     "ss_cook_costing": {
+      "id": "ss_cook_costing",
+      "p": [
+       0.332955465183367,
+       0.3335222674083165,
+       0.22234817827221098,
+       0.11117408913610549
+      ],
+      "level": 2,
+      "confidence": 0.667044534816633,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 0,
+      "last_at": 0,
+      "history": []
+     },
+     "ss_cook_hygiene": {
+      "id": "ss_cook_hygiene",
+      "p": [
+       0.34831093746885267,
+       0.32584453126557367,
+       0.21722968751038244,
+       0.10861484375519122
+      ],
+      "level": 2,
+      "confidence": 0.6516890625311473,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 0,
+      "last_at": 0,
+      "history": []
+     },
+     "ss_cook_quantity": {
+      "id": "ss_cook_quantity",
+      "p": [
+       0.386193379646164,
+       0.306903310176918,
+       0.20460220678461202,
+       0.10230110339230601
+      ],
+      "level": 2,
+      "confidence": 0.613806620353836,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 0,
+      "last_at": 0,
+      "history": []
+     },
+     "ss_draw_colour": {
+      "id": "ss_draw_colour",
+      "p": [
+       0.25466570794523496,
+       0.3660873500674388,
+       0.26790238464367155,
+       0.11134455734365463
+      ],
+      "level": 2,
+      "confidence": 0.745334292054765,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 2,
+      "last_at": 1762086400003,
+      "history": [
+       {
+        "event_id": "01K8ZP4N020000000000000002",
+        "kind": "self_report",
+        "at": 1762000000002,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.6609931145216392
+       },
+       {
+        "event_id": "01K928HC030000000000000003",
+        "kind": "family_report",
+        "at": 1762086400003,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.745334292054765
+       }
+      ]
+     },
+     "ss_draw_proportion": {
+      "id": "ss_draw_proportion",
+      "p": [
+       0.3390068854783607,
+       0.32876056985255575,
+       0.2272212278901232,
+       0.10501131677896029
+      ],
+      "level": 2,
+      "confidence": 0.6609931145216392,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 1,
+      "last_at": 1762000000002,
+      "history": [
+       {
+        "event_id": "01K8ZP4N020000000000000002",
+        "kind": "self_report",
+        "at": 1762000000002,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.6609931145216392
+       }
+      ]
+     },
+     "ss_draw_shading": {
+      "id": "ss_draw_shading",
+      "p": [
+       0.3390068854783607,
+       0.32876056985255575,
+       0.2272212278901232,
+       0.10501131677896029
+      ],
+      "level": 2,
+      "confidence": 0.6609931145216392,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 1,
+      "last_at": 1762000000002,
+      "history": [
+       {
+        "event_id": "01K8ZP4N020000000000000002",
+        "kind": "self_report",
+        "at": 1762000000002,
+        "level_before": 2,
+        "level_after": 2,
+        "confidence_after": 0.6609931145216392
+       }
+      ]
+     },
+     "ss_money_counting": {
+      "id": "ss_money_counting",
+      "p": [
+       0.386193379646164,
+       0.306903310176918,
+       0.20460220678461202,
+       0.10230110339230601
+      ],
+      "level": 2,
+      "confidence": 0.613806620353836,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 0,
+      "last_at": 0,
+      "history": []
+     },
+     "ss_money_pricing": {
+      "id": "ss_money_pricing",
+      "p": [
+       0.1449942548272204,
+       0.346036372921913,
+       0.33931291483391113,
+       0.16965645741695556
+      ],
+      "level": 3,
+      "confidence": 0.5089693722508667,
+      "strong": false,
+      "performance": true,
+      "paid": false,
+      "n": 1,
+      "last_at": 1762259200004,
+      "history": [
+       {
+        "event_id": "01K97DAT040000000000000004",
+        "kind": "task",
+        "at": 1762259200004,
+        "level_before": 2,
+        "level_after": 3,
+        "confidence_after": 0.5089693722508667
+       }
+      ]
+     },
+     "ss_money_records": {
+      "id": "ss_money_records",
+      "p": [
+       0.34593146155564597,
+       0.327034269222177,
+       0.21802284614811804,
+       0.10901142307405902
+      ],
+      "level": 2,
+      "confidence": 0.6540685384443541,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 0,
+      "last_at": 0,
+      "history": []
+     },
+     "ss_sell_customer": {
+      "id": "ss_sell_customer",
+      "p": [
+       0.31731873702103197,
+       0.341340631489484,
+       0.22756042099298932,
+       0.11378021049649466
+      ],
+      "level": 2,
+      "confidence": 0.682681262978968,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 0,
+      "last_at": 0,
+      "history": []
+     },
+     "ss_sell_explain": {
+      "id": "ss_sell_explain",
+      "p": [
+       0.37856838001055876,
+       0.31071580999472065,
+       0.20714387332981377,
+       0.10357193666490688
+      ],
+      "level": 2,
+      "confidence": 0.6214316199894413,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 0,
+      "last_at": 0,
+      "history": []
+     },
+     "ss_sell_negotiate": {
+      "id": "ss_sell_negotiate",
+      "p": [
+       0.34593146155564597,
+       0.327034269222177,
+       0.21802284614811804,
+       0.10901142307405902
+      ],
+      "level": 2,
+      "confidence": 0.6540685384443541,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 0,
+      "last_at": 0,
+      "history": []
+     },
+     "ss_teach_check": {
+      "id": "ss_teach_check",
+      "p": [
+       0.317318737021032,
+       0.34134063148948396,
+       0.22756042099298934,
+       0.11378021049649467
+      ],
+      "level": 2,
+      "confidence": 0.682681262978968,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 0,
+      "last_at": 0,
+      "history": []
+     },
+     "ss_teach_explain": {
+      "id": "ss_teach_explain",
+      "p": [
+       0.01590853803204625,
+       0.01305717683109509,
+       0.5710342851368586,
+       0.4
+      ],
+      "level": 3,
+      "confidence": 0.9710342851368586,
+      "strong": true,
+      "performance": true,
+      "paid": false,
+      "n": 1,
+      "last_at": 1762432000006,
+      "history": [
+       {
+        "event_id": "01K9CJ48060000000000000006",
+        "kind": "rating",
+        "at": 1762432000006,
+        "level_before": 2,
+        "level_after": 3,
+        "confidence_after": 0.9710342851368586
+       }
+      ]
+     },
+     "ss_teach_plan": {
+      "id": "ss_teach_plan",
+      "p": [
+       0.4,
+       0.3,
+       0.2,
+       0.1
+      ],
+      "level": 2,
+      "confidence": 0.6000000000000001,
+      "strong": false,
+      "performance": false,
+      "paid": false,
+      "n": 0,
+      "last_at": 0,
+      "history": []
+     }
+    },
+    "aptitude": {}
+   }
+  }
  ]
 }

@@ -39,3 +39,6 @@ def test_golden_is_current():
         assert matcher.recommend(case["persona"]) == case["result"]
     for case in golden["eligibility"]:
         assert eligibility.evaluate_all(case["facts"]) == case["result"]
+    from app.services import tracing
+    for case in golden["fold"]:
+        assert tracing.fold_events(case["events"], case["opts"]) == case["result"], case["name"]

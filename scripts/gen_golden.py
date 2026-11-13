@@ -16,7 +16,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "apps" / "api"))
 
 from app import kb  # noqa: E402
-from app.services import eligibility, matcher  # noqa: E402
+from app.services import eligibility, irt, matcher, tracing  # noqa: E402
+
+sys.path.insert(0, str(ROOT / "scripts"))
+import scenarios  # noqa: E402
 
 OUT = ROOT / "packages" / "engine" / "test" / "golden.json"
 
@@ -76,6 +79,51 @@ def random_facts(rng: random.Random) -> dict:
     return {k: gen() for k, gen in pool.items() if rng.random() < 0.6}
 
 
+def seeded_list(seed: int, n: int) -> list[float]:
+    r = irt.seeded_random(seed)
+    return [r() for _ in range(n)]
+
+
+def irt_cases() -> dict:
+    """Ability scoring, question picking and level conversion on fixed inputs."""
+    rand = irt.seeded_random(42)
+    bank = [{"id": f"q{i:02d}", "a": round(0.6 + 0.1 * (i % 9), 2), "b": round(-2 + 0.25 * i, 2),
+             "format": ["picture_choice", "order_steps", "spot_mistake"][i % 3]} for i in range(17)]
+    post = irt.prior()
+    picks, formats, seen = [], [], set()
+    truth = 0.7
+    rng = random.Random(7)
+    while not irt.should_stop(post, len(picks), len(bank) - len(seen)):
+        item = irt.next_item(post, bank, seen, rand, formats)
+        correct = rng.random() < irt.p_correct(truth, item["a"], item["b"])
+        post = irt.update(post, item, correct)
+        seen.add(item["id"])
+        formats.append(item["format"])
+        picks.append({"id": item["id"], "correct": correct, "eap": irt.eap(post), "se": irt.se(post)})
+    cuts = [-1.0, 0.3, 1.5]
+    return {
+        "random": seeded_list(7, 5),
+        "prior": irt.prior(),
+        "bank": bank,
+        "session": {"seed": 42, "truth_seed": 7, "truth": truth, "picks": picks, "post": post},
+        "level_probs": irt.level_probs(post, cuts),
+        "level_likelihood": irt.level_likelihood([(bank[3], True), (bank[8], True), (bank[12], False)], cuts),
+        "cuts": cuts,
+    }
+
+
+def fold_cases() -> list[dict]:
+    """Skill levels rebuilt from the scenario stories (scripts/scenarios.py), at every checkpoint."""
+    cases = []
+    events, opts, checkpoints = scenarios.meena()
+    for label, n in checkpoints:
+        o = {**opts, "now": events[n - 1]["created_at"]}
+        cases.append({"name": f"meena_{label}", "events": events[:n], "opts": o, "result": tracing.fold_events(events[:n], o)})
+    for name, (ev, o) in (("aptitude", scenarios.aptitude_story()), ("retraction", scenarios.retraction_story())):
+        cases.append({"name": name, "events": ev, "opts": o, "result": tracing.fold_events(ev, o)})
+    return cases
+
+
 def main() -> None:
     rng = random.Random(2026)
     personas = [MEENA, {}, {"education": "graduate", "skills": [{"id": "sk_coding"}]}]
@@ -92,6 +140,8 @@ def main() -> None:
         "recommend_embed": [{"persona": p, "embed_sims": embed_sims, "result": matcher.recommend(p, embed_sims=embed_sims)}
                             for p in personas[:10]],
         "eligibility": [{"facts": f, "result": eligibility.evaluate_all(f)} for f in facts_list],
+        "irt": irt_cases(),
+        "fold": fold_cases(),
     }
     OUT.write_text(json.dumps(golden, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"wrote {OUT.relative_to(ROOT)}: {len(personas)} students, {len(facts_list)} fact sets")
