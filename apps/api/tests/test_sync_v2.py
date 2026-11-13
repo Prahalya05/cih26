@@ -1,0 +1,100 @@
+"""/v2/sync: idempotent upload, consent check, two devices, cursor paging."""
+import pytest
+from fastapi.testclient import TestClient
+
+B32 = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+NOW = 1763000000000
+
+
+def uid(n: int) -> str:
+    """A valid 26-character ULID whose order follows n."""
+    s = ""
+    for _ in range(6):
+        s = B32[n % 32] + s
+        n //= 32
+    return "01KA0000000000000000" + s
+
+
+@pytest.fixture()
+def client(pg, monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    from app.main import app
+    return TestClient(app)
+
+
+STUDENT = {"id": "st1", "name": "Meena", "class": 11, "gender": "female", "district": "Dharmapuri",
+           "consent": {"id": "c1", "scopes": ["assess"], "method": "paper_form", "granted_at": NOW}}
+
+
+def self_report(n, student="st1", device="phoneA"):
+    return {"id": uid(n), "student_id": student, "device_id": device, "kind": "self_report",
+            "skill_id": "sk_stitching", "payload": {"source": "voice"}, "created_at": NOW + n}
+
+
+def test_same_batch_twice_is_harmless(client):
+    body = {"device_id": "phoneA", "students": [STUDENT], "events": [self_report(1), self_report(2)]}
+    r1 = client.post("/v2/sync", json=body).json()
+    r2 = client.post("/v2/sync", json=body).json()
+    assert r1["accepted"] == r2["accepted"] == [uid(1), uid(2)]
+    assert r1["rejected"] == []
+    from app import db
+    with db.connect() as con:
+        assert con.execute("select count(*) as n from evidence_event").fetchone()["n"] == 2
+        assert con.execute("select name from student_private").fetchone()["name"] == "Meena"
+
+
+def test_events_without_consent_are_rejected(client):
+    no_consent = {**STUDENT, "id": "st2", "consent": None}
+    r = client.post("/v2/sync", json={"device_id": "phoneA", "students": [no_consent],
+                                      "events": [self_report(1, student="st2")]}).json()
+    assert r["accepted"] == []
+    assert r["rejected"][0]["errors"] == ["no consent to assess this student"]
+
+
+def test_invalid_events_are_rejected_with_reasons(client):
+    bad = {**self_report(1), "payload": {"source": "shout"}}
+    r = client.post("/v2/sync", json={"device_id": "phoneA", "students": [STUDENT], "events": [bad]}).json()
+    assert r["rejected"][0]["errors"] == ["payload.source must be voice, tap or text"]
+
+
+def test_teacher_rating_reaches_the_student_phone(client):
+    sample = {"id": uid(1), "student_id": "st1", "device_id": "phoneA", "kind": "work_sample", "skill_id": "sk_stitching",
+              "payload": {"rubric_id": "rb_stitching", "scorer": "ai", "scores": {"seams": 2}}, "created_at": NOW}
+    a = client.post("/v2/sync", json={"device_id": "phoneA", "students": [STUDENT], "events": [sample]}).json()
+    assert a["events"] == []
+    rating = {"id": uid(2), "student_id": "st1", "device_id": "phoneT", "kind": "rating", "rater_id": "t1",
+              "refers_to": uid(1), "payload": {"scores": {"seams": 2}}, "created_at": NOW + 10}
+    t = client.post("/v2/sync", json={"device_id": "phoneT", "raters": [{"id": "t1", "role": "teacher"}],
+                                      "events": [rating], "student_ids": ["st1"], "cursor": 0}).json()
+    assert t["accepted"] == [uid(2)]
+    assert [e["id"] for e in t["events"]] == [uid(1)]  # the teacher phone gets the sample
+    back = client.post("/v2/sync", json={"device_id": "phoneA", "student_ids": ["st1"], "cursor": a["cursor"]}).json()
+    assert [e["id"] for e in back["events"]] == [uid(2)]
+    assert back["events"][0]["created_at"] == NOW + 10
+    again = client.post("/v2/sync", json={"device_id": "phoneA", "student_ids": ["st1"], "cursor": back["cursor"]}).json()
+    assert again["events"] == []
+
+
+def test_rating_for_unknown_event_waits(client):
+    client.post("/v2/sync", json={"device_id": "phoneA", "students": [STUDENT]})
+    rating = {"id": uid(5), "student_id": "st1", "device_id": "phoneT", "kind": "rating", "rater_id": "t1",
+              "refers_to": uid(4), "payload": {"scores": {"seams": 1}}, "created_at": NOW}
+    r = client.post("/v2/sync", json={"device_id": "phoneT", "raters": [{"id": "t1", "role": "teacher"}],
+                                      "events": [rating]}).json()
+    assert r["rejected"][0]["errors"] == ["refers_to an event the server does not have yet"]
+
+
+def test_cursor_pages_through_1000_events(client):
+    client.post("/v2/sync", json={"device_id": "phoneA", "students": [STUDENT]})
+    for start in range(0, 1000, 500):
+        evs = [self_report(n) for n in range(start, start + 500)]
+        r = client.post("/v2/sync", json={"device_id": "phoneA", "events": evs}).json()
+        assert len(r["accepted"]) == 500
+    seen, cursor = [], 0
+    for _ in range(5):
+        r = client.post("/v2/sync", json={"device_id": "phoneB", "student_ids": ["st1"], "cursor": cursor}).json()
+        seen += [e["id"] for e in r["events"]]
+        cursor = r["cursor"]
+        if not r["more"]:
+            break
+    assert len(seen) == 1000 and len(set(seen)) == 1000

@@ -1,0 +1,472 @@
+{
+ "now": 1763000000000,
+ "cases": [
+  {
+   "ok": true,
+   "e": {
+    "id": "01KA0000000000000000000000",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "self_report",
+    "payload": {
+     "source": "voice",
+     "evidence": "I stitch blouses"
+    },
+    "skill_id": "sk_stitching"
+   }
+  },
+  {
+   "ok": true,
+   "e": {
+    "id": "01KA0000000000000000000001",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "self_report",
+    "payload": {
+     "source": "tap",
+     "retracted": true
+    },
+    "skill_id": "sk_stitching"
+   }
+  },
+  {
+   "ok": false,
+   "e": {
+    "id": "01KA0000000000000000000002",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "self_report",
+    "payload": {
+     "source": "voice"
+    }
+   }
+  },
+  {
+   "ok": false,
+   "e": {
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "id": "not-a-ulid",
+    "kind": "self_report",
+    "skill_id": "sk_x",
+    "payload": {
+     "source": "voice"
+    }
+   }
+  },
+  {
+   "ok": false,
+   "e": {
+    "id": "01KA0000000000000000000004",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "self_report",
+    "payload": {
+     "source": "shout"
+    },
+    "skill_id": "sk_x"
+   }
+  },
+  {
+   "ok": true,
+   "e": {
+    "id": "01KA0000000000000000000005",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "item_response",
+    "payload": {
+     "correct": true,
+     "ms": 5300
+    },
+    "subskill_id": "ss_stitch_fitting",
+    "item_id": "it_1"
+   }
+  },
+  {
+   "ok": false,
+   "e": {
+    "id": "01KA0000000000000000000006",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "item_response",
+    "payload": {
+     "correct": 1,
+     "ms": 5300
+    },
+    "subskill_id": "ss_stitch_fitting",
+    "item_id": "it_1"
+   }
+  },
+  {
+   "ok": false,
+   "e": {
+    "id": "01KA0000000000000000000007",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763172800000,
+    "kind": "item_response",
+    "payload": {
+     "correct": true,
+     "ms": 5300
+    },
+    "subskill_id": "ss_stitch_fitting",
+    "item_id": "it_1"
+   }
+  },
+  {
+   "ok": false,
+   "e": {
+    "id": "01KA0000000000000000000008",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "item_response",
+    "payload": {
+     "correct": true,
+     "ms": 5300
+    },
+    "item_id": "it_1"
+   }
+  },
+  {
+   "ok": true,
+   "e": {
+    "id": "01KA0000000000000000000009",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "task",
+    "payload": {
+     "score": 0.75
+    },
+    "subskill_id": "ss_money_pricing"
+   }
+  },
+  {
+   "ok": false,
+   "e": {
+    "id": "01KA000000000000000000000A",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "task",
+    "payload": {
+     "score": 1.5
+    },
+    "subskill_id": "ss_money_pricing"
+   }
+  },
+  {
+   "ok": true,
+   "e": {
+    "id": "01KA000000000000000000000B",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "aptitude_response",
+    "payload": {
+     "domain": "apt_spatial",
+     "correct": false,
+     "ms": 4000
+    },
+    "item_id": "apt_sp_1"
+   }
+  },
+  {
+   "ok": false,
+   "e": {
+    "id": "01KA000000000000000000000C",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "aptitude_response",
+    "payload": {
+     "domain": "spatial",
+     "correct": false,
+     "ms": 4000
+    },
+    "item_id": "apt_sp_1"
+   }
+  },
+  {
+   "ok": true,
+   "e": {
+    "id": "01KA000000000000000000000D",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "interest_choice",
+    "payload": {
+     "card": "c_sewing",
+     "like": true
+    }
+   }
+  },
+  {
+   "ok": false,
+   "e": {
+    "id": "01KA000000000000000000000E",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "interest_choice",
+    "payload": {
+     "card": "c_sewing"
+    }
+   }
+  },
+  {
+   "ok": true,
+   "e": {
+    "id": "01KA000000000000000000000F",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "work_sample",
+    "payload": {
+     "rubric_id": "rb_stitching",
+     "scorer": "ai",
+     "scores": {
+      "seams": 2,
+      "edges": 1
+     }
+    },
+    "skill_id": "sk_stitching"
+   }
+  },
+  {
+   "ok": true,
+   "e": {
+    "id": "01KA000000000000000000000G",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "work_sample",
+    "payload": {
+     "rubric_id": "rb_stitching",
+     "scorer": "pending"
+    },
+    "skill_id": "sk_stitching"
+   }
+  },
+  {
+   "ok": false,
+   "e": {
+    "id": "01KA000000000000000000000H",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "work_sample",
+    "payload": {
+     "rubric_id": "rb_stitching",
+     "scorer": "ai",
+     "scores": {}
+    },
+    "skill_id": "sk_stitching"
+   }
+  },
+  {
+   "ok": false,
+   "e": {
+    "id": "01KA000000000000000000000J",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "work_sample",
+    "payload": {
+     "rubric_id": "rb_stitching",
+     "scorer": "ai",
+     "scores": {
+      "seams": 3
+     }
+    },
+    "skill_id": "sk_stitching"
+   }
+  },
+  {
+   "ok": false,
+   "e": {
+    "id": "01KA000000000000000000000K",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "work_sample",
+    "payload": {
+     "rubric_id": "rb_stitching",
+     "scorer": "ai",
+     "scores": {
+      "seams": true
+     }
+    },
+    "skill_id": "sk_stitching"
+   }
+  },
+  {
+   "ok": true,
+   "e": {
+    "id": "01KA000000000000000000000M",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "rating",
+    "payload": {
+     "scores": {
+      "seams": 2,
+      "edges": 2
+     }
+    },
+    "rater_id": "r1",
+    "refers_to": "01KA0000000000000000000000"
+   }
+  },
+  {
+   "ok": true,
+   "e": {
+    "id": "01KA000000000000000000000N",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "rating",
+    "payload": {
+     "level": 3
+    },
+    "rater_id": "r1",
+    "subskill_id": "ss_teach_explain"
+   }
+  },
+  {
+   "ok": true,
+   "e": {
+    "id": "01KA000000000000000000000P",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "rating",
+    "payload": {
+     "endorse": true
+    },
+    "rater_id": "r1",
+    "skill_id": "sk_stitching"
+   }
+  },
+  {
+   "ok": false,
+   "e": {
+    "id": "01KA000000000000000000000Q",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "rating",
+    "payload": {
+     "level": 3
+    },
+    "skill_id": "sk_stitching"
+   }
+  },
+  {
+   "ok": false,
+   "e": {
+    "id": "01KA000000000000000000000R",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "rating",
+    "payload": {
+     "level": 5
+    },
+    "rater_id": "r1",
+    "skill_id": "sk_stitching"
+   }
+  },
+  {
+   "ok": false,
+   "e": {
+    "id": "01KA000000000000000000000S",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "rating",
+    "payload": {
+     "level": 2
+    },
+    "rater_id": "r1"
+   }
+  },
+  {
+   "ok": true,
+   "e": {
+    "id": "01KA000000000000000000000T",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "order",
+    "payload": {
+     "amount_inr": 250
+    },
+    "skill_id": "sk_stitching"
+   }
+  },
+  {
+   "ok": false,
+   "e": {
+    "id": "01KA000000000000000000000V",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "order",
+    "payload": {
+     "amount_inr": -1
+    },
+    "skill_id": "sk_stitching"
+   }
+  },
+  {
+   "ok": true,
+   "e": {
+    "id": "01KA000000000000000000000W",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "taster",
+    "payload": {
+     "levels": {
+      "ss_elec_safety": 2
+     }
+    },
+    "rater_id": "r2"
+   }
+  },
+  {
+   "ok": false,
+   "e": {
+    "id": "01KA000000000000000000000X",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "taster",
+    "payload": {
+     "levels": {}
+    },
+    "rater_id": "r2"
+   }
+  },
+  {
+   "ok": false,
+   "e": {
+    "id": "01KA000000000000000000000Y",
+    "student_id": "s1",
+    "device_id": "d1",
+    "created_at": 1763000000000,
+    "kind": "gossip",
+    "payload": {}
+   }
+  }
+ ]
+}

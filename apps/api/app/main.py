@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import settings
 from .adapters import gemini
-from .routers import v1
+from .routers import v1, v2
 
 app = FastAPI(
     title="Disha API",
@@ -31,6 +31,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(v1.router)
+app.include_router(v2.router)
 
 
 @app.get("/health")
