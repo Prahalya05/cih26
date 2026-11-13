@@ -9,7 +9,7 @@ from typing import Callable
 
 GRID = [-4 + i * 0.2 for i in range(41)]
 STOP_SE = 0.4
-MAX_ITEMS = 10
+MAX_ITEMS = 8
 TOP_K = 3
 MAX_RUN = 3
 
@@ -90,8 +90,14 @@ def next_item(post: list[float], bank: list[dict], seen: set[str], rand: Callabl
     return ranked[math.floor(rand() * k)]
 
 
-def should_stop(post: list[float], answered: int, items_left: int) -> bool:
-    return se(post) < STOP_SE or answered >= MAX_ITEMS or items_left == 0
+STOP_LEVEL_CONFIDENCE = 0.85
+MIN_ITEMS = 3
+
+
+def should_stop(post: list[float], answered: int, items_left: int, cuts=None) -> bool:
+    if se(post) < STOP_SE or answered >= MAX_ITEMS or items_left == 0:
+        return True
+    return cuts is not None and answered >= MIN_ITEMS and max(level_probs(post, cuts)) >= STOP_LEVEL_CONFIDENCE
 
 
 def band_of(th: float, cuts) -> int:

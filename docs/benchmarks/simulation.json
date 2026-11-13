@@ -1,0 +1,39 @@
+{
+ "students": 500,
+ "ratings": 2500,
+ "exact": 0.7996,
+ "within_one": 0.998,
+ "mean_items": 7.6448,
+ "max_items": 8,
+ "confusion_true_by_estimated": [
+  [
+   645,
+   125,
+   5,
+   0
+  ],
+  [
+   126,
+   614,
+   120,
+   0
+  ],
+  [
+   0,
+   80,
+   546,
+   0
+  ],
+  [
+   0,
+   0,
+   45,
+   194
+  ]
+ ],
+ "exact_by_self_report_bias": {
+  "under": 0.7988165680473372,
+  "accurate": 0.8,
+  "over": 0.8
+ }
+}

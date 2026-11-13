@@ -3,6 +3,7 @@
 import type { EvidenceEvent } from "@disha/engine";
 import { db, type Action, type SkillClaim, type StoredEvent, type Student } from "./db";
 import { deviceId } from "./events";
+import { refreshSkillState } from "./skills";
 
 const API = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 
@@ -93,6 +94,7 @@ export async function syncEvents(): Promise<boolean> {
       await db.meta.put({ key: "event_cursor", value: out.cursor });
     });
     cursor = out.cursor;
+    for (const sid of new Set(out.events.map((e) => e.student_id))) await refreshSkillState(sid);
   };
 
   try {

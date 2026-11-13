@@ -67,7 +67,7 @@ export function seededRandom(seed: number): () => number {
 }
 
 export const STOP_SE = 0.4;
-export const MAX_ITEMS = 10;
+export const MAX_ITEMS = 8;
 const TOP_K = 3;      // pick at random among the 3 most informative, so friends can't share answers
 const MAX_RUN = 3;    // no more than 3 questions in a row of the same format
 
@@ -93,14 +93,22 @@ export function nextItem(post: number[], bank: ItemParams[], seen: Set<string>, 
   return ranked[Math.floor(rand() * k)].it;
 }
 
-export function shouldStop(post: number[], answered: number, itemsLeft: number): boolean {
-  return se(post) < STOP_SE || answered >= MAX_ITEMS || itemsLeft === 0;
+export const STOP_LEVEL_CONFIDENCE = 0.85;
+export const MIN_ITEMS = 3;
+
+/**
+ * Stop when the ability is precise (SE < 0.4), or, given the sub-skill's cut-points, when one level is
+ * 85% likely after at least 3 answers (we only need her level, not an exact score), or after 8 answers.
+ */
+export function shouldStop(post: number[], answered: number, itemsLeft: number, cuts?: readonly number[]): boolean {
+  if (se(post) < STOP_SE || answered >= MAX_ITEMS || itemsLeft === 0) return true;
+  return !!cuts && answered >= MIN_ITEMS && Math.max(...levelProbs(post, cuts)) >= STOP_LEVEL_CONFIDENCE;
 }
 
 // ---------- levels ----------
 
 /** Splits the ability posterior into chances of levels 1-4, using a sub-skill's three cut-points. */
-export function levelProbs(post: number[], cuts: readonly [number, number, number] | number[]): number[] {
+export function levelProbs(post: number[], cuts: readonly number[]): number[] {
   const out = [0, 0, 0, 0];
   for (let i = 0; i < GRID.length; i++) out[bandOf(GRID[i], cuts)] += post[i];
   return out;

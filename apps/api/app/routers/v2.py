@@ -12,8 +12,9 @@ from fastapi import APIRouter
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel, Field
 
-from .. import db
+from .. import db, kb
 from ..schemas import validate_event
+from ..services import tracing
 
 router = APIRouter(prefix="/v2", tags=["v2"])
 
@@ -128,6 +129,27 @@ def _insert_events(con, device_id: str, events: list[dict]) -> tuple[list[str], 
     return accepted, rejected
 
 
+def refresh_state(con, student_ids: set[str]) -> None:
+    """Rebuilds skill_state and aptitude_state for these students from all their events."""
+    if not student_ids:
+        return
+    raters = {r["id"]: r["agreement"] for r in con.execute("select id, agreement from rater")}
+    now = datetime.now(tz=timezone.utc)
+    for sid in sorted(student_ids):
+        rows = con.execute("select * from evidence_event where student_id = %s", (sid,)).fetchall()
+        events = [_row_to_event(r) for r in rows]
+        profile = tracing.fold_events(events, {"now": _ms(now), "items": kb.items(), "rubrics": kb.rubrics(),
+                                               "raterWeights": raters})
+        con.execute("delete from skill_state where student_id = %s", (sid,))
+        for uid, u in profile["units"].items():
+            con.execute("insert into skill_state(student_id, subskill_id, p_level, theta, se, updated_at) "
+                        "values (%s, %s, %s, null, null, %s)", (sid, uid, u["p"], now))
+        con.execute("delete from aptitude_state where student_id = %s", (sid,))
+        for domain, a in profile["aptitude"].items():
+            con.execute("insert into aptitude_state(student_id, domain, theta, se) values (%s, %s, %s, %s)",
+                        (sid, domain, a["theta"], a["se"]))
+
+
 def _row_to_event(r: dict) -> dict:
     e = {k: r[k] for k in ("id", "student_id", "device_id", "kind", "payload")}
     for k in ("skill_id", "subskill_id", "item_id", "rater_id", "refers_to"):
@@ -145,6 +167,7 @@ def sync(req: SyncIn):
             con.execute("insert into rater(id, role, school_id) values (%s, %s, %s) on conflict (id) do nothing",
                         (r.id, r.role, r.school_id))
         accepted, rejected = _insert_events(con, req.device_id, req.events)
+        refresh_state(con, {e["student_id"] for e in req.events if e.get("id") in set(accepted)})
         wanted = sorted(set(req.student_ids) | {s.id for s in req.students})
         rows = con.execute(
             "select * from evidence_event where student_id = any(%s) and seq > %s and device_id <> %s "

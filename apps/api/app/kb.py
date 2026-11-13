@@ -67,3 +67,28 @@ def graph() -> dict:
 def skill_of(subskill_or_skill: str) -> str:
     s = graph()["subskills"].get(subskill_or_skill)
     return s["skill"] if s else subskill_or_skill
+
+
+@lru_cache
+def items() -> dict[str, dict]:
+    """Question bank: packages/kb/items/*.json, keyed by id, with a and b for scoring."""
+    out: dict[str, dict] = {}
+    folder = KB_DIR / "items"
+    if folder.is_dir():
+        for p in sorted(folder.glob("*.json")):
+            with open(p, encoding="utf-8") as f:
+                for it in json.load(f):
+                    out[it["id"]] = {**it, "a": it.get("a", 1.0), "b": it["b"]}
+    return out
+
+
+@lru_cache
+def rubrics() -> dict[str, dict]:
+    out: dict[str, dict] = {}
+    folder = KB_DIR / "rubrics"
+    if folder.is_dir():
+        for p in sorted(folder.glob("*.json")):
+            with open(p, encoding="utf-8") as f:
+                r = json.load(f)
+                out[r["id"]] = r
+    return out

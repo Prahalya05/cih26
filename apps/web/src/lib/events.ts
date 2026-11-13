@@ -3,6 +3,7 @@
 
 import { ulid, validateEvent, type EvidenceEvent } from "@disha/engine";
 import { db } from "./db";
+import { refreshSkillState } from "./skills";
 
 export type NewEvent = Omit<EvidenceEvent, "id" | "device_id" | "created_at">;
 
@@ -33,6 +34,7 @@ export async function recordEvent(e: NewEvent, at = Date.now()): Promise<Evidenc
   }
   const student = await db.students.get(e.student_id);
   await db.events.put({ ...event, synced: student?.simulated ? 1 : 0 }); // demo students never sync
+  await refreshSkillState(e.student_id);
   return event;
 }
 

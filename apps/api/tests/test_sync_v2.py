@@ -98,3 +98,14 @@ def test_cursor_pages_through_1000_events(client):
         if not r["more"]:
             break
     assert len(seen) == 1000 and len(set(seen)) == 1000
+
+
+def test_sync_rebuilds_skill_levels_for_teachers(client):
+    sample = {"id": uid(1), "student_id": "st1", "device_id": "phoneA", "kind": "work_sample", "skill_id": "sk_stitching",
+              "payload": {"rubric_id": "rb_stitching", "scorer": "ai", "scores": {"seams": 2, "edges": 2}}, "created_at": NOW}
+    client.post("/v2/sync", json={"device_id": "phoneA", "students": [STUDENT], "events": [self_report(0), sample]})
+    from app import db
+    with db.connect() as con:
+        rows = {r["subskill_id"]: r["p_level"] for r in con.execute("select * from skill_state where student_id = 'st1'")}
+    assert set(rows) >= {"ss_stitch_machine", "ss_stitch_fitting", "ss_stitch_measure", "ss_stitch_cutting"}
+    assert rows["ss_stitch_machine"][2] + rows["ss_stitch_machine"][3] > 0.5  # likely level 3 or above
