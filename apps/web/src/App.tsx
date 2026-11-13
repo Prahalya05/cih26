@@ -11,6 +11,7 @@ import FactsScreen from "./screens/Facts";
 import Results from "./screens/Results";
 import CareerDetail from "./screens/CareerDetail";
 import Teacher from "./screens/Teacher";
+import Assess from "./screens/Assess";
 
 export type Route =
   | { name: "home" }
@@ -21,7 +22,8 @@ export type Route =
   | { name: "facts"; id: string }
   | { name: "results"; id: string; tab?: "strengths" | "careers" | "schemes" }
   | { name: "career"; id: string; occ: string }
-  | { name: "teacher" };
+  | { name: "teacher" }
+  | { name: "assess"; id: string; subskill: string };
 
 export type Go = (r: Route) => void;
 
@@ -64,6 +66,7 @@ export default function App() {
       {route.name === "results" && <Results go={go} id={route.id} tab={route.tab ?? "strengths"} />}
       {route.name === "career" && <CareerDetail go={go} id={route.id} occ={route.occ} />}
       {route.name === "teacher" && <Teacher go={go} />}
+      {route.name === "assess" && <Assess go={go} id={route.id} subskill={route.subskill} />}
     </LangContext.Provider>
   );
 }

@@ -9,6 +9,8 @@ import { useT } from "../lib/i18n";
 import { kb } from "../lib/kb";
 import { formatDate, SCHEME_TYPE, SECTOR } from "../lib/labels";
 import { analyse, type Analysis } from "../lib/profile";
+import { ITEMS, profileOf } from "../lib/skills";
+import type { UnitState } from "@disha/engine";
 
 type Tab = "strengths" | "careers" | "schemes";
 
@@ -42,7 +44,7 @@ export default function Results({ go, id, tab }: { go: Go; id: string; tab: Tab 
         ))}
       </nav>
 
-      {tab === "strengths" && <Strengths a={analysis} />}
+      {tab === "strengths" && <><SkillLevels id={id} go={go} claimed={analysis.skills.map((s) => s.id)} /><Strengths a={analysis} /></>}
       {tab === "careers" && <Careers a={analysis} go={go} id={id} />}
       {tab === "schemes" && <Schemes a={analysis} student={student} />}
 
@@ -55,6 +57,71 @@ export default function Results({ go, id, tab }: { go: Go; id: string; tab: Tab 
         }}>🗑 {t("deleteMe")}</Button>
       </div>
     </Screen>
+  );
+}
+
+/** Levels 1-4 per sub-skill, rebuilt from evidence events, with a test button where questions exist. */
+function SkillLevels({ id, go, claimed }: { id: string; go: Go; claimed: string[] }) {
+  const { t, pick } = useT();
+  const profile = useLive(() => profileOf(id), [id], null);
+  if (!profile) return null;
+  const g = kb.graph!;
+  const testable = new Set(Object.values(ITEMS).map((it) => it.subskill));
+  const skills = Object.keys(g.bySkill).filter((sk) =>
+    claimed.includes(sk) || g.bySkill[sk].some((u) => (profile.units[u]?.n ?? 0) > 0));
+  if (!skills.length) return null;
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="text-2xl font-bold">{t("skillLevels")}</h2>
+      <p className="text-muted">{t("skillLevelsHint")}</p>
+      {skills.map((sk) => (
+        <article key={sk} className="rounded-3xl bg-white p-4 shadow-sm">
+          <h3 className="text-lg font-semibold">{pick(kb.skills[sk].name)}</h3>
+          <ul className="mt-2 flex flex-col gap-3">
+            {g.bySkill[sk].map((u) => (
+              <SubskillRow key={u} unitId={u} unit={profile.units[u]} canTest={testable.has(u)}
+                onTest={() => go({ name: "assess", id, subskill: u })} />
+            ))}
+          </ul>
+        </article>
+      ))}
+    </section>
+  );
+}
+
+function SubskillRow({ unitId, unit, canTest, onTest }: { unitId: string; unit?: UnitState; canTest: boolean; onTest: () => void }) {
+  const { t, pick } = useT();
+  const sub = kb.graph!.subskills[unitId];
+  const direct = unit && unit.n > 0;
+  const kinds = [...new Set((unit?.history ?? []).map((h) => h.kind))];
+  const tested = kinds.includes("test");
+  return (
+    <li className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-2">
+        <p className="flex-1 font-medium">{pick(sub.name)}</p>
+        {unit?.strong && <Pill tone="good">💪 {t("strong")}</Pill>}
+      </div>
+      {direct ? (
+        <>
+          <div className="flex gap-1" aria-label={t("levelN", { n: unit.level })}>
+            {[1, 2, 3, 4].map((L) => (
+              <div key={L} className={`h-2.5 flex-1 rounded-full ${L <= unit.level ? (unit.confidence >= 0.8 ? "bg-good" : "bg-sun") : "bg-line"}`} />
+            ))}
+          </div>
+          <p className="text-sm text-muted">
+            {t("levelN", { n: unit.level })}: {t(`level${unit.level}` as "level1")} · {t("sure", { pct: Math.round(unit.confidence * 100) })}
+          </p>
+          <p className="text-xs text-muted">{t("basedOn")}: {kinds.map((k) => t(`ev_${k}` as "ev_test")).join(", ")}</p>
+        </>
+      ) : (
+        <p className="text-sm text-muted">{t("notTestedYet")}</p>
+      )}
+      {canTest && (
+        <button onClick={onTest} className="self-start rounded-xl bg-brand-soft px-3 py-2 text-sm font-semibold text-brand-dark">
+          📝 {tested ? t("testAgain") : t("testMe")}
+        </button>
+      )}
+    </li>
   );
 }
 

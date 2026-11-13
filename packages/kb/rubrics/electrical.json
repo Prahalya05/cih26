@@ -1,0 +1,24 @@
+{
+  "id": "rb_electrical",
+  "skill": "sk_electrical_basic",
+  "name": {"en": "Basic electrical work sample", "ta": "அடிப்படை மின் வேலை மாதிரி"},
+  "capture": {"en": "Under 18: a battery circuit (battery, switch, bulb) you made. 18 and over: a switchboard you wired, with the supply off. Short video, say each step aloud.", "ta": "18 வயதுக்குக் கீழ்: நீங்கள் செய்த பேட்டரி மின்சுற்று (பேட்டரி, சுவிட்ச், பல்பு). 18 மற்றும் மேல்: சப்ளை அணைத்த நிலையில் நீங்கள் இணைத்த சுவிட்ச் போர்டு. சிறு வீடியோ, ஒவ்வொரு படியையும் சொல்லுங்கள்."},
+  "under_18": "battery_circuit_only",
+  "criteria": [
+    {"id": "safety_steps", "subskill": "ss_elec_safety",
+     "name": {"en": "Says and follows safety steps", "ta": "பாதுகாப்புப் படிகளைச் சொல்லிப் பின்பற்றுகிறார்"},
+     "scores": {"0": "No safety step", "1": "Some steps (switch off) but not all", "2": "Supply off, dry hands, checks with tester before touching"}},
+    {"id": "connections", "subskill": "ss_elec_circuits",
+     "name": {"en": "Connections are correct", "ta": "இணைப்புகள் சரியாக உள்ளன"},
+     "scores": {"0": "Circuit does not work", "1": "Works, but a wire is in the wrong place", "2": "Works, every wire in the right place"}},
+    {"id": "insulation", "subskill": "ss_elec_safety",
+     "name": {"en": "No bare wire showing", "ta": "வெற்றுக் கம்பி தெரியவில்லை"},
+     "scores": {"0": "Bare copper visible", "1": "A little bare wire at a joint", "2": "All joints insulated and tight"}},
+    {"id": "tools", "subskill": "ss_elec_tools",
+     "name": {"en": "Uses the right tools", "ta": "சரியான கருவிகளைப் பயன்படுத்துகிறார்"},
+     "scores": {"0": "Wrong tool (knife for stripping, no tester)", "1": "Mostly right tools", "2": "Stripper, screwdriver and tester used correctly"}},
+    {"id": "neat", "subskill": "ss_elec_circuits",
+     "name": {"en": "Neat and labelled", "ta": "ஒழுங்காகவும் குறியிட்டும் உள்ளது"},
+     "scores": {"0": "Tangled wires", "1": "Tidy but unlabelled", "2": "Tidy, colour-coded and labelled"}}
+  ]
+}

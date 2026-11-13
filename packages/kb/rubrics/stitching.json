@@ -1,0 +1,23 @@
+{
+  "id": "rb_stitching",
+  "skill": "sk_stitching",
+  "name": {"en": "Stitching work sample", "ta": "தையல் வேலை மாதிரி"},
+  "capture": {"en": "Photo of a blouse or garment you stitched: one of the outside, one of the inside seams.", "ta": "நீங்கள் தைத்த பிளவுஸ் அல்லது ஆடையின் புகைப்படம்: ஒன்று வெளிப்புறம், ஒன்று உள்பக்கத் தையல்கள்."},
+  "criteria": [
+    {"id": "seams", "subskill": "ss_stitch_machine",
+     "name": {"en": "Seams are straight", "ta": "தையல்கள் நேராக உள்ளன"},
+     "scores": {"0": "Seams wander or pucker", "1": "Mostly straight, a few wobbles", "2": "Straight and flat all along"}},
+    {"id": "even", "subskill": "ss_stitch_machine",
+     "name": {"en": "Stitches are even", "ta": "தையல்கள் சீராக உள்ளன"},
+     "scores": {"0": "Loose, skipped or bunched stitches", "1": "Mostly even", "2": "Even length and tension throughout"}},
+    {"id": "edges", "subskill": "ss_stitch_machine",
+     "name": {"en": "Edges are finished", "ta": "ஓரங்கள் முடிக்கப்பட்டுள்ளன"},
+     "scores": {"0": "Raw edges fraying", "1": "Some edges finished", "2": "All edges overlocked, folded or bound"}},
+    {"id": "fit", "subskill": "ss_stitch_fitting",
+     "name": {"en": "Fits the body well", "ta": "உடலுக்கு நன்றாகப் பொருந்துகிறது"},
+     "scores": {"0": "Clearly too tight or loose", "1": "Small fit problems (armhole, waist)", "2": "Sits smoothly with no pulling"}},
+    {"id": "shape", "subskill": "ss_stitch_cutting",
+     "name": {"en": "Pieces are cut to shape", "ta": "துண்டுகள் வடிவத்திற்கு வெட்டப்பட்டுள்ளன"},
+     "scores": {"0": "Uneven or mismatched pieces", "1": "Minor mismatch at joins", "2": "Matching, symmetrical pieces"}}
+  ]
+}
