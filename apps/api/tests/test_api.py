@@ -8,10 +8,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
 @pytest.fixture()
-def client(tmp_path, monkeypatch):
+def client(pg, monkeypatch):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-    from app import db
-    monkeypatch.setattr(db, "DB_PATH", tmp_path / "test.sqlite3")
     from fastapi.testclient import TestClient
     from app.main import app
     return TestClient(app)
