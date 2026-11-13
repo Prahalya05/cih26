@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Go } from "../App";
 import { Button, Pill, Screen, useLive, useOnline } from "../components/ui";
 import { addAction, db, type Action, type Student } from "../lib/db";
+import { raterId, recordEvent } from "../lib/events";
 import { clearDemoClass, loadDemoClass } from "../lib/demo";
 import { useT } from "../lib/i18n";
 import { kb } from "../lib/kb";
@@ -10,6 +11,12 @@ import { analyse, isStrongMatch, type Analysis } from "../lib/profile";
 import { pullCohort, syncNow } from "../lib/sync";
 
 const savedCode = () => { try { return localStorage.getItem("disha.code") ?? ""; } catch { return ""; } };
+
+/** A teacher confirms a skill: kept as a v1 action (current screens) and as a rating event (skill levels). */
+async function endorse(studentId: string, skillId: string) {
+  await addAction({ student_id: studentId, kind: "endorse", payload: { skill_id: skillId }, by: "teacher" });
+  await recordEvent({ student_id: studentId, kind: "rating", rater_id: await raterId(), skill_id: skillId, payload: { endorse: true } });
+}
 
 export default function Teacher({ go }: { go: Go }) {
   const { t, lang } = useT();
@@ -130,7 +137,7 @@ function StudentRow({ s, a, strong, open, onToggle }: { s: Student; a: Analysis;
                   </div>
                   {sk.endorsed
                     ? <Pill tone="good">✔ {t("endorsedBy")}</Pill>
-                    : <button onClick={() => addAction({ student_id: s.id, kind: "endorse", payload: { skill_id: sk.id }, by: "teacher" })}
+                    : <button onClick={() => void endorse(s.id, sk.id)}
                         className="rounded-xl bg-good-soft px-3 py-2 text-sm font-semibold text-good">✔ {t("endorse")}</button>}
                 </li>
               ))}

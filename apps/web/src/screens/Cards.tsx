@@ -3,6 +3,7 @@ import type { Go } from "../App";
 import { Progress, Screen, SpeakButton, useLive } from "../components/ui";
 import { CARDS } from "../data/cards";
 import { db, patchStudent } from "../lib/db";
+import { recordEvent } from "../lib/events";
 import { useT } from "../lib/i18n";
 import { speak } from "../lib/speech";
 
@@ -32,6 +33,7 @@ export default function Cards({ go, id }: { go: Go; id: string }) {
 
   const answer = async (like: boolean) => {
     await patchStudent(id, (s) => ({ ...s, cards: { ...s.cards, [card.id]: like } }));
+    await recordEvent({ student_id: id, kind: "interest_choice", payload: { card: card.id, like } });
     setIndex(index + 1);
   };
 

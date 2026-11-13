@@ -3,6 +3,7 @@ import type { Go } from "../App";
 import { Button, Chip, Pill, Progress, Screen, SpeakButton, useLive, useOnline } from "../components/ui";
 import { QUESTIONS } from "../data/questions";
 import { db, patchStudent, type Answer, type SkillClaim } from "../lib/db";
+import { recordEvent, recordEvents } from "../lib/events";
 import { useT } from "../lib/i18n";
 import { extractKeywords } from "../lib/keywords";
 import { kb } from "../lib/kb";
@@ -37,12 +38,19 @@ export default function Questions({ go, id }: { go: Go; id: string }) {
   const update = (change: (a: Answer) => Answer) =>
     patchStudent(id, (s) => ({ ...s, answers: { ...s.answers, [q.id]: change(s.answers[q.id] ?? { qid: q.id, chips: [] }) } }));
 
-  const toggle = (skill: string) =>
+  const toggle = (skill: string) => {
+    const wasOn = answer.chips.includes(skill);
     void update((a) => ({ ...a, chips: a.chips.includes(skill) ? a.chips.filter((c) => c !== skill) : [...a.chips, skill] }));
+    void recordEvent({ student_id: id, kind: "self_report", skill_id: skill,
+      payload: { source: "tap", qid: q.id, ...(wasOn ? { retracted: true } : {}) } });
+  };
 
   const join = (a?: string, b?: string) => [a, b].filter(Boolean).join(" · ");
 
   const addExtracted = (skills: SkillClaim[], extra: (a: Answer) => Partial<Answer>) => {
+    const fresh = skills.filter((s) => !(answer.extracted ?? []).some((m) => m.id === s.id));
+    void recordEvents(fresh.map((s) => ({ student_id: id, kind: "self_report" as const, skill_id: s.id,
+      payload: { source: s.source, qid: q.id, evidence: s.evidence, confidence: s.confidence } })));
     void update((a) => {
       const merged = [...(a.extracted ?? [])];
       for (const s of skills) if (!merged.some((m) => m.id === s.id)) merged.push(s);

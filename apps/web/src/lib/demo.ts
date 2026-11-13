@@ -2,7 +2,8 @@
 // Real 30/90-day outcomes can't exist before the finale, so we don't pretend they do.
 
 import { CARDS, type Riasec } from "../data/cards";
-import { db, type Student } from "./db";
+import { db, eventsFromLegacy, type Student } from "./db";
+import { deviceId } from "./events";
 
 interface Seed {
   name: string;
@@ -62,12 +63,17 @@ export async function loadDemoClass(code: string) {
     };
   });
   await db.students.bulkPut(students);
+  const device = await deviceId();
+  const events = students.flatMap((s) => eventsFromLegacy(s, [], device));
+  await db.events.bulkPut(events.map((e) => ({ ...e, synced: 1 as const }))); // demo events never leave the phone
 }
 
 export async function clearDemoClass() {
   const ids = (await db.students.filter((s) => !!s.simulated).primaryKeys()) as string[];
-  await db.transaction("rw", db.students, db.actions, async () => {
+  await db.transaction("rw", [db.students, db.actions, db.events, db.skillState], async () => {
     await db.students.bulkDelete(ids);
     await db.actions.where("student_id").anyOf(ids).delete();
+    await db.events.where("student_id").anyOf(ids).delete();
+    await db.skillState.where("student_id").anyOf(ids).delete();
   });
 }
