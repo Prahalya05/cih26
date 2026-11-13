@@ -1,6 +1,7 @@
 // Builds the knowledge base object from the raw JSON files.
 // The engine never reads files itself, so it runs the same in the browser and in Node.
 
+import { loadGraph, type RawGraph } from "./graph.ts";
 import type { KB, Occupation, Rule, Scheme, Skill } from "./types.ts";
 
 export const EDUCATION_ORDER: Record<string, number> = {
@@ -21,11 +22,13 @@ export function buildKb(raw: {
   occupations: Occupation[];
   schemes: Scheme[];
   rules: Rule[];
+  graph?: RawGraph;
 }): KB {
   return {
     skills: byId(raw.skills),
     occupations: byId(raw.occupations),
     schemes: byId(raw.schemes),
     rules: byId(raw.rules),
+    ...(raw.graph ? { graph: loadGraph(raw.graph) } : {}),
   };
 }

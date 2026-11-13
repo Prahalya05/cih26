@@ -40,3 +40,30 @@ def rules() -> dict[str, dict]:
             r = json.load(f)
         out[r["id"]] = r
     return out
+
+
+@lru_cache
+def graph() -> dict:
+    """Sub-skills, aptitudes and links. Same shape and key order as loadGraph() in packages/engine/src/graph.ts."""
+    subskills = _load("graph/subskills.json")
+    g: dict = {"subskills": {}, "aptitudes": {}, "bySkill": {}, "needs": {}, "aptitudeNeeds": {}, "related": {}}
+    for s in subskills:
+        g["subskills"][s["id"]] = s
+        g["bySkill"].setdefault(s["skill"], []).append(s["id"])
+        g["related"][s["id"]] = []
+    for a in _load("graph/aptitudes.json"):
+        g["aptitudes"][a["id"]] = a
+    for e in _load("graph/edges.json"):
+        if e["type"] == "NEEDS":
+            g["needs"].setdefault(e["src"], []).append({"id": e["dst"], "level": e.get("level", 2), "weight": e["weight"]})
+        elif e["type"] == "NEEDS_APTITUDE":
+            g["aptitudeNeeds"].setdefault(e["src"], []).append({"id": e["dst"], "weight": e["weight"]})
+        else:
+            g["related"][e["src"]].append({"id": e["dst"], "weight": e["weight"]})
+            g["related"][e["dst"]].append({"id": e["src"], "weight": e["weight"]})
+    return g
+
+
+def skill_of(subskill_or_skill: str) -> str:
+    s = graph()["subskills"].get(subskill_or_skill)
+    return s["skill"] if s else subskill_or_skill

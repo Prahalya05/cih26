@@ -1,0 +1,5 @@
+[
+  {"id": "apt_spatial", "name": {"en": "Spatial reasoning", "ta": "இட அமைவு சிந்தனை"}, "games": ["paper_folding", "rotation"]},
+  {"id": "apt_numeric", "name": {"en": "Number sense", "ta": "எண் அறிவு"}, "games": ["money_quantity"]},
+  {"id": "apt_mechanical", "name": {"en": "Mechanical sense", "ta": "இயந்திர அறிவு"}, "games": ["gears_levers_flow"]}
+]

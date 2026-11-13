@@ -17,7 +17,7 @@ Changing anything here means rewriting questions and checklists, so the whole te
 | `sk_caring_people` Caring for people | `ss_care_firstaid` first aid · `ss_care_hygiene` hygiene and infection · `ss_care_listening` listening and reassuring |
 | `sk_teaching_explaining` Teaching and explaining | `ss_teach_explain` explaining step by step · `ss_teach_check` checking understanding · `ss_teach_plan` planning a short lesson |
 
-33 sub-skills in total. The other 15 skills in `packages/kb/skills.json` stay in the knowledge base. They can be self-reported and rated by teachers, but they have no question bank in the demo.
+32 sub-skills in total. The other 15 skills in `packages/kb/skills.json` stay in the knowledge base. They can be self-reported and rated by teachers, but they have no question bank in the demo.
 
 ## Aptitude games
 

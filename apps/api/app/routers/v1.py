@@ -30,6 +30,11 @@ def get_kb():
         "occupations": list(kb.occupations().values()),
         "schemes": list(kb.schemes().values()),
         "rules": list(kb.rules().values()),
+        "graph": {
+            "subskills": list(kb.graph()["subskills"].values()),
+            "aptitudes": list(kb.graph()["aptitudes"].values()),
+            "edges": kb._load("graph/edges.json"),
+        },
     }
     version = hashlib.sha256(json.dumps(data, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:12]
     return {"version": version, **data}

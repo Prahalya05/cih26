@@ -1,5 +1,7 @@
 // Shapes of the knowledge base files in packages/kb.
 
+import type { Graph } from "./graph.ts";
+
 export type Lang = { en: string; ta?: string; [lang: string]: string | undefined };
 
 export interface Skill {
@@ -52,6 +54,8 @@ export interface KB {
   occupations: Record<string, Occupation>;
   schemes: Record<string, Scheme>;
   rules: Record<string, Rule>;
+  /** Sub-skills, aptitudes and links. Absent only in old tests that build a KB by hand. */
+  graph?: Graph;
 }
 
 export interface Persona {

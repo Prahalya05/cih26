@@ -17,5 +17,10 @@ export function loadKb(dir = KB_DIR): KB {
     occupations: read(join(dir, "occupations.json")),
     schemes: read(join(dir, "schemes.json")),
     rules: ruleFiles.map((f) => read(join(dir, "rules", f))),
+    graph: {
+      subskills: read(join(dir, "graph", "subskills.json")),
+      aptitudes: read(join(dir, "graph", "aptitudes.json")),
+      edges: read(join(dir, "graph", "edges.json")),
+    },
   });
 }
