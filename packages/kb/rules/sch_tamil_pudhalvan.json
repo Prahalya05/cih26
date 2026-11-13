@@ -1,0 +1,73 @@
+{
+ "id": "sch_tamil_pudhalvan",
+ "updated": "2026-11-11",
+ "notes": "Boys who studied Classes 6-12 in a TN government school, paid while in higher education. Check whether the Dec 2024 aided-school extension and the third-gender inclusion also apply here.",
+ "rule": {
+  "and": [
+   {
+    "==": [
+     {
+      "var": "gender"
+     },
+     "male"
+    ]
+   },
+   {
+    "==": [
+     {
+      "var": "state"
+     },
+     "TN"
+    ]
+   },
+   {
+    "==": [
+     {
+      "var": "school_6_to_12"
+     },
+     "govt"
+    ]
+   },
+   {
+    "in": [
+     {
+      "var": "stage"
+     },
+     [
+      "iti",
+      "diploma",
+      "ug"
+     ]
+    ]
+   }
+  ]
+ },
+ "fixtures": [
+  {
+   "facts": {
+    "gender": "male",
+    "state": "TN",
+    "school_6_to_12": "govt",
+    "stage": "ug"
+   },
+   "expected": "eligible"
+  },
+  {
+   "facts": {
+    "gender": "female",
+    "state": "TN",
+    "school_6_to_12": "govt",
+    "stage": "ug"
+   },
+   "expected": "not_eligible"
+  },
+  {
+   "facts": {
+    "gender": "male",
+    "state": "TN",
+    "stage": "ug"
+   },
+   "expected": "need_info"
+  }
+ ]
+}

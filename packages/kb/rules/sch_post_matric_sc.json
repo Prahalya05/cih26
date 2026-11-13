@@ -1,0 +1,76 @@
+{
+ "id": "sch_post_matric_sc",
+ "updated": "2026-11-11",
+ "notes": "Post-Matric Scholarship for SC students after Class 10 (Class 11 onwards, ITI, diploma, degree); family income up to Rs 2.5 lakh.",
+ "rule": {
+  "and": [
+   {
+    "==": [
+     {
+      "var": "category"
+     },
+     "sc"
+    ]
+   },
+   {
+    ">=": [
+     {
+      "var": "passed_class"
+     },
+     10
+    ]
+   },
+   {
+    "in": [
+     {
+      "var": "stage"
+     },
+     [
+      "school",
+      "iti",
+      "diploma",
+      "ug",
+      "pg"
+     ]
+    ]
+   },
+   {
+    "<=": [
+     {
+      "var": "family_income_inr"
+     },
+     250000
+    ]
+   }
+  ]
+ },
+ "fixtures": [
+  {
+   "facts": {
+    "category": "sc",
+    "passed_class": 10,
+    "stage": "diploma",
+    "family_income_inr": 150000
+   },
+   "expected": "eligible"
+  },
+  {
+   "facts": {
+    "category": "sc",
+    "passed_class": 8,
+    "stage": "school",
+    "family_income_inr": 150000
+   },
+   "expected": "not_eligible"
+  },
+  {
+   "facts": {
+    "category": "sc",
+    "passed_class": 12,
+    "stage": "ug",
+    "family_income_inr": 400000
+   },
+   "expected": "not_eligible"
+  }
+ ]
+}

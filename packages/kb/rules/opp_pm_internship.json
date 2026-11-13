@@ -1,0 +1,130 @@
+{
+ "id": "opp_pm_internship",
+ "updated": "2026-11-11",
+ "notes": "Apr 2026 expansion (reported by BusinessToday, 22 Apr 2026): age 18-25; final-year UG/PG students allowed with institution NOC; family income up to Rs 8 lakh; no family member in a regular government job; not in a full-time job. Confirm against the official MCA notification.",
+ "rule": {
+  "and": [
+   {
+    "<=": [
+     18,
+     {
+      "var": "age"
+     },
+     25
+    ]
+   },
+   {
+    ">=": [
+     {
+      "var": "passed_class"
+     },
+     10
+    ]
+   },
+   {
+    "<=": [
+     {
+      "var": "family_income_inr"
+     },
+     800000
+    ]
+   },
+   {
+    "==": [
+     {
+      "var": "govt_job_family"
+     },
+     false
+    ]
+   },
+   {
+    "==": [
+     {
+      "var": "full_time_job"
+     },
+     false
+    ]
+   },
+   {
+    "or": [
+     {
+      "==": [
+       {
+        "var": "studying_full_time"
+       },
+       false
+      ]
+     },
+     {
+      "==": [
+       {
+        "var": "final_year"
+       },
+       true
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "fixtures": [
+  {
+   "facts": {
+    "age": 19,
+    "passed_class": 12,
+    "family_income_inr": 200000,
+    "govt_job_family": false,
+    "full_time_job": false,
+    "studying_full_time": false
+   },
+   "expected": "eligible"
+  },
+  {
+   "facts": {
+    "age": 21,
+    "passed_class": 12,
+    "family_income_inr": 200000,
+    "govt_job_family": false,
+    "full_time_job": false,
+    "studying_full_time": true,
+    "final_year": true
+   },
+   "expected": "eligible"
+  },
+  {
+   "facts": {
+    "age": 21,
+    "passed_class": 12,
+    "family_income_inr": 200000,
+    "govt_job_family": false,
+    "full_time_job": false,
+    "studying_full_time": true,
+    "final_year": false
+   },
+   "expected": "not_eligible"
+  },
+  {
+   "facts": {
+    "age": 17,
+    "passed_class": 12
+   },
+   "expected": "not_eligible"
+  },
+  {
+   "facts": {
+    "age": 22,
+    "passed_class": 12,
+    "family_income_inr": 900000
+   },
+   "expected": "not_eligible"
+  },
+  {
+   "facts": {
+    "age": 22,
+    "passed_class": 12,
+    "family_income_inr": 200000
+   },
+   "expected": "need_info"
+  }
+ ]
+}

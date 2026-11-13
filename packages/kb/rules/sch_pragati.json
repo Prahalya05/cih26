@@ -1,0 +1,158 @@
+{
+ "id": "sch_pragati",
+ "updated": "2026-11-11",
+ "notes": "AICTE Pragati: girls admitted to first year (or second year by lateral entry) of an AICTE-approved diploma or degree; family income up to Rs 8 lakh; at most 2 girls per family. Renewals continue in later years (renewal not modelled).",
+ "rule": {
+  "and": [
+   {
+    "==": [
+     {
+      "var": "gender"
+     },
+     "female"
+    ]
+   },
+   {
+    "in": [
+     {
+      "var": "stage"
+     },
+     [
+      "diploma",
+      "ug"
+     ]
+    ]
+   },
+   {
+    "==": [
+     {
+      "var": "course_type"
+     },
+     "technical"
+    ]
+   },
+   {
+    "<=": [
+     {
+      "var": "family_income_inr"
+     },
+     800000
+    ]
+   },
+   {
+    "if": [
+     {
+      "==": [
+       {
+        "var": "year_of_study"
+       },
+       1
+      ]
+     },
+     true,
+     {
+      "==": [
+       {
+        "var": "year_of_study"
+       },
+       2
+      ]
+     },
+     {
+      "==": [
+       {
+        "var": "lateral_entry"
+       },
+       true
+      ]
+     },
+     false
+    ]
+   },
+   {
+    "<=": [
+     {
+      "var": [
+       "other_girls_in_family_with_pragati",
+       0
+      ]
+     },
+     1
+    ]
+   }
+  ]
+ },
+ "fixtures": [
+  {
+   "facts": {
+    "gender": "female",
+    "stage": "diploma",
+    "course_type": "technical",
+    "family_income_inr": 120000,
+    "year_of_study": 1
+   },
+   "expected": "eligible"
+  },
+  {
+   "facts": {
+    "gender": "female",
+    "stage": "ug",
+    "course_type": "technical",
+    "family_income_inr": 120000,
+    "year_of_study": 2,
+    "lateral_entry": true
+   },
+   "expected": "eligible"
+  },
+  {
+   "facts": {
+    "gender": "female",
+    "stage": "ug",
+    "course_type": "technical",
+    "family_income_inr": 120000,
+    "year_of_study": 3
+   },
+   "expected": "not_eligible"
+  },
+  {
+   "facts": {
+    "gender": "female",
+    "stage": "ug",
+    "course_type": "technical",
+    "family_income_inr": 120000,
+    "year_of_study": 1,
+    "other_girls_in_family_with_pragati": 2
+   },
+   "expected": "not_eligible"
+  },
+  {
+   "facts": {
+    "gender": "male",
+    "stage": "diploma",
+    "course_type": "technical",
+    "family_income_inr": 120000,
+    "year_of_study": 1
+   },
+   "expected": "not_eligible"
+  },
+  {
+   "facts": {
+    "gender": "female",
+    "stage": "ug",
+    "course_type": "general",
+    "family_income_inr": 120000,
+    "year_of_study": 1
+   },
+   "expected": "not_eligible"
+  },
+  {
+   "facts": {
+    "gender": "female",
+    "stage": "diploma",
+    "course_type": "technical",
+    "family_income_inr": 120000
+   },
+   "expected": "need_info"
+  }
+ ]
+}

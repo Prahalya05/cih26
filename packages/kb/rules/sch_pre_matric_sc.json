@@ -1,0 +1,62 @@
+{
+ "id": "sch_pre_matric_sc",
+ "updated": "2026-11-11",
+ "notes": "Pre-Matric Scholarship for SC students in Classes 9-10; family income up to Rs 2.5 lakh.",
+ "rule": {
+  "and": [
+   {
+    "==": [
+     {
+      "var": "category"
+     },
+     "sc"
+    ]
+   },
+   {
+    "in": [
+     {
+      "var": "current_class"
+     },
+     [
+      9,
+      10
+     ]
+    ]
+   },
+   {
+    "<=": [
+     {
+      "var": "family_income_inr"
+     },
+     250000
+    ]
+   }
+  ]
+ },
+ "fixtures": [
+  {
+   "facts": {
+    "category": "sc",
+    "current_class": 9,
+    "family_income_inr": 100000
+   },
+   "expected": "eligible"
+  },
+  {
+   "facts": {
+    "category": "obc",
+    "current_class": 9,
+    "family_income_inr": 100000
+   },
+   "expected": "not_eligible"
+  },
+  {
+   "facts": {
+    "category": "sc",
+    "current_class": 9,
+    "family_income_inr": 300000
+   },
+   "expected": "not_eligible"
+  }
+ ]
+}

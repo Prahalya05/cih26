@@ -1,0 +1,132 @@
+{
+ "id": "sch_pudhumai_penn",
+ "updated": "2026-11-11",
+ "notes": "Girls who studied Classes 6-12 in a TN government school; extended 30 Dec 2024 to Tamil-medium students of government-aided schools. Paid while in higher education (ITI, diploma, degree).",
+ "rule": {
+  "and": [
+   {
+    "==": [
+     {
+      "var": "gender"
+     },
+     "female"
+    ]
+   },
+   {
+    "==": [
+     {
+      "var": "state"
+     },
+     "TN"
+    ]
+   },
+   {
+    "if": [
+     {
+      "==": [
+       {
+        "var": "school_6_to_12"
+       },
+       "govt"
+      ]
+     },
+     true,
+     {
+      "==": [
+       {
+        "var": "school_6_to_12"
+       },
+       "aided"
+      ]
+     },
+     {
+      "==": [
+       {
+        "var": "tamil_medium"
+       },
+       true
+      ]
+     },
+     false
+    ]
+   },
+   {
+    "in": [
+     {
+      "var": "stage"
+     },
+     [
+      "iti",
+      "diploma",
+      "ug"
+     ]
+    ]
+   }
+  ]
+ },
+ "fixtures": [
+  {
+   "facts": {
+    "gender": "female",
+    "state": "TN",
+    "school_6_to_12": "govt",
+    "stage": "diploma"
+   },
+   "expected": "eligible"
+  },
+  {
+   "facts": {
+    "gender": "female",
+    "state": "TN",
+    "school_6_to_12": "aided",
+    "tamil_medium": true,
+    "stage": "ug"
+   },
+   "expected": "eligible"
+  },
+  {
+   "facts": {
+    "gender": "female",
+    "state": "TN",
+    "school_6_to_12": "aided",
+    "tamil_medium": false,
+    "stage": "ug"
+   },
+   "expected": "not_eligible"
+  },
+  {
+   "facts": {
+    "gender": "female",
+    "state": "TN",
+    "school_6_to_12": "private",
+    "stage": "ug"
+   },
+   "expected": "not_eligible"
+  },
+  {
+   "facts": {
+    "gender": "female",
+    "state": "TN",
+    "school_6_to_12": "govt",
+    "stage": "school"
+   },
+   "expected": "not_eligible"
+  },
+  {
+   "facts": {
+    "gender": "female",
+    "state": "TN",
+    "school_6_to_12": "aided",
+    "stage": "ug"
+   },
+   "expected": "need_info"
+  },
+  {
+   "facts": {
+    "gender": "male",
+    "state": "TN"
+   },
+   "expected": "not_eligible"
+  }
+ ]
+}

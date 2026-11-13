@@ -1,0 +1,10 @@
+// @disha/engine: career matching and scheme eligibility that run on the phone, offline.
+// Keep in step with apps/api/app/services/*.py. test/parity.test.ts checks both give identical results.
+
+export * from "./types.ts";
+export { buildKb, EDUCATION_ORDER, SECTORS } from "./kb.ts";
+export { apply as applyRule, Evaluation, UNKNOWN } from "./jsonlogic.ts";
+export { check, evaluateAll, joined, NEXT_STAGES } from "./eligibility.ts";
+export type { SchemeResult, Status } from "./eligibility.ts";
+export { feasibility, mmrRerank, recommend, scoreAll, skillOverlap, whatIf, WEIGHTS } from "./matcher.ts";
+export type { ScoredCareer, WhatIf } from "./matcher.ts";

@@ -1,0 +1,114 @@
+{
+ "id": "sch_nmms",
+ "updated": "2026-11-11",
+ "notes": "NMMS: apply in Class 8 at a government or aided school (Kendriya Vidyalaya, Navodaya, Sainik and residential schools excluded); family income up to Rs 3.5 lakh; at least 55% in Class 7 (50% for SC/ST). Mostly useful for younger siblings, since Disha users are Class 9 and above.",
+ "rule": {
+  "and": [
+   {
+    "==": [
+     {
+      "var": "current_class"
+     },
+     8
+    ]
+   },
+   {
+    "in": [
+     {
+      "var": "school_type"
+     },
+     [
+      "govt",
+      "aided"
+     ]
+    ]
+   },
+   {
+    "<=": [
+     {
+      "var": "family_income_inr"
+     },
+     350000
+    ]
+   },
+   {
+    ">=": [
+     {
+      "var": "class7_percent"
+     },
+     {
+      "if": [
+       {
+        "in": [
+         {
+          "var": "category"
+         },
+         [
+          "sc",
+          "st"
+         ]
+        ]
+       },
+       50,
+       55
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "fixtures": [
+  {
+   "facts": {
+    "current_class": 8,
+    "school_type": "govt",
+    "family_income_inr": 200000,
+    "class7_percent": 60,
+    "category": "general"
+   },
+   "expected": "eligible"
+  },
+  {
+   "facts": {
+    "current_class": 8,
+    "school_type": "govt",
+    "family_income_inr": 200000,
+    "class7_percent": 52,
+    "category": "sc"
+   },
+   "expected": "eligible"
+  },
+  {
+   "facts": {
+    "current_class": 8,
+    "school_type": "govt",
+    "family_income_inr": 200000,
+    "class7_percent": 52,
+    "category": "obc"
+   },
+   "expected": "not_eligible"
+  },
+  {
+   "facts": {
+    "current_class": 8,
+    "school_type": "central",
+    "family_income_inr": 200000,
+    "class7_percent": 80
+   },
+   "expected": "not_eligible"
+  },
+  {
+   "facts": {
+    "current_class": 10,
+    "school_type": "govt"
+   },
+   "expected": "not_eligible"
+  },
+  {
+   "facts": {
+    "stage": "ug"
+   },
+   "expected": "need_info"
+  }
+ ]
+}

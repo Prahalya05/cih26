@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #fffbf5;
+  --color-ink: #1c1917;
+  --color-muted: #57534e;
+  --color-brand: #0f766e;
+  --color-brand-dark: #115e59;
+  --color-brand-soft: #ccfbf1;
+  --color-sun: #f59e0b;
+  --color-sun-soft: #fef3c7;
+  --color-good: #15803d;
+  --color-good-soft: #dcfce7;
+  --color-warn: #b45309;
+  --color-line: #e7e5e4;
+  --font-sans: "Noto Sans Tamil", "Noto Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 3px solid var(--color-sun);
+  outline-offset: 2px;
+}
+
+@keyframes pop {
+  from { transform: scale(0.96); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.pop { animation: pop 180ms ease-out; }

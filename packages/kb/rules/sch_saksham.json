@@ -1,0 +1,103 @@
+{
+ "id": "sch_saksham",
+ "updated": "2026-11-11",
+ "notes": "AICTE Saksham: students with 40% or more disability admitted to first year (or second year by lateral entry) of an AICTE-approved diploma or degree; family income up to Rs 8 lakh. Same structure as Pragati; confirm in the AICTE guidelines.",
+ "rule": {
+  "and": [
+   {
+    ">=": [
+     {
+      "var": "disability_percent"
+     },
+     40
+    ]
+   },
+   {
+    "in": [
+     {
+      "var": "stage"
+     },
+     [
+      "diploma",
+      "ug"
+     ]
+    ]
+   },
+   {
+    "==": [
+     {
+      "var": "course_type"
+     },
+     "technical"
+    ]
+   },
+   {
+    "<=": [
+     {
+      "var": "family_income_inr"
+     },
+     800000
+    ]
+   },
+   {
+    "if": [
+     {
+      "==": [
+       {
+        "var": "year_of_study"
+       },
+       1
+      ]
+     },
+     true,
+     {
+      "==": [
+       {
+        "var": "year_of_study"
+       },
+       2
+      ]
+     },
+     {
+      "==": [
+       {
+        "var": "lateral_entry"
+       },
+       true
+      ]
+     },
+     false
+    ]
+   }
+  ]
+ },
+ "fixtures": [
+  {
+   "facts": {
+    "disability_percent": 50,
+    "stage": "ug",
+    "course_type": "technical",
+    "family_income_inr": 500000,
+    "year_of_study": 1
+   },
+   "expected": "eligible"
+  },
+  {
+   "facts": {
+    "disability_percent": 20,
+    "stage": "ug",
+    "course_type": "technical",
+    "family_income_inr": 500000,
+    "year_of_study": 1
+   },
+   "expected": "not_eligible"
+  },
+  {
+   "facts": {
+    "disability_percent": 0,
+    "stage": "school"
+   },
+   "expected": "not_eligible"
+  }
+ ]
+}

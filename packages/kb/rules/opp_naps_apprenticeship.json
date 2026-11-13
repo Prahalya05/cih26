@@ -1,0 +1,75 @@
+{
+ "id": "opp_naps_apprenticeship",
+ "updated": "2026-11-11",
+ "notes": "NAPS apprenticeship: minimum age 14, or 18 for hazardous trades; Class 8 passed or more (depends on trade). Eligible means you can register; you still need an employer opening on the portal.",
+ "rule": {
+  "and": [
+   {
+    ">=": [
+     {
+      "var": "passed_class"
+     },
+     8
+    ]
+   },
+   {
+    "if": [
+     {
+      "var": [
+       "hazardous_trade",
+       false
+      ]
+     },
+     {
+      ">=": [
+       {
+        "var": "age"
+       },
+       18
+      ]
+     },
+     {
+      ">=": [
+       {
+        "var": "age"
+       },
+       14
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "fixtures": [
+  {
+   "facts": {
+    "age": 16,
+    "passed_class": 8
+   },
+   "expected": "eligible"
+  },
+  {
+   "facts": {
+    "age": 16,
+    "passed_class": 10,
+    "hazardous_trade": true
+   },
+   "expected": "not_eligible"
+  },
+  {
+   "facts": {
+    "age": 18,
+    "passed_class": 10,
+    "hazardous_trade": true
+   },
+   "expected": "eligible"
+  },
+  {
+   "facts": {
+    "age": 13,
+    "passed_class": 8
+   },
+   "expected": "not_eligible"
+  }
+ ]
+}

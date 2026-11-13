@@ -1,0 +1,146 @@
+[
+  {
+    "id": "occ_fashion_designer", "sector": "creative", "riasec": "AES", "min_education": "class12",
+    "name": {"en": "Fashion Designer", "ta": "ஆடை வடிவமைப்பாளர்"},
+    "description_en": "Designs clothes and accessories; turns sketches into garments for shops, brands or own label.",
+    "skills": [{"id": "sk_drawing", "w": 3}, {"id": "sk_stitching", "w": 2}, {"id": "sk_colour_design", "w": 3}, {"id": "sk_selling", "w": 1}],
+    "pathway": ["Finish Class 12 (any stream)", "Prepare for NIFT / NID entrance or join a state fashion diploma", "Build a sketch portfolio", "Intern with a boutique or garment unit"],
+    "exams": ["NIFT entrance", "NID DAT"], "local_demand_tn": "medium",
+    "source_url": "https://www.nift.ac.in", "needs_verification": true
+  },
+  {
+    "id": "occ_sewing_machine_operator", "sector": "vocational", "riasec": "RC", "min_education": "class8",
+    "name": {"en": "Sewing Machine Operator (Apprentice)", "ta": "தையல் இயந்திர இயக்குநர் (பயிற்சியாளர்)"},
+    "description_en": "Operates industrial sewing machines in garment units; paid apprenticeship available.",
+    "skills": [{"id": "sk_stitching", "w": 3}, {"id": "sk_tools_handling", "w": 1}, {"id": "sk_organising", "w": 1}],
+    "pathway": ["Register on the apprenticeship portal", "Join a garment-unit apprenticeship (stipend)", "Get NSQF certificate", "Move up to line supervisor / quality checker"],
+    "exams": [], "local_demand_tn": "high",
+    "source_url": "https://www.apprenticeshipindia.gov.in", "needs_verification": true
+  },
+  {
+    "id": "occ_textile_technician", "sector": "stem", "riasec": "RIC", "min_education": "class10",
+    "name": {"en": "Textile Technician (Diploma)", "ta": "நெசவு தொழில்நுட்பர் (பட்டயம்)"},
+    "description_en": "Runs and checks spinning, weaving and dyeing processes in textile mills.",
+    "skills": [{"id": "sk_science", "w": 2}, {"id": "sk_machine_repair", "w": 2}, {"id": "sk_stitching", "w": 1}, {"id": "sk_basic_math", "w": 2}],
+    "pathway": ["Finish Class 10", "Join 3-year Diploma in Textile Technology at a polytechnic", "Industrial training in a mill", "Lateral entry to B.Tech (optional)"],
+    "exams": ["Polytechnic admission (state)"], "local_demand_tn": "high",
+    "source_url": "https://www.tndte.gov.in", "needs_verification": true
+  },
+  {
+    "id": "occ_boutique_owner", "sector": "entrepreneurship", "riasec": "EAS", "min_education": "none",
+    "name": {"en": "Boutique / Tailoring Business Owner", "ta": "தையல் கடை / பூட்டிக் உரிமையாளர்"},
+    "description_en": "Runs own tailoring or boutique shop; can start small from home with a sewing machine.",
+    "skills": [{"id": "sk_stitching", "w": 3}, {"id": "sk_money_handling", "w": 2}, {"id": "sk_selling", "w": 2}, {"id": "sk_colour_design", "w": 1}],
+    "pathway": ["Take a short entrepreneurship / tailoring course", "Start taking orders from neighbours", "Apply for a micro-enterprise loan scheme", "Sell online via social media"],
+    "exams": [], "local_demand_tn": "high",
+    "source_url": "https://www.myscheme.gov.in", "needs_verification": true
+  },
+  {
+    "id": "occ_graphic_designer", "sector": "creative", "riasec": "AIE", "min_education": "class12",
+    "name": {"en": "Graphic Designer", "ta": "வரைகலை வடிவமைப்பாளர்"},
+    "description_en": "Designs posters, logos, social-media posts and packaging using computer tools.",
+    "skills": [{"id": "sk_drawing", "w": 2}, {"id": "sk_colour_design", "w": 3}, {"id": "sk_computer_basic", "w": 3}, {"id": "sk_photography", "w": 1}],
+    "pathway": ["Learn free design tools online", "Take a design course (diploma or online certificate)", "Do small paid jobs for local shops", "Build an online portfolio"],
+    "exams": [], "local_demand_tn": "medium",
+    "source_url": "https://swayam.gov.in", "needs_verification": true
+  },
+  {
+    "id": "occ_electrician", "sector": "vocational", "riasec": "RIC", "min_education": "class10",
+    "name": {"en": "Electrician (ITI)", "ta": "மின் பணியாளர் (ITI)"},
+    "description_en": "Installs and repairs wiring, motors and electrical fittings in homes, farms and factories.",
+    "skills": [{"id": "sk_electrical_basic", "w": 3}, {"id": "sk_tools_handling", "w": 2}, {"id": "sk_machine_repair", "w": 2}, {"id": "sk_basic_math", "w": 1}],
+    "pathway": ["Finish Class 10", "Join 2-year ITI Electrician trade", "Apprenticeship with stipend", "Get wireman licence / start own service"],
+    "exams": ["ITI admission (state)"], "local_demand_tn": "high",
+    "source_url": "https://dgt.gov.in", "needs_verification": true
+  },
+  {
+    "id": "occ_two_wheeler_mechanic", "sector": "vocational", "riasec": "RC", "min_education": "class8",
+    "name": {"en": "Two-wheeler Mechanic", "ta": "இருசக்கர வாகன மெக்கானிக்"},
+    "description_en": "Services and repairs bikes and scooters, including electric two-wheelers.",
+    "skills": [{"id": "sk_machine_repair", "w": 3}, {"id": "sk_tools_handling", "w": 3}, {"id": "sk_driving", "w": 1}],
+    "pathway": ["Join a short NSQF two-wheeler service course", "Apprentice at a service centre", "Learn EV servicing", "Open own workshop"],
+    "exams": [], "local_demand_tn": "high",
+    "source_url": "https://www.skillindiadigital.gov.in", "needs_verification": true
+  },
+  {
+    "id": "occ_dairy_entrepreneur", "sector": "agri", "riasec": "REC", "min_education": "none",
+    "name": {"en": "Dairy Farmer / Entrepreneur", "ta": "பால் பண்ணை தொழில்முனைவோர்"},
+    "description_en": "Runs a small dairy unit, sells milk to cooperatives, can scale with loans and better breeds.",
+    "skills": [{"id": "sk_animal_care", "w": 3}, {"id": "sk_money_handling", "w": 2}, {"id": "sk_selling", "w": 1}],
+    "pathway": ["Take a dairy-farming training (KVK / state dairy)", "Join the village milk cooperative", "Apply for dairy entrepreneurship support scheme", "Add value: curd, paneer, ghee"],
+    "exams": [], "local_demand_tn": "medium",
+    "source_url": "https://www.myscheme.gov.in", "needs_verification": true
+  },
+  {
+    "id": "occ_agri_drone_operator", "sector": "agri", "riasec": "RIE", "min_education": "class10",
+    "name": {"en": "Agricultural Drone Operator", "ta": "வேளாண் ட்ரோன் இயக்குநர்"},
+    "description_en": "Flies drones to spray crops and map fields for farmers; new and growing rural job.",
+    "skills": [{"id": "sk_crop_farming", "w": 2}, {"id": "sk_computer_basic", "w": 2}, {"id": "sk_machine_repair", "w": 1}, {"id": "sk_science", "w": 1}],
+    "pathway": ["Finish Class 10", "Complete a DGCA-approved remote pilot training", "Get remote pilot certificate", "Work with FPOs or start a spraying service"],
+    "exams": [], "local_demand_tn": "medium",
+    "source_url": "https://www.dgca.gov.in", "needs_verification": true
+  },
+  {
+    "id": "occ_nurse_anm", "sector": "health", "riasec": "SIR", "min_education": "class12",
+    "name": {"en": "Nurse (ANM / GNM)", "ta": "செவிலியர்"},
+    "description_en": "Provides patient care in hospitals, primary health centres and villages.",
+    "skills": [{"id": "sk_caring_people", "w": 3}, {"id": "sk_science", "w": 2}, {"id": "sk_communication", "w": 1}],
+    "pathway": ["Finish Class 12 (science preferred)", "Join ANM (2 yr) or GNM / B.Sc Nursing", "Register with state nursing council", "Work at PHC / hospital"],
+    "exams": ["State nursing admission"], "local_demand_tn": "high",
+    "source_url": "https://www.indiannursingcouncil.org", "needs_verification": true
+  },
+  {
+    "id": "occ_primary_teacher", "sector": "govt", "riasec": "SAE", "min_education": "class12",
+    "name": {"en": "Primary School Teacher", "ta": "தொடக்கப்பள்ளி ஆசிரியர்"},
+    "description_en": "Teaches children in Classes 1–5; government posts need D.El.Ed/B.Ed and TET.",
+    "skills": [{"id": "sk_teaching_explaining", "w": 3}, {"id": "sk_communication", "w": 2}, {"id": "sk_reading_writing", "w": 2}],
+    "pathway": ["Finish Class 12", "Do D.El.Ed (2 yr) or degree + B.Ed", "Clear Teacher Eligibility Test (TET)", "Apply for govt / private teaching posts"],
+    "exams": ["TNTET / CTET"], "local_demand_tn": "medium",
+    "source_url": "https://ctet.nic.in", "needs_verification": true
+  },
+  {
+    "id": "occ_bank_correspondent", "sector": "services", "riasec": "CES", "min_education": "class10",
+    "name": {"en": "Bank Business Correspondent (Bank Mitra)", "ta": "வங்கி வணிக முகவர் (வங்கி மித்ரா)"},
+    "description_en": "Provides basic banking services (deposits, withdrawals, accounts) in the village on behalf of a bank.",
+    "skills": [{"id": "sk_money_handling", "w": 3}, {"id": "sk_computer_basic", "w": 2}, {"id": "sk_communication", "w": 2}, {"id": "sk_organising", "w": 1}],
+    "pathway": ["Finish Class 10/12", "Complete IIBF BC/BF certification", "Tie up with a bank / CSP provider", "Run a Customer Service Point"],
+    "exams": ["IIBF BC certification"], "local_demand_tn": "medium",
+    "source_url": "https://www.iibf.org.in", "needs_verification": true
+  },
+  {
+    "id": "occ_software_developer", "sector": "stem", "riasec": "IRC", "min_education": "graduate",
+    "name": {"en": "Software Developer", "ta": "மென்பொருள் உருவாக்குநர்"},
+    "description_en": "Builds apps and websites; many free online courses; jobs in cities and remote.",
+    "skills": [{"id": "sk_coding", "w": 3}, {"id": "sk_basic_math", "w": 2}, {"id": "sk_computer_basic", "w": 2}, {"id": "sk_english_basic", "w": 1}],
+    "pathway": ["Finish Class 12 (maths)", "Degree / diploma in computer science or BCA", "Learn coding via free courses (SWAYAM / NPTEL)", "Internships, then entry-level job"],
+    "exams": ["TNEA / JEE", "Polytechnic admission"], "local_demand_tn": "medium",
+    "source_url": "https://nptel.ac.in", "needs_verification": true
+  },
+  {
+    "id": "occ_police_constable", "sector": "govt", "riasec": "SRE", "min_education": "class10",
+    "name": {"en": "Police Constable", "ta": "காவலர்"},
+    "description_en": "Maintains law and order; recruited through state uniformed services exam with physical test.",
+    "skills": [{"id": "sk_physical_fitness", "w": 3}, {"id": "sk_communication", "w": 1}, {"id": "sk_leadership", "w": 1}],
+    "pathway": ["Finish Class 10 (12 for some posts)", "Prepare for state police recruitment exam", "Pass physical efficiency test", "Training at police academy"],
+    "exams": ["TNUSRB Constable"], "local_demand_tn": "medium",
+    "source_url": "https://www.tnusrb.tn.gov.in", "needs_verification": true
+  },
+  {
+    "id": "occ_cook_chef", "sector": "services", "riasec": "RAE", "min_education": "class10",
+    "name": {"en": "Cook / Chef (Hospitality)", "ta": "சமையல் கலைஞர்"},
+    "description_en": "Prepares food in hotels, canteens and catering; can grow into own food business.",
+    "skills": [{"id": "sk_cooking", "w": 3}, {"id": "sk_organising", "w": 1}, {"id": "sk_colour_design", "w": 1}],
+    "pathway": ["Short NSQF commis chef course or hotel-management diploma", "Apprenticeship in a hotel kitchen", "Specialise (bakery, South Indian, etc.)", "Catering / food-stall business"],
+    "exams": ["NCHM JEE (for hotel management)"], "local_demand_tn": "high",
+    "source_url": "https://nchm.gov.in", "needs_verification": true
+  },
+  {
+    "id": "occ_content_creator", "sector": "creative", "riasec": "AES", "min_education": "none",
+    "name": {"en": "Photographer / Video Creator", "ta": "புகைப்படக் கலைஞர் / காணொளி உருவாக்குநர்"},
+    "description_en": "Shoots and edits photos and videos for events, local businesses and social media.",
+    "skills": [{"id": "sk_photography", "w": 3}, {"id": "sk_computer_basic", "w": 2}, {"id": "sk_communication", "w": 1}, {"id": "sk_colour_design", "w": 1}],
+    "pathway": ["Practise with a phone camera", "Free video-editing course", "Assist a local event photographer", "Start own page / studio"],
+    "exams": [], "local_demand_tn": "medium",
+    "source_url": "https://www.skillindiadigital.gov.in", "needs_verification": true
+  }
+]
