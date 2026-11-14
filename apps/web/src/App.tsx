@@ -14,6 +14,9 @@ import Teacher from "./screens/Teacher";
 import Assess from "./screens/Assess";
 import Game from "./screens/Game";
 import WorkSample from "./screens/WorkSample";
+import Order from "./screens/Order";
+import Rate from "./screens/Rate";
+import ConfirmJob from "./screens/ConfirmJob";
 import { scorePending } from "./lib/samples";
 
 export type Route =
@@ -28,7 +31,9 @@ export type Route =
   | { name: "teacher" }
   | { name: "assess"; id: string; subskill: string }
   | { name: "game"; id: string; domain: string }
-  | { name: "sample"; id: string; rubric: string };
+  | { name: "sample"; id: string; rubric: string }
+  | { name: "order"; id: string }
+  | { name: "rate"; id: string; mode: "taster" | "term" };
 
 export type Go = (r: Route) => void;
 
@@ -37,6 +42,8 @@ const write = (k: string, v: string) => { try { localStorage.setItem(k, v); } ca
 
 export default function App() {
   const [route, setRoute] = useState<Route>({ name: "home" });
+  // A buyer opening a job-confirmation link (?confirm=token) sees only that page.
+  const [confirmToken, setConfirmToken] = useState(() => new URLSearchParams(location.search).get("confirm"));
   const [lang, setLangState] = useState<LangCode>(() => (read("disha.lang") as LangCode) || "ta");
 
   const setLang = (l: LangCode) => {
@@ -63,7 +70,8 @@ export default function App() {
 
   return (
     <LangContext.Provider value={{ lang, setLang }}>
-      {route.name === "home" && <Home go={go} />}
+      {confirmToken && <ConfirmJob token={confirmToken} onClose={() => { history.replaceState(null, "", "/"); setConfirmToken(null); }} />}
+      {!confirmToken && route.name === "home" && <Home go={go} />}
       {route.name === "new" && <NewStudent go={go} />}
       {route.name === "consent" && <Consent go={go} id={route.id} />}
       {route.name === "cards" && <Cards go={go} id={route.id} />}
@@ -75,6 +83,8 @@ export default function App() {
       {route.name === "assess" && <Assess go={go} id={route.id} subskill={route.subskill} />}
       {route.name === "game" && <Game go={go} id={route.id} domain={route.domain} />}
       {route.name === "sample" && <WorkSample go={go} id={route.id} rubric={route.rubric} />}
+      {route.name === "order" && <Order go={go} id={route.id} />}
+      {route.name === "rate" && <Rate go={go} id={route.id} mode={route.mode} />}
     </LangContext.Provider>
   );
 }

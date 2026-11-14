@@ -124,3 +124,17 @@ def validate_event(e: dict, now_ms: float | None = None) -> list[str]:
         if not isinstance(levels, dict) or not levels or not all(_level(v) for v in levels.values()):
             errs.append("payload.levels must map sub-skills to 1-4")
     return errs
+
+
+_B32 = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+
+
+def new_ulid(now_ms: float | None = None) -> str:
+    """A ULID for events the server makes itself (a buyer's confirmation)."""
+    import secrets
+    t = int(time.time() * 1000 if now_ms is None else now_ms)
+    out = ""
+    for _ in range(10):
+        out = _B32[t % 32] + out
+        t //= 32
+    return out + "".join(secrets.choice(_B32) for _ in range(16))

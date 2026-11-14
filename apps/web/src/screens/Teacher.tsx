@@ -93,7 +93,7 @@ export default function Teacher({ go }: { go: Go }) {
       {rows.length === 0 && <p className="text-muted">{t("noStudents")}</p>}
 
       {rows.map(({ s, a, strong }) => (
-        <StudentRow key={s.id} s={s} a={a} strong={strong} open={open === s.id} onToggle={() => setOpen(open === s.id ? null : s.id)} />
+        <StudentRow key={s.id} s={s} a={a} strong={strong} open={open === s.id} onToggle={() => setOpen(open === s.id ? null : s.id)} go={go} />
       ))}
 
       <div className="mt-4 flex flex-col gap-2">
@@ -167,7 +167,7 @@ function Stat({ value, label }: { value: number; label: string }) {
   );
 }
 
-function StudentRow({ s, a, strong, open, onToggle }: { s: Student; a: Analysis; strong: boolean; open: boolean; onToggle: () => void }) {
+function StudentRow({ s, a, strong, open, onToggle, go }: { s: Student; a: Analysis; strong: boolean; open: boolean; onToggle: () => void; go: Go }) {
   const { t, pick } = useT();
   const top = a.careers.careers[0];
   const eligible = a.schemes.filter((x) => x.status === "eligible");
@@ -192,6 +192,10 @@ function StudentRow({ s, a, strong, open, onToggle }: { s: Student; a: Analysis;
 
       {open && (
         <div className="flex flex-col gap-4 border-t border-line p-4">
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => go({ name: "rate", id: s.id, mode: "term" })} className="min-h-12 rounded-xl bg-brand-soft px-3 text-sm font-semibold text-brand-dark">📋 {t("rateTerm")}</button>
+            <button onClick={() => go({ name: "rate", id: s.id, mode: "taster" })} className="min-h-12 rounded-xl bg-sun-soft px-3 text-sm font-semibold text-warn">🧑‍🔧 {t("rateTaster")}</button>
+          </div>
           <div>
             <p className="mb-2 text-sm font-semibold text-muted">{t("strengths")}</p>
             <ul className="flex flex-col gap-2">

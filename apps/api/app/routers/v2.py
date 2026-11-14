@@ -6,7 +6,8 @@ Sending the same event twice is harmless: ids are ULIDs made on the phone.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import secrets
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from psycopg.types.json import Jsonb
@@ -15,7 +16,7 @@ from pydantic import BaseModel, Field
 from .. import db, kb
 from ..adapters import gemini_vision
 from ..adapters.gemini import GeminiUnavailable
-from ..schemas import validate_event
+from ..schemas import new_ulid, validate_event
 from ..services import tracing
 
 router = APIRouter(prefix="/v2", tags=["v2"])
@@ -210,3 +211,69 @@ async def score_work_sample(student_id: str = Form(...), rubric_id: str = Form(.
     except GeminiUnavailable:
         raise HTTPException(503, "AI scoring unavailable; a teacher will score this sample") from None
     return {**out, "rubric_id": rubric_id, "scorer": "ai"}
+
+
+# ---------- buyer confirmation of paid jobs ----------
+
+LINK_DAYS = 7
+
+
+class ConfirmIn(BaseModel):
+    on_time: bool
+    quality: bool
+    rehire: bool
+
+
+@router.post("/orders/{event_id}/link", summary="Make a one-time link the buyer opens to confirm a paid job")
+def order_link(event_id: str):
+    with db.connect() as con:
+        ev = con.execute("select id, student_id, kind from evidence_event where id = %s", (event_id,)).fetchone()
+        if not ev or ev["kind"] != "order":
+            raise HTTPException(404, "Unknown job; sync the phone first")
+        old = con.execute("select token from confirm_token where event_id = %s and used_at is null and expires_at > now()",
+                          (event_id,)).fetchone()
+        if old:
+            return {"token": old["token"]}
+        token = secrets.token_urlsafe(12)
+        con.execute("insert into confirm_token(token, event_id, student_id, expires_at) values (%s, %s, %s, %s)",
+                    (token, event_id, ev["student_id"], datetime.now(tz=timezone.utc) + timedelta(days=LINK_DAYS)))
+        return {"token": token}
+
+
+def _token_row(con, token: str) -> dict:
+    row = con.execute("select t.*, e.skill_id, e.payload from confirm_token t join evidence_event e on e.id = t.event_id "
+                      "where t.token = %s", (token,)).fetchone()
+    if not row:
+        raise HTTPException(404, "This link is not valid")
+    if row["used_at"] is not None:
+        raise HTTPException(410, "This job was already confirmed. Thank you!")
+    if row["expires_at"] < datetime.now(tz=timezone.utc):
+        raise HTTPException(410, "This link has expired")
+    return row
+
+
+@router.get("/confirm/{token}", summary="What the buyer is asked to confirm (first name only)")
+def confirm_info(token: str):
+    with db.connect() as con:
+        row = _token_row(con, token)
+        name = con.execute("select name from student_private where student_id = %s", (row["student_id"],)).fetchone()
+    first = (name["name"] if name and name["name"] else "").split(" ")[0]
+    skill = kb.skills().get(row["skill_id"], {}).get("name", {"en": row["skill_id"]})
+    p = row["payload"] or {}
+    return {"student": first, "skill": skill, "what": p.get("what", ""), "amount_inr": p.get("amount_inr")}
+
+
+@router.post("/confirm/{token}", summary="The buyer's three answers; recorded as a rating of the job. Works once.")
+def confirm(token: str, body: ConfirmIn):
+    with db.connect() as con:
+        row = _token_row(con, token)
+        rater = f"buyer_{token[:8]}"
+        con.execute("insert into rater(id, role) values (%s, 'buyer') on conflict (id) do nothing", (rater,))
+        now = datetime.now(tz=timezone.utc)
+        con.execute(
+            "insert into evidence_event(id, student_id, device_id, kind, skill_id, payload, rater_id, refers_to, created_at) "
+            "values (%s, %s, 'buyer_link', 'rating', %s, %s, %s, %s, %s)",
+            (new_ulid(), row["student_id"], row["skill_id"], Jsonb(body.model_dump()), rater, row["event_id"], now))
+        con.execute("update confirm_token set used_at = %s where token = %s", (now, token))
+        refresh_state(con, {row["student_id"]})
+    return {"ok": True}
