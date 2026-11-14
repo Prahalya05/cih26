@@ -1,7 +1,7 @@
 // Talks to the Disha API. Everything here is optional: the student flow works without it.
 
 import type { EvidenceEvent } from "@disha/engine";
-import { db, type Action, type SkillClaim, type StoredEvent, type Student } from "./db";
+import { db, deleteStudent, hasScope, type Action, type SkillClaim, type StoredEvent, type Student } from "./db";
 import { deviceId } from "./events";
 import { refreshSkillState } from "./skills";
 
@@ -11,10 +11,13 @@ export const isOnline = () => navigator.onLine;
 
 export async function syncNow(): Promise<boolean> {
   if (!isOnline()) return false;
-  const students = (await db.students.toArray()).filter((s) => !s.simulated && (!s.synced_at || s.updated_at > s.synced_at));
-  // Demo (made-up) students never leave the phone.
-  const actions = (await db.actions.where("synced").equals(0).toArray()).filter((a) => !a.student_id.startsWith("demo_"));
-  const allIds = (await db.students.toArray()).filter((s) => !s.simulated).map((s) => s.id);
+  await flushErasures();
+  // Demo (made-up) students never leave the phone; nor does anyone whose consent is missing or withdrawn.
+  const shared = (await db.students.toArray()).filter((s) => !s.simulated && hasScope(s, "assess"));
+  const sharedIds = new Set(shared.map((s) => s.id));
+  const students = shared.filter((s) => !s.synced_at || s.updated_at > s.synced_at);
+  const actions = (await db.actions.where("synced").equals(0).toArray()).filter((a) => sharedIds.has(a.student_id));
+  const allIds = [...sharedIds];
   try {
     const res = await fetch(`${API}/v1/sync`, {
       method: "POST",
@@ -57,8 +60,10 @@ interface SyncOut {
 export async function syncEvents(): Promise<boolean> {
   if (!isOnline()) return false;
   const device = await deviceId();
-  const real = (await db.students.toArray()).filter((s) => !s.simulated);
-  const studentIds = real.map((s) => s.id);
+  // Students with withdrawn consent are still sent (so the server records the withdrawal), but none of
+  // their events go up and the server sends nothing back for them.
+  const real = (await db.students.toArray()).filter((s) => !s.simulated && s.consent);
+  const studentIds = real.filter((s) => hasScope(s, "assess")).map((s) => s.id);
   const pending = (await db.events.where("synced").equals(0).sortBy("id")).filter((e) => studentIds.includes(e.student_id));
   const myRater = `rater_${device}`;
   const raters = pending.some((e) => e.rater_id === myRater) ? [{ id: myRater, role: "teacher" }] : [];
@@ -115,13 +120,59 @@ export async function syncEvents(): Promise<boolean> {
 }
 
 function studentForServer(s: Student) {
+  const c = s.consent;
   return {
     id: s.id,
     name: s.name,
     facilitator_code: s.facilitator_code ?? null,
-    consent: s.consent ? { id: `consent_${s.id}`, scopes: ["assess", ...(s.consent.photos ? ["photos"] : [])],
-      method: "app_checkbox", granted_at: s.consent.at } : null,
+    birth_year: s.birth_year ?? null,
+    consent: c ? {
+      id: `consent_${s.id}`,
+      scopes: c.scopes ?? ["assess", ...(c.photos ? ["photos"] : [])],
+      method: c.method ?? "paper_form",
+      granted_at: c.at,
+      guardian_name: c.guardian_name ?? null,
+      revoked_at: c.revoked_at ?? null,
+    } : null,
   };
+}
+
+// ---------- delete my data (Step 11.2) ----------
+
+const ERASE_KEY = "pending_erasures";
+type Erasure = { id: string; by: "guardian" | "student" };
+
+/**
+ * Deletes everything about a student on this phone at once, and on the server now or at the next sync.
+ * Only the student id is kept until the server confirms, so the request is not lost when offline.
+ */
+export async function eraseStudent(id: string, confirmedBy: "guardian" | "student"): Promise<void> {
+  const synced = !id.startsWith("demo_") && !(await db.students.get(id))?.simulated;
+  await deleteStudent(id);
+  if (!synced) return;
+  const list = ((await db.meta.get(ERASE_KEY))?.value as Erasure[] | undefined) ?? [];
+  await db.meta.put({ key: ERASE_KEY, value: [...list.filter((x) => x.id !== id), { id, by: confirmedBy }] });
+  await flushErasures();
+}
+
+async function flushErasures(): Promise<void> {
+  if (!isOnline()) return;
+  const list = ((await db.meta.get(ERASE_KEY))?.value as Erasure[] | undefined) ?? [];
+  if (list.length === 0) return;
+  const left: Erasure[] = [];
+  for (const x of list) {
+    try {
+      const res = await fetch(`${API}/v2/student/${encodeURIComponent(x.id)}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmed_by: x.by }),
+      });
+      if (!res.ok) left.push(x);
+    } catch {
+      left.push(x);
+    }
+  }
+  await db.meta.put({ key: ERASE_KEY, value: left });
 }
 
 export async function pullCohort(code: string): Promise<boolean> {

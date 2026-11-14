@@ -3,8 +3,10 @@
 // photo checking, the photo is sent once for AI scoring; the result is a new work_sample event that
 // replaces the pending one. A teacher then confirms or corrects the scores (a rating event).
 
-import type { EvidenceEvent } from "@disha/engine";
-import { db, newId, type StoredEvent } from "./db";
+import { safeRubric, type EvidenceEvent } from "@disha/engine";
+import { db, hasScope, isMinorStudent, newId, type Student, type StoredEvent } from "./db";
+import { kb } from "./kb";
+import { RUBRICS } from "./skills";
 import { recordEvent } from "./events";
 import { isOnline, syncEvents } from "./sync";
 
@@ -23,6 +25,15 @@ export interface ScoreResult {
   scores: Record<string, number>;
   reasons: Record<string, string>;
   cannot_see: string[];
+}
+
+/**
+ * The checklist this student may be given. Under 18 (or age unknown), items on hazardous sub-skills are
+ * removed; null when nothing safe is left (Step 11.3).
+ */
+export function rubricFor(student: Pick<Student, "birth_year"> | undefined, rubricId: string): RubricFull | null {
+  const full = RUBRICS[rubricId] as unknown as RubricFull | undefined;
+  return full ? safeRubric(kb.graph!, full, isMinorStudent(student)) : null;
 }
 
 /** Shrinks a camera photo to at most 1280 px on the long side, JPEG quality 0.75 (about 150 KB). */
@@ -52,7 +63,7 @@ export async function saveSample(studentId: string, rubric: RubricFull, photo: B
 export async function scoreSample(pending: EvidenceEvent): Promise<ScoreResult | null> {
   if (!isOnline()) return null;
   const student = await db.students.get(pending.student_id);
-  if (!student?.consent?.photos) return null;
+  if (!hasScope(student, "photos")) return null;
   const media = await db.media.get(String(pending.payload.media_ref));
   if (!media) return null;
   await syncEvents(); // the server must know about the consent and the sample first

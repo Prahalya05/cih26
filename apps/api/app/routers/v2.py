@@ -17,7 +17,7 @@ from .. import db, kb
 from ..adapters import gemini_vision
 from ..adapters.gemini import GeminiUnavailable
 from ..schemas import new_ulid, validate_event
-from ..services import tracing
+from ..services import safety, tracing
 
 router = APIRouter(prefix="/v2", tags=["v2"])
 
@@ -81,16 +81,20 @@ def _save_students(con, students: list[StudentIn]) -> None:
             "gender = coalesce(excluded.gender, student.gender), medium = coalesce(excluded.medium, student.medium), "
             "birth_year = coalesce(excluded.birth_year, student.birth_year)",
             (s.id, s.school_id, s.facilitator_code, s.district, s.class_, s.gender, s.medium, s.birth_year))
-        if s.name is not None:
-            con.execute("insert into student_private(student_id, name) values (%s, %s) "
-                        "on conflict (student_id) do update set name = excluded.name", (s.id, s.name))
+        guardian = s.consent.guardian_name if s.consent else None
+        if s.name is not None or guardian is not None:
+            # Names are kept only in student_private (checked in CI by scripts/check_privacy.py).
+            con.execute("insert into student_private(student_id, name, guardian_name) values (%s, %s, %s) "
+                        "on conflict (student_id) do update set name = coalesce(excluded.name, student_private.name), "
+                        "guardian_name = coalesce(excluded.guardian_name, student_private.guardian_name)",
+                        (s.id, s.name, guardian))
         if s.consent:
             c = s.consent
             con.execute(
-                "insert into consent(id, student_id, guardian_name, scopes, method, granted_at, revoked_at) "
-                "values (%s, %s, %s, %s, %s, %s, %s) on conflict (id) do update set "
-                "scopes = excluded.scopes, revoked_at = excluded.revoked_at",
-                (c.id, s.id, c.guardian_name, c.scopes, c.method, _ts(c.granted_at), _ts(c.revoked_at)))
+                "insert into consent(id, student_id, scopes, method, granted_at, revoked_at) "
+                "values (%s, %s, %s, %s, %s, %s) on conflict (id) do update set scopes = excluded.scopes, "
+                "method = excluded.method, granted_at = excluded.granted_at, revoked_at = excluded.revoked_at",
+                (c.id, s.id, c.scopes, c.method, _ts(c.granted_at), _ts(c.revoked_at)))
 
 
 def _consented(con, student_ids: set[str]) -> set[str]:
@@ -171,7 +175,8 @@ def sync(req: SyncIn):
                         (r.id, r.role, r.school_id))
         accepted, rejected = _insert_events(con, req.device_id, req.events)
         refresh_state(con, {e["student_id"] for e in req.events if e.get("id") in set(accepted)})
-        wanted = sorted(set(req.student_ids) | {s.id for s in req.students})
+        # Withdrawn consent stops sync both ways: nothing is accepted or sent back for that student.
+        wanted = sorted(_consented(con, set(req.student_ids) | {s.id for s in req.students}))
         rows = con.execute(
             "select * from evidence_event where student_id = any(%s) and seq > %s and device_id <> %s "
             "order by seq limit %s", (wanted, req.cursor, req.device_id, PAGE + 1)).fetchall()
@@ -200,8 +205,13 @@ async def score_work_sample(student_id: str = Form(...), rubric_id: str = Form(.
     with db.connect() as con:
         ok = con.execute("select 1 from consent where student_id = %s and revoked_at is null and 'photos' = any(scopes)",
                          (student_id,)).fetchone()
+        st = con.execute("select birth_year from student where id = %s", (student_id,)).fetchone()
     if not ok:
         raise HTTPException(403, "No consent to check photos for this student")
+    # Under 18 (or age unknown): checklist items on hazardous sub-skills are never scored.
+    rubric = safety.safe_rubric(kb.graph(), rubric, safety.is_minor(st["birth_year"] if st else None))
+    if rubric is None:
+        raise HTTPException(403, "This work sample is not allowed under 18")
     data = await image.read()
     if len(data) > MAX_IMAGE_BYTES:
         raise HTTPException(413, "Photo too large")
@@ -277,3 +287,25 @@ def confirm(token: str, body: ConfirmIn):
         con.execute("update confirm_token set used_at = %s where token = %s", (now, token))
         refresh_state(con, {row["student_id"]})
     return {"ok": True}
+
+
+# ---------- delete my data (Step 11.2) ----------
+
+class DeleteIn(BaseModel):
+    confirmed_by: str = Field(description="guardian, or student when 18 or over")
+
+
+@router.delete("/student/{student_id}", summary="Erase a student and everything about her. Keeps only a count.")
+def delete_student(student_id: str, body: DeleteIn):
+    if body.confirmed_by not in ("guardian", "student"):
+        raise HTTPException(400, "A guardian (or the student, if 18 or over) must confirm")
+    with db.connect() as con:
+        # Every table with a student_id cascades from student (migrations 0001, 0005); the legacy v1
+        # tables have no foreign key, so they are cleared by hand.
+        con.execute("delete from legacy_action where student_id = %s", (student_id,))
+        con.execute("delete from legacy_student_doc where id = %s", (student_id,))
+        gone = con.execute("delete from student where id = %s", (student_id,)).rowcount > 0
+        if gone:
+            con.execute("insert into deletion_count(day, n) values (current_date, 1) "
+                        "on conflict (day) do update set n = deletion_count.n + 1")
+    return {"deleted": gone}

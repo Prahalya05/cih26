@@ -11,8 +11,7 @@ import { kb } from "../lib/kb";
 import { SECTOR } from "../lib/labels";
 import { analyse, isStrongMatch, type Analysis } from "../lib/profile";
 import { pullCohort, syncNow } from "../lib/sync";
-import { samplesToConfirm, type RubricFull } from "../lib/samples";
-import { RUBRICS } from "../lib/skills";
+import { rubricFor, samplesToConfirm } from "../lib/samples";
 import type { StoredEvent } from "../lib/db";
 
 const savedCode = () => { try { return localStorage.getItem("disha.code") ?? ""; } catch { return ""; } };
@@ -120,7 +119,7 @@ function WorkQueue({ students }: { students: Student[] }) {
 
 function SampleCard({ sample, student }: { sample: StoredEvent; student?: Student }) {
   const { t, pick } = useT();
-  const rubric = RUBRICS[String(sample.payload.rubric_id)] as unknown as RubricFull | undefined;
+  const rubric = rubricFor(student, String(sample.payload.rubric_id));
   const ai = (sample.payload.scores ?? {}) as Record<string, number>;
   const reasons = (sample.payload.reasons ?? {}) as Record<string, string>;
   const [scores, setScores] = useState<Record<string, number>>(ai);

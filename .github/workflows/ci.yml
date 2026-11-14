@@ -39,4 +39,5 @@ jobs:
           cache-dependency-path: apps/api/requirements.txt
       - run: pip install -r apps/api/requirements.txt
       - run: python scripts/validate_kb.py
+      - run: python scripts/check_privacy.py
       - run: python -m pytest apps/api/tests -q

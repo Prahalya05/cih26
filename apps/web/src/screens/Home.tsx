@@ -1,12 +1,12 @@
 import type { Go } from "../App";
 import { Button, Screen, SpeakButton, useLive } from "../components/ui";
 import { CARDS } from "../data/cards";
-import { db, type Student } from "../lib/db";
+import { db, hasScope, type Student } from "../lib/db";
 import { useT } from "../lib/i18n";
 
 /** Where to send a returning student: the first step they haven't finished. */
 export function nextStep(s: Student): Parameters<Go>[0] {
-  if (!s.consent) return { name: "consent", id: s.id };
+  if (!hasScope(s, "assess")) return { name: "consent", id: s.id };
   if (Object.keys(s.cards).length < CARDS.length) return { name: "cards", id: s.id };
   if (Object.keys(s.answers).length === 0) return { name: "questions", id: s.id };
   if (Object.keys(s.factAnswers).length === 0) return { name: "facts", id: s.id };

@@ -13,13 +13,16 @@ export default function NewStudent({ go }: { go: Go }) {
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState("");
   const [code, setCode] = useState(lastCode);
+  const [birthYear, setBirthYear] = useState("");
+  const year = Number(birthYear);
+  const validYear = Number.isInteger(year) && year >= 1950 && year <= new Date().getFullYear() - 8;
 
   const create = async () => {
     const id = newId();
     const facilitator_code = code.trim().toUpperCase() || undefined;
     try { if (facilitator_code) localStorage.setItem("disha.code", facilitator_code); } catch { /* ignore */ }
     await saveStudent({
-      id, name: name.trim() || avatar, avatar, facilitator_code,
+      id, name: name.trim() || avatar, avatar, facilitator_code, birth_year: validYear ? year : undefined,
       cards: {}, answers: {}, factAnswers: {}, updated_at: Date.now(),
     });
     go({ name: "consent", id });
@@ -49,6 +52,18 @@ export default function NewStudent({ go }: { go: Go }) {
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
+          className="min-h-14 rounded-2xl border-2 border-line bg-white px-4 text-lg"
+          autoComplete="off"
+        />
+      </label>
+
+      <label className="flex flex-col gap-1">
+        <span className="font-semibold">{t("birthYear")}</span>
+        <input
+          value={birthYear}
+          onChange={(e) => setBirthYear(e.target.value.replace(/\D/g, "").slice(0, 4))}
+          inputMode="numeric"
+          placeholder="2010"
           className="min-h-14 rounded-2xl border-2 border-line bg-white px-4 text-lg"
           autoComplete="off"
         />

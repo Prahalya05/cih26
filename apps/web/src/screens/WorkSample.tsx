@@ -3,17 +3,16 @@
 import { useState } from "react";
 import type { Go } from "../App";
 import { Button, Pill, Screen, useLive } from "../components/ui";
-import { db, patchStudent } from "../lib/db";
+import { db, hasScope, patchStudent, scopesOf } from "../lib/db";
 import { useT } from "../lib/i18n";
-import { compressImage, saveSample, scoreSample, type RubricFull, type ScoreResult } from "../lib/samples";
-import { RUBRICS } from "../lib/skills";
+import { compressImage, rubricFor, saveSample, scoreSample, type ScoreResult } from "../lib/samples";
 
 type Stage = "ready" | "saving" | "scoring" | "scored" | "waiting";
 
 export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: string; rubric: string }) {
   const { t, pick } = useT();
   const student = useLive(() => db.students.get(id), [id], undefined);
-  const rubric = RUBRICS[rubricId] as unknown as RubricFull | undefined;
+  const rubric = student ? rubricFor(student, rubricId) : null;
   const [stage, setStage] = useState<Stage>("ready");
   const [preview, setPreview] = useState<string | null>(null);
   const [result, setResult] = useState<ScoreResult | null>(null);
@@ -34,7 +33,7 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
     setStage(out ? "scored" : "waiting");
   };
 
-  const photosAllowed = !!student.consent?.photos;
+  const photosAllowed = hasScope(student, "photos");
   return (
     <Screen title={pick(rubric.name)} onBack={back}>
       <div className="rounded-3xl bg-white p-4 shadow-sm">
@@ -56,7 +55,7 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
         <div className="rounded-3xl bg-sun-soft p-4">
           <p className="text-warn">{t("photoConsent")}</p>
           <Button kind="soft" className="mt-3 w-full"
-            onClick={() => patchStudent(id, (s) => ({ ...s, consent: { at: s.consent?.at ?? Date.now(), photos: true } }))}>
+            onClick={() => patchStudent(id, (s) => ({ ...s, consent: { ...s.consent!, scopes: [...scopesOf(s), "photos"], photos: undefined } }))}>
             ✅ {t("photoConsentAgree")}
           </Button>
         </div>

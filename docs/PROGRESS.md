@@ -15,21 +15,20 @@ Tracks the build against `docs/Disha_Implementation_Plan.docx`. Last updated 14 
 | 6 Assessment screens | Done | `screens/Assess.tsx`, `components/Items.tsx` (choice, estimate, order steps), skill levels on Strengths tab |
 | 7 Aptitude games | Done | `scripts/gen_aptitude.py` (59 puzzles), `components/Figure.tsx` (SVG gears, seesaw, shapes), `screens/Game.tsx`. District percentiles (7.2) not done |
 | 8 Work samples | Done | `lib/samples.ts`, `screens/WorkSample.tsx`, `adapters/gemini_vision.py`, `/v2/work-sample/score`, teacher queue in `screens/Teacher.tsx` |
-| 9 Real-world evidence | Done, not browser-checked | Paid jobs + buyer link (`screens/Order.tsx`, `screens/ConfirmJob.tsx`, `/v2/orders/.../link`, `/v2/confirm/...`), taster and term ratings (`screens/Rate.tsx`), `scripts/rater_stats.py` |
+| 9 Real-world evidence | Done, checked live against the API | Paid jobs + buyer link (`screens/Order.tsx`, `screens/ConfirmJob.tsx`, `/v2/orders/.../link`, `/v2/confirm/...`), taster and term ratings (`screens/Rate.tsx`), `scripts/rater_stats.py`. Live run: phone sync, buyer link, buyer page, confirm, rating back on the phone, CORS. The on-screen "Confirmed" badge has not been seen in a browser yet |
 | 10 Matching | Done | `fitreach.ts` / `fitreach.py`: Fit, Reach, Worth; could-learn flag; sub-skill what-ifs; best-next-test picker |
-| 11 Privacy and safety | Not started | Next |
+| 11 Privacy and safety | Done | Three consent scopes and guardian method (`screens/Consent.tsx`), Privacy screen to change scopes, withdraw or delete (`screens/Privacy.tsx`), withdrawal stops sync both ways, `DELETE /v2/student/{id}` with `deletion_count` (migration 0006), guardian name moved to `student_private`, under-18 work-sample rule (`safety.ts` / `safety.py`), `scripts/check_privacy.py` in CI |
 | 12 Validation and pilot | Not started | Fairness tests, pilot prep, `scripts/calibrate.py` |
 | 13 Demo and launch | Not started | Demo stories as events, deploy, load tests, pitch |
 
 ## Next steps, in order
 
-1. Browser-check Phase 9 with the API running: log a job, open the buyer link, confirm, see "Confirmed" on the student's phone. This is also the first browser test of phone-to-server sync.
+1. Click through the app in a browser (Chrome extension was not connected): new student with birth year, consent scopes, Privacy screen (toggle photos, withdraw, delete), and the paid-job "Confirmed" badge.
    - API: `cd apps/api && CORS_ORIGINS=http://localhost:5185 python -m uvicorn app.main:app --port 8010`
    - App: `cd apps/web && VITE_API_URL=http://localhost:8010 npx vite --port 5185`
-2. Phase 11: separate consent scopes on the consent screen, `DELETE /v2/student/{id}` with full erasure, block hazardous work samples for under-18s, CI check for name/phone columns.
-3. Phase 12: fairness tests in CI, pilot materials, Rasch recalibration script.
-4. Decide when to do the research follow-ups below (experience-first extraction, RPL opportunity).
-5. Phase 13: rebuild demo students as event stories (so the demo class shows Strong matches), deploy, load test.
+2. Phase 12: fairness tests in CI, pilot materials, Rasch recalibration script.
+3. Decide when to do the research follow-ups below (experience-first extraction, RPL opportunity).
+4. Phase 13: rebuild demo students as event stories (so the demo class shows Strong matches), deploy, load test.
 
 ## Research follow-ups (from a review of skill-extraction methods, 14 November 2026)
 
@@ -48,6 +47,10 @@ Not yet scheduled: decide whether to do items 1-2 before or after Phase 11.
 Sources: Tabiya Compass (globaldevincubator.org), Harambee "Breaking Barriers" (Feb 2024), CSAE Oxford skills-based hiring, JEDM "When is Deep Learning the Best Approach to Knowledge Tracing?", arXiv 2404.00712 (CAT survey), arXiv 2307.03539 (LLM ESCO matching), NSDC Recognition of Prior Learning.
 
 ## Open items
+
+- Phase 11 gaps: OTP to the guardian's phone is not built (under-18s can only use the signed paper form, which is not photographed in the app). `share_portfolio` is recorded and can be switched, but there is no portfolio-sharing feature yet for it to control. A minor can still log a paid job in a skill with a hazardous sub-skill (only work samples are blocked).
+- The legacy `/v1/sync` table `legacy_student_doc` stores whole student records, including the name, as JSON; the CI column check cannot see this. Erasure clears it. Drop it once phones are on v2.
+- Server access logs include buyer-link tokens in the URL path (`/v2/confirm/{token}`).
 
 - Teacher and mentor PIN login (9.1) not built: any phone in teacher mode counts as a teacher.
 - Rater leniency is measured but scores are not yet shifted by it.

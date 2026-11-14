@@ -1,7 +1,7 @@
 // On-phone storage (IndexedDB). Several students can share one phone; each has their own record.
 // Teacher actions are saved here first and sent to the server when there is internet.
 
-import { ulid, type EvidenceEvent } from "@disha/engine";
+import { isMinor, ulid, type EvidenceEvent } from "@disha/engine";
 import Dexie, { type EntityTable, type Table } from "dexie";
 
 export interface SkillClaim {
@@ -20,12 +20,28 @@ export interface Answer {
   via?: "gemini" | "keywords" | "unavailable";
 }
 
+/** What the parent (or a student aged 18+) agreed to. Each scope switches one feature on. */
+export type Scope = "assess" | "photos" | "share_portfolio";
+export type ConsentMethod = "paper_form" | "otp" | "self_18plus";
+
+export interface Consent {
+  at: number;
+  scopes?: Scope[];
+  method?: ConsentMethod;
+  guardian_name?: string;
+  /** Set when consent is withdrawn: nothing more is sent or fetched for her. */
+  revoked_at?: number;
+  /** Old (version 1) records: photo checking was the only separate choice. */
+  photos?: boolean;
+}
+
 export interface Student {
   id: string;
   name: string;
   avatar: string;
   facilitator_code?: string;
-  consent?: { at: number; photos?: boolean };
+  birth_year?: number;
+  consent?: Consent;
   cards: Record<string, boolean>;
   answers: Record<string, Answer>;
   factAnswers: Record<string, unknown>;
@@ -124,6 +140,18 @@ export function eventsFromLegacy(s: Student, actions: Action[], deviceId: string
   }
   return out;
 }
+
+/** The scopes in force now (none after withdrawal). Old records without scopes had assess, plus photos if ticked. */
+export function scopesOf(s: Pick<Student, "consent"> | undefined): Scope[] {
+  const c = s?.consent;
+  if (!c || c.revoked_at) return [];
+  return c.scopes ?? ["assess", ...(c.photos ? (["photos"] as Scope[]) : [])];
+}
+
+export const hasScope = (s: Pick<Student, "consent"> | undefined, scope: Scope) => scopesOf(s).includes(scope);
+
+/** Under 18, or age not known (Step 11.3). */
+export const isMinorStudent = (s: Pick<Student, "birth_year"> | undefined) => isMinor(s?.birth_year);
 
 export const newId = () =>
   (crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`).replace(/-/g, "").slice(0, 16);

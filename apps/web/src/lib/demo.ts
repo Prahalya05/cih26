@@ -58,7 +58,7 @@ export async function loadDemoClass(code: string) {
     }
     return {
       id: `demo_${code}_${i}`, name: seed.name, avatar: seed.avatar, facilitator_code: code,
-      consent: { at: now }, cards, answers, factAnswers: { state: "TN", ...seed.facts },
+      consent: { at: now, scopes: ["assess", "photos", "share_portfolio"], method: "paper_form" }, cards, answers, factAnswers: { state: "TN", ...seed.facts },
       simulated: true, updated_at: now - i * 60_000,
     };
   });

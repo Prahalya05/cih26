@@ -17,6 +17,7 @@ import WorkSample from "./screens/WorkSample";
 import Order from "./screens/Order";
 import Rate from "./screens/Rate";
 import ConfirmJob from "./screens/ConfirmJob";
+import Privacy from "./screens/Privacy";
 import { scorePending } from "./lib/samples";
 
 export type Route =
@@ -33,7 +34,8 @@ export type Route =
   | { name: "game"; id: string; domain: string }
   | { name: "sample"; id: string; rubric: string }
   | { name: "order"; id: string }
-  | { name: "rate"; id: string; mode: "taster" | "term" };
+  | { name: "rate"; id: string; mode: "taster" | "term" }
+  | { name: "privacy"; id: string };
 
 export type Go = (r: Route) => void;
 
@@ -85,6 +87,7 @@ export default function App() {
       {route.name === "sample" && <WorkSample go={go} id={route.id} rubric={route.rubric} />}
       {route.name === "order" && <Order go={go} id={route.id} />}
       {route.name === "rate" && <Rate go={go} id={route.id} mode={route.mode} />}
+      {route.name === "privacy" && <Privacy go={go} id={route.id} />}
     </LangContext.Provider>
   );
 }

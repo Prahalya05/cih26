@@ -4,14 +4,14 @@ import type { Go } from "../App";
 import { FactQuestionView } from "../components/FactQuestionView";
 import { Button, Pill, Screen, SpeakButton, useLive } from "../components/ui";
 import { FACT_QUESTIONS } from "../data/facts";
-import { addAction, db, deleteStudent, patchStudent, type Action, type Student } from "../lib/db";
+import { addAction, db, isMinorStudent, patchStudent, type Action, type Student } from "../lib/db";
 import { useT } from "../lib/i18n";
 import { kb } from "../lib/kb";
 import { formatDate, SCHEME_TYPE, SECTOR } from "../lib/labels";
 import { analyse, type Analysis } from "../lib/profile";
 import { ITEMS, RUBRICS, profileOf } from "../lib/skills";
 import { GAMES } from "./Game";
-import { nextToTest, personaFromProfile, type PersonaV2, type UnitState } from "@disha/engine";
+import { nextToTest, personaFromProfile, safeRubric, type PersonaV2, type UnitState } from "@disha/engine";
 
 type Tab = "strengths" | "careers" | "schemes";
 
@@ -57,9 +57,7 @@ export default function Results({ go, id, tab }: { go: Go; id: string; tab: Tab 
 
       <div className="mt-4 flex gap-2">
         <Button kind="ghost" className="flex-1 text-base" onClick={() => go({ name: "cards", id })}>↺ {t("restart")}</Button>
-        <Button kind="ghost" className="flex-1 text-base text-red-700" onClick={async () => {
-          if (window.confirm(t("deleteMe") + "?")) { await deleteStudent(id); go({ name: "home" }); }
-        }}>🗑 {t("deleteMe")}</Button>
+        <Button kind="ghost" className="flex-1 text-base" onClick={() => go({ name: "privacy", id })}>🔒 {t("privacy")}</Button>
       </div>
     </Screen>
   );
@@ -96,8 +94,10 @@ function Games({ id, go }: { id: string; go: Go }) {
 function SkillLevels({ id, go, claimed, persona }: { id: string; go: Go; claimed: string[]; persona: PersonaV2 }) {
   const { t, pick } = useT();
   const profile = useLive(() => profileOf(id), [id], null);
-  if (!profile) return null;
+  const student = useLive(() => db.students.get(id), [id], undefined);
+  if (!profile || !student) return null;
   const g = kb.graph!;
+  const minor = isMinorStudent(student); // no work samples on hazardous sub-skills under 18
   const testable = new Set(Object.values(ITEMS).map((it) => it.subskill));
   const skills = Object.keys(g.bySkill).filter((sk) =>
     claimed.includes(sk) || g.bySkill[sk].some((u) => (profile.units[u]?.n ?? 0) > 0));
@@ -123,7 +123,7 @@ function SkillLevels({ id, go, claimed, persona }: { id: string; go: Go; claimed
         <article key={sk} className="rounded-3xl bg-white p-4 shadow-sm">
           <div className="flex items-center gap-2">
             <h3 className="flex-1 text-lg font-semibold">{pick(kb.skills[sk].name)}</h3>
-            {Object.values(RUBRICS).filter((r) => r.skill === sk).map((r) => (
+            {Object.values(RUBRICS).filter((r) => r.skill === sk && safeRubric(g, r, minor)).map((r) => (
               <button key={r.id} onClick={() => go({ name: "sample", id, rubric: r.id })}
                 className="rounded-xl bg-sun-soft px-3 py-2 text-sm font-semibold text-warn">📷 {t("showWork")}</button>
             ))}
