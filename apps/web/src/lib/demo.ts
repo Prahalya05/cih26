@@ -4,6 +4,7 @@
 import { CARDS, type Riasec } from "../data/cards";
 import { db, eventsFromLegacy, type Student } from "./db";
 import { deviceId } from "./events";
+import { addStory, STORIES } from "./stories";
 
 interface Seed {
   name: string;
@@ -20,13 +21,14 @@ const SEEDS: Seed[] = [
     facts: { age: 16, gender: "female", level: "10", school_6_to_12: "govt", tamil_medium: true, category: "sc", family_income_inr: 80000 },
     said: { qid: "home", text: "அக்கம்பக்கத்து அக்காக்களுக்கு பிளவுஸ் தைத்துக் கொடுப்பேன்", skills: ["sk_stitching"] } },
   { name: "கார்த்திக் (Karthik)", avatar: "🐅", likes: ["R", "I"],
-    chips: { home: ["sk_machine_repair"], asked_for_help: ["sk_electrical_basic", "sk_tools_handling"], subjects: ["sk_science"] },
+    chips: {}, // claims nothing: his story is told by the puzzle games
     facts: { age: 17, gender: "male", level: "11", school_6_to_12: "govt", tamil_medium: true, category: "mbc", family_income_inr: 200000 } },
   { name: "பிரியா (Priya)", avatar: "🌻", likes: ["S", "I"],
     chips: { home: ["sk_caring_people"], asked_for_help: ["sk_teaching_explaining"], subjects: ["sk_science", "sk_english_basic"] },
     facts: { age: 15, gender: "female", level: "9", school_6_to_12: "govt", tamil_medium: true, category: "sc", family_income_inr: 80000 } },
   { name: "அருண் (Arun)", avatar: "🌳", likes: ["R", "E"],
     chips: { home: ["sk_crop_farming", "sk_animal_care"], lead: ["sk_driving"] },
+    said: { qid: "home", text: "அப்பாவின் கடையில் பொருட்களுக்கு நான்தான் விலை வைப்பேன்", skills: ["sk_money_handling"] },
     facts: { age: 18, gender: "male", level: "12", school_6_to_12: "aided", tamil_medium: true, category: "bc", family_income_inr: 200000 } },
   { name: "திவ்யா (Divya)", avatar: "⭐", likes: ["C", "I"],
     chips: { free_time: ["sk_computer_basic"], subjects: ["sk_basic_math", "sk_coding"] },
@@ -66,6 +68,13 @@ export async function loadDemoClass(code: string) {
   const device = await deviceId();
   const events = students.flatMap((s) => eventsFromLegacy(s, [], device));
   await db.events.bulkPut(events.map((e) => ({ ...e, synced: 1 as const }))); // demo events never leave the phone
+  for (const [i, steps] of Object.entries(STORIES)) await addStory(students[Number(i)].id, steps);
+}
+
+/** The story for a demo student id (demo_<code>_<index>), if it has one. */
+export function storyOf(studentId: string) {
+  const m = /^demo_.+_(\d+)$/.exec(studentId);
+  return m ? STORIES[Number(m[1])] : undefined;
 }
 
 export async function clearDemoClass() {

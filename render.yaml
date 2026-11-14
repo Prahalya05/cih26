@@ -1,0 +1,23 @@
+# Render blueprint (Step 13.2). In Render: New > Blueprint, pick this repository.
+# Secrets marked sync: false are typed into the Render dashboard, never committed.
+services:
+  - type: web
+    name: disha
+    runtime: docker
+    region: singapore          # closest Render region to Tamil Nadu
+    plan: starter
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL      # Supabase session pooler URL (see docs/DEPLOY.md)
+        sync: false
+      - key: GEMINI_API_KEY    # optional; paid tier for real students
+        sync: false
+      - key: ADMIN_TOKEN
+        generateValue: true
+      - key: CORS_ORIGINS      # the public address, e.g. https://disha.example.in
+        sync: false
+      - key: WEB_CONCURRENCY
+        value: "2"
+      - key: DB_POOL_MAX       # per worker; keep workers x this under the Supabase pooler limit
+        value: "8"

@@ -54,6 +54,8 @@ interface SyncOut {
   events: EvidenceEvent[];
   cursor: number;
   more: boolean;
+  /** Continue paging after this seq within the same sync (the stored cursor may lag behind). */
+  page_from?: number | null;
 }
 
 /** Sends this phone's new events and fetches events made on other devices (teacher ratings and so on). */
@@ -72,7 +74,7 @@ export async function syncEvents(): Promise<boolean> {
   if (chunks.length === 0) chunks.push([]); // nothing to send, but still fetch
   let cursor = Number((await db.meta.get("event_cursor"))?.value ?? 0);
 
-  const post = async (events: StoredEvent[]): Promise<SyncOut | null> => {
+  const post = async (events: StoredEvent[], pageFrom: number | null = null): Promise<SyncOut | null> => {
     const res = await fetch(`${API}/v2/sync`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -82,6 +84,7 @@ export async function syncEvents(): Promise<boolean> {
         raters,
         events: events.map(({ synced: _s, sync_error: _e, ...e }) => e),
         cursor,
+        page_from: pageFrom,
         student_ids: studentIds,
       }),
     });
@@ -108,7 +111,7 @@ export async function syncEvents(): Promise<boolean> {
       if (!out) return false;
       await save(out);
       while (out.more) {
-        out = await post([]);
+        out = await post([], out.page_from ?? null);
         if (!out) return false;
         await save(out);
       }

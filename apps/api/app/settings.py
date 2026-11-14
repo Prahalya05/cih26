@@ -25,3 +25,4 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
 MEDIA_BUCKET = os.getenv("MEDIA_BUCKET", "")
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")
+DB_POOL_MAX = int(os.getenv("DB_POOL_MAX", "20"))  # database connections per server process

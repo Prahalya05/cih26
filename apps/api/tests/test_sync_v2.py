@@ -71,8 +71,38 @@ def test_teacher_rating_reaches_the_student_phone(client):
     back = client.post("/v2/sync", json={"device_id": "phoneA", "student_ids": ["st1"], "cursor": a["cursor"]}).json()
     assert [e["id"] for e in back["events"]] == [uid(2)]
     assert back["events"][0]["created_at"] == NOW + 10
+    # Still recent: sent again (the phone skips ids it has), in case an earlier number is still committing.
     again = client.post("/v2/sync", json={"device_id": "phoneA", "student_ids": ["st1"], "cursor": back["cursor"]}).json()
-    assert again["events"] == []
+    assert [e["id"] for e in again["events"]] == [uid(2)]
+    # Once settled, the cursor moves past it.
+    from app import db
+    with db.connect() as con:
+        con.execute("update evidence_event set received_at = received_at - interval '2 minutes'")
+    settled = client.post("/v2/sync", json={"device_id": "phoneA", "student_ids": ["st1"], "cursor": again["cursor"]}).json()
+    assert [e["id"] for e in settled["events"]] == [uid(2)]
+    done = client.post("/v2/sync", json={"device_id": "phoneA", "student_ids": ["st1"], "cursor": settled["cursor"]}).json()
+    assert done["events"] == []
+
+
+def test_late_commit_with_a_lower_number_still_reaches_the_phone(client):
+    """Two teacher events: number 2 is visible first, number 1 commits later. The phone must get both."""
+    from app import db
+    client.post("/v2/sync", json={"device_id": "phoneA", "students": [STUDENT]})
+    client.post("/v2/sync", json={"device_id": "phoneT", "raters": [{"id": "t1", "role": "teacher"}]})
+    with db.connect() as con:
+        first = con.execute("select nextval(pg_get_serial_sequence('evidence_event', 'seq')) as s").fetchone()["s"]
+    late = {"id": uid(1), "student_id": "st1", "device_id": "phoneT", "kind": "rating", "rater_id": "t1",
+            "skill_id": "sk_stitching", "payload": {"endorse": True}, "created_at": NOW}
+    early = {**late, "id": uid(2), "created_at": NOW + 1}
+    client.post("/v2/sync", json={"device_id": "phoneT", "events": [early]})       # gets a higher number
+    seen = client.post("/v2/sync", json={"device_id": "phoneA", "student_ids": ["st1"], "cursor": 0}).json()
+    assert [e["id"] for e in seen["events"]] == [uid(2)]
+    with db.connect() as con:                                                       # the slow one commits now
+        con.execute("insert into evidence_event(id, seq, student_id, device_id, kind, skill_id, payload, rater_id, "
+                    "created_at) values (%s, %s, 'st1', 'phoneT', 'rating', 'sk_stitching', '{\"endorse\": true}', 't1', "
+                    "to_timestamp(%s / 1000.0))", (late["id"], first, NOW))
+    nxt = client.post("/v2/sync", json={"device_id": "phoneA", "student_ids": ["st1"], "cursor": seen["cursor"]}).json()
+    assert uid(1) in [e["id"] for e in nxt["events"]]
 
 
 def test_rating_for_unknown_event_waits(client):
@@ -90,14 +120,16 @@ def test_cursor_pages_through_1000_events(client):
         evs = [self_report(n) for n in range(start, start + 500)]
         r = client.post("/v2/sync", json={"device_id": "phoneA", "events": evs}).json()
         assert len(r["accepted"]) == 500
-    seen, cursor = [], 0
+    seen, cursor, page_from = [], 0, None
     for _ in range(5):
-        r = client.post("/v2/sync", json={"device_id": "phoneB", "student_ids": ["st1"], "cursor": cursor}).json()
+        r = client.post("/v2/sync", json={"device_id": "phoneB", "student_ids": ["st1"], "cursor": cursor,
+                                          "page_from": page_from}).json()
         seen += [e["id"] for e in r["events"]]
-        cursor = r["cursor"]
+        cursor, page_from = r["cursor"], r["page_from"]
         if not r["more"]:
             break
     assert len(seen) == 1000 and len(set(seen)) == 1000
+    assert cursor == 0  # all just arrived: the stored cursor waits until they settle
 
 
 def test_sync_rebuilds_skill_levels_for_teachers(client):

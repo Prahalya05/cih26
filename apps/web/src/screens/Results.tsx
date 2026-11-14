@@ -10,6 +10,7 @@ import { kb } from "../lib/kb";
 import { formatDate, SCHEME_TYPE, SECTOR } from "../lib/labels";
 import { analyse, type Analysis } from "../lib/profile";
 import { ITEMS, RUBRICS, profileOf } from "../lib/skills";
+import { STORY_KEY } from "../lib/stories";
 import { GAMES } from "./Game";
 import { nextToTest, personaFromProfile, rplOpportunities, safeRubric, type PersonaV2, type UnitState } from "@disha/engine";
 
@@ -107,6 +108,7 @@ function SkillLevels({ id, go, claimed, persona }: { id: string; go: Go; claimed
   const rpl = rplOpportunities(kb, profile.units, minor);
   return (
     <section className="flex flex-col gap-3">
+      <StoryBanner id={id} />
       {rpl.map((r) => (
         <button key={r.occupation} onClick={() => go({ name: "career", id, occ: r.occupation })}
           className="flex items-start gap-3 rounded-3xl bg-good-soft p-4 text-left shadow-sm">
@@ -149,6 +151,20 @@ function SkillLevels({ id, go, claimed, persona }: { id: string; go: Go; claimed
         </article>
       ))}
     </section>
+  );
+}
+
+/** While a demo story replays, says which step was just added. */
+function StoryBanner({ id }: { id: string }) {
+  const { t, pick } = useT();
+  const row = useLive(() => db.meta.get(STORY_KEY), [], undefined);
+  const v = row?.value as { student: string; step: number; of: number; label: { en: string; ta: string } } | undefined;
+  if (!v || v.student !== id) return null;
+  return (
+    <div className="sticky top-2 z-10 rounded-3xl bg-brand p-4 text-white shadow-lg" role="status" aria-live="polite">
+      <p className="text-sm opacity-90">▶ {t("storyStep", { n: v.step + 1, of: v.of })}</p>
+      <p className="text-lg font-semibold">{pick(v.label)}</p>
+    </div>
   );
 }
 

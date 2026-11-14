@@ -23,6 +23,10 @@ router = APIRouter(prefix="/v2", tags=["v2"])
 
 MAX_EVENTS_PER_SYNC = 500
 PAGE = 500
+# Event numbers (seq) are handed out on insert but become visible on commit, and the two orders can differ
+# when phones sync at the same time. So the cursor never moves past events younger than this: a late commit
+# with a lower number is then still sent. Recent events may be sent twice; phones skip ids they already have.
+SETTLE_SECONDS = 60
 
 
 class ConsentIn(BaseModel):
@@ -59,6 +63,7 @@ class SyncIn(BaseModel):
     raters: list[RaterIn] = []
     events: list[dict] = Field([], max_length=MAX_EVENTS_PER_SYNC)
     cursor: int = 0
+    page_from: int | None = Field(None, description="Within one sync: continue after this seq (from the last answer)")
     student_ids: list[str] = Field([], description="Every student on this phone, to fetch their events from other devices")
 
 
@@ -97,6 +102,17 @@ def _save_students(con, students: list[StudentIn]) -> None:
                 (c.id, s.id, c.scopes, c.method, _ts(c.granted_at), _ts(c.revoked_at)))
 
 
+def _insert_rows(con, head: str, rows: list[tuple], tail: str = "", chunk: int = 20) -> None:
+    """Inserts many rows with one multi-row VALUES statement per chunk (one round trip each). Chunks stay
+    small (under about 8 KB) because larger requests hit a 40 ms TCP delayed-ACK stall on some networks."""
+    if not rows:
+        return
+    one = "(" + ", ".join(["%s"] * len(rows[0])) + ")"
+    for i in range(0, len(rows), chunk):
+        part = rows[i:i + chunk]
+        con.execute(f"{head} values {', '.join([one] * len(part))} {tail}", [v for r in part for v in r])
+
+
 def _consented(con, student_ids: set[str]) -> set[str]:
     """Students with a current consent that covers assessment."""
     if not student_ids:
@@ -112,6 +128,9 @@ def _insert_events(con, device_id: str, events: list[dict]) -> tuple[list[str], 
     ok_students = _consented(con, {e.get("student_id") for e in events if e.get("student_id")})
     known_raters = {r["id"] for r in con.execute("select id from rater where id = any(%s)",
                                                  ([e["rater_id"] for e in events if e.get("rater_id")],))}
+    refs = list({e["refers_to"] for e in events if isinstance(e.get("refers_to"), str)})
+    known_refs = {r["id"] for r in con.execute("select id from evidence_event where id = any(%s)", (refs,))} if refs else set()
+    rows = []
     # Oldest first, so a rating can refer to a sample sent in the same batch.
     for e in sorted(events, key=lambda x: str(x.get("id"))):
         errs = validate_event(e)
@@ -119,20 +138,19 @@ def _insert_events(con, device_id: str, events: list[dict]) -> tuple[list[str], 
             errs = ["no consent to assess this student"]
         if not errs and e.get("rater_id") and e["rater_id"] not in known_raters:
             errs = ["unknown rater"]
-        if not errs and e.get("refers_to"):
-            if not con.execute("select 1 from evidence_event where id = %s", (e["refers_to"],)).fetchone():
-                errs = ["refers_to an event the server does not have yet"]
+        if not errs and e.get("refers_to") and e["refers_to"] not in known_refs:
+            errs = ["refers_to an event the server does not have yet"]
         if errs:
             rejected.append({"id": e.get("id"), "errors": errs})
             continue
-        con.execute(
-            "insert into evidence_event(id, student_id, device_id, kind, skill_id, subskill_id, item_id, payload, "
-            "rater_id, refers_to, created_at) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
-            "on conflict (id) do nothing",
-            (e["id"], e["student_id"], e["device_id"] or device_id, e["kind"], e.get("skill_id"), e.get("subskill_id"),
-             e.get("item_id"), Jsonb(e.get("payload") or {}), e.get("rater_id"), e.get("refers_to"),
-             _ts(e["created_at"])))
+        rows.append((e["id"], e["student_id"], e["device_id"] or device_id, e["kind"], e.get("skill_id"),
+                     e.get("subskill_id"), e.get("item_id"), Jsonb(e.get("payload") or {}), e.get("rater_id"),
+                     e.get("refers_to"), _ts(e["created_at"])))
+        known_refs.add(e["id"])
         accepted.append(e["id"])
+    # One statement for the whole batch (Step 13.3 load test).
+    _insert_rows(con, "insert into evidence_event(id, student_id, device_id, kind, skill_id, subskill_id, item_id, "
+                      "payload, rater_id, refers_to, created_at)", rows, "on conflict (id) do nothing")
     return accepted, rejected
 
 
@@ -142,19 +160,20 @@ def refresh_state(con, student_ids: set[str]) -> None:
         return
     raters = {r["id"]: r["agreement"] for r in con.execute("select id, agreement from rater")}
     now = datetime.now(tz=timezone.utc)
-    for sid in sorted(student_ids):
-        rows = con.execute("select * from evidence_event where student_id = %s", (sid,)).fetchall()
-        events = [_row_to_event(r) for r in rows]
-        profile = tracing.fold_events(events, {"now": _ms(now), "items": kb.items(), "rubrics": kb.rubrics(),
-                                               "raterWeights": raters})
-        con.execute("delete from skill_state where student_id = %s", (sid,))
-        for uid, u in profile["units"].items():
-            con.execute("insert into skill_state(student_id, subskill_id, p_level, theta, se, updated_at) "
-                        "values (%s, %s, %s, null, null, %s)", (sid, uid, u["p"], now))
-        con.execute("delete from aptitude_state where student_id = %s", (sid,))
-        for domain, a in profile["aptitude"].items():
-            con.execute("insert into aptitude_state(student_id, domain, theta, se) values (%s, %s, %s, %s)",
-                        (sid, domain, a["theta"], a["se"]))
+    ids = sorted(student_ids)
+    by_student: dict[str, list[dict]] = {sid: [] for sid in ids}
+    for r in con.execute("select * from evidence_event where student_id = any(%s)", (ids,)):
+        by_student[r["student_id"]].append(_row_to_event(r))
+    skills, aptitudes = [], []
+    for sid in ids:
+        profile = tracing.fold_events(by_student[sid], {"now": _ms(now), "items": kb.items(), "rubrics": kb.rubrics(),
+                                                        "raterWeights": raters})
+        skills += [(sid, uid, u["p"], now) for uid, u in profile["units"].items()]
+        aptitudes += [(sid, d, a["theta"], a["se"]) for d, a in profile["aptitude"].items()]
+    con.execute("delete from skill_state where student_id = any(%s)", (ids,))
+    con.execute("delete from aptitude_state where student_id = any(%s)", (ids,))
+    _insert_rows(con, "insert into skill_state(student_id, subskill_id, p_level, updated_at)", skills)
+    _insert_rows(con, "insert into aptitude_state(student_id, domain, theta, se)", aptitudes)
 
 
 def _row_to_event(r: dict) -> dict:
@@ -179,17 +198,22 @@ def sync(req: SyncIn):
         wanted = sorted(_consented(con, set(req.student_ids) | {s.id for s in req.students}))
         rows = con.execute(
             "select * from evidence_event where student_id = any(%s) and seq > %s and device_id <> %s "
-            "order by seq limit %s", (wanted, req.cursor, req.device_id, PAGE + 1)).fetchall()
+            "order by seq limit %s", (wanted, max(req.cursor, req.page_from or 0), req.device_id, PAGE + 1)).fetchall()
         more = len(rows) > PAGE
         rows = rows[:PAGE]
-        cursor = rows[-1]["seq"] if rows else max(req.cursor, 0)
-        if not rows:
-            # Skip past everything this device has already seen (its own events).
-            top = con.execute("select coalesce(max(seq), 0) as m from evidence_event where student_id = any(%s)",
-                              (wanted,)).fetchone()["m"]
-            cursor = max(cursor, top)
+        if rows:
+            reach = rows[-1]["seq"]
+        else:
+            # Nothing new from other devices: skip past this device's own events too.
+            reach = con.execute("select coalesce(max(seq), 0) as m from evidence_event where student_id = any(%s)",
+                                (wanted,)).fetchone()["m"]
+        settled = con.execute(
+            "select coalesce(max(seq), 0) as m from evidence_event where student_id = any(%s) "
+            "and received_at < clock_timestamp() - make_interval(secs => %s)", (wanted, SETTLE_SECONDS)).fetchone()["m"]
+        cursor = max(req.cursor, min(reach, settled))
+        # "cursor" is safe to store; "page_from" only continues paging within this sync.
         return {"accepted": accepted, "rejected": rejected, "events": [_row_to_event(r) for r in rows],
-                "cursor": cursor, "more": more}
+                "cursor": cursor, "more": more, "page_from": rows[-1]["seq"] if more else None}
 
 
 # ---------- work samples ----------

@@ -36,7 +36,7 @@ def pool() -> ConnectionPool:
         if _pool is not None:
             _pool.close()
         _url = settings.DATABASE_URL
-        _pool = ConnectionPool(_url, min_size=1, max_size=10, kwargs={"row_factory": dict_row},
+        _pool = ConnectionPool(_url, min_size=1, max_size=settings.DB_POOL_MAX, kwargs={"row_factory": dict_row},
                                configure=_configure, open=True)
     return _pool
 

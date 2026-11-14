@@ -5,7 +5,8 @@ import { addAction, db, type Action, type Student } from "../lib/db";
 import { raterId, recordEvent } from "../lib/events";
 import { profileOf } from "../lib/skills";
 import type { Profile } from "@disha/engine";
-import { clearDemoClass, loadDemoClass } from "../lib/demo";
+import { clearDemoClass, loadDemoClass, storyOf } from "../lib/demo";
+import { playStory } from "../lib/stories";
 import { useT } from "../lib/i18n";
 import { kb } from "../lib/kb";
 import { SECTOR } from "../lib/labels";
@@ -191,6 +192,10 @@ function StudentRow({ s, a, strong, open, onToggle, go }: { s: Student; a: Analy
 
       {open && (
         <div className="flex flex-col gap-4 border-t border-line p-4">
+          {storyOf(s.id) && (
+            <button onClick={() => { go({ name: "results", id: s.id, tab: "strengths" }); void playStory(s.id, storyOf(s.id)!); }}
+              className="min-h-12 rounded-xl bg-brand px-3 text-base font-semibold text-white">▶ {t("playStory")}</button>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <button onClick={() => go({ name: "rate", id: s.id, mode: "term" })} className="min-h-12 rounded-xl bg-brand-soft px-3 text-sm font-semibold text-brand-dark">📋 {t("rateTerm")}</button>
             <button onClick={() => go({ name: "rate", id: s.id, mode: "taster" })} className="min-h-12 rounded-xl bg-sun-soft px-3 text-sm font-semibold text-warn">🧑‍🔧 {t("rateTaster")}</button>
