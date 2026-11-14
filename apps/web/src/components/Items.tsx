@@ -5,13 +5,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { seededRandom } from "@disha/engine";
 import { useT } from "../lib/i18n";
 import { speak } from "../lib/speech";
+import { Figure, ShapeGrid, type FigureSpec } from "./Figure";
 import { Button, SpeakButton } from "./ui";
 
 type Lang = { en: string; ta?: string };
 
 export interface ChoiceItem {
-  id: string; format: "choice"; prompt: Lang; answer: string;
-  options: (Lang & { id: string; emoji?: string; image?: string })[];
+  id: string; format: "choice"; prompt: Lang; answer: string; figure?: FigureSpec;
+  options: (Lang & { id: string; emoji?: string; image?: string; cells?: [number, number][] })[];
 }
 export interface EstimateItem {
   id: string; format: "estimate"; prompt: Lang; answer: number; tolerance?: number; unit?: Lang;
@@ -59,6 +60,7 @@ export function ItemView({ item, seed, onAnswer }: { item: QuestionItem; seed: s
         <h2 className="flex-1 text-xl leading-snug font-bold">{pick(item.prompt)}</h2>
         <SpeakButton text={pick(item.prompt)} audioKey={`item_${item.id}`} />
       </div>
+      {item.format === "choice" && item.figure && <div className="rounded-2xl bg-white p-3"><Figure spec={item.figure} /></div>}
       {item.format === "choice" && <Choice item={item} seed={seed} onPick={(id) => answer(id === item.answer, id)} />}
       {item.format === "estimate" && <Estimate item={item} onDone={(v) => answer(Math.abs(v - item.answer) <= (item.tolerance ?? 0), v)} />}
       {item.format === "order_steps" && <Order item={item} seed={seed} onDone={(ids) => answer(ids.join() === item.answer.join(), ids)} />}
@@ -76,7 +78,8 @@ function Choice({ item, seed, onPick }: { item: ChoiceItem; seed: string; onPick
           className="flex min-h-14 items-center gap-3 rounded-2xl border-2 border-line bg-white px-4 py-3 text-left text-lg font-medium active:border-brand active:bg-brand-soft">
           {o.emoji && <span className="text-3xl">{o.emoji}</span>}
           {o.image && <img src={o.image} alt="" className="size-16 rounded-xl object-cover" />}
-          <span>{pick(o)}</span>
+          {o.cells && <ShapeGrid cells={o.cells} />}
+          {(o.en || o.ta) && <span>{pick(o)}</span>}
         </button>
       ))}
     </div>

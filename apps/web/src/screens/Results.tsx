@@ -10,6 +10,7 @@ import { kb } from "../lib/kb";
 import { formatDate, SCHEME_TYPE, SECTOR } from "../lib/labels";
 import { analyse, type Analysis } from "../lib/profile";
 import { ITEMS, profileOf } from "../lib/skills";
+import { GAMES } from "./Game";
 import { nextToTest, personaFromProfile, type PersonaV2, type UnitState } from "@disha/engine";
 
 type Tab = "strengths" | "careers" | "schemes";
@@ -45,7 +46,7 @@ export default function Results({ go, id, tab }: { go: Go; id: string; tab: Tab 
         ))}
       </nav>
 
-      {tab === "strengths" && <><SkillLevels id={id} go={go} claimed={analysis.skills.map((s) => s.id)}
+      {tab === "strengths" && <><Games id={id} go={go} /><SkillLevels id={id} go={go} claimed={analysis.skills.map((s) => s.id)}
         persona={personaFromProfile(profile!, { education: analysis.persona.education, riasec: analysis.persona.riasec })} />
         <Strengths a={analysis} /></>}
       {tab === "careers" && <Careers a={analysis} go={go} id={id} />}
@@ -60,6 +61,33 @@ export default function Results({ go, id, tab }: { go: Go; id: string; tab: Tab 
         }}>🗑 {t("deleteMe")}</Button>
       </div>
     </Screen>
+  );
+}
+
+/** The three 3-minute puzzle games that measure how quickly she could learn new kinds of work. */
+function Games({ id, go }: { id: string; go: Go }) {
+  const { t, pick } = useT();
+  const profile = useLive(() => profileOf(id), [id], null);
+  if (!profile) return null;
+  return (
+    <section className="rounded-3xl bg-white p-4 shadow-sm">
+      <h2 className="text-xl font-bold">{t("gamesTitle")}</h2>
+      <p className="text-sm text-muted">{t("gamesHint")}</p>
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        {GAMES.map((g) => {
+          const played = (profile.aptitude[g.domain]?.n ?? 0) > 0;
+          return (
+            <button key={g.domain} onClick={() => go({ name: "game", id, domain: g.domain })}
+              className={`flex min-h-20 flex-col items-center justify-center gap-1 rounded-2xl border-2 p-2 text-sm font-semibold ${
+                played ? "border-good bg-good-soft text-good" : "border-line bg-paper"}`}>
+              <span className="text-3xl">{g.emoji}</span>
+              <span className="text-center leading-tight">{pick(kb.graph!.aptitudes[g.domain].name)}</span>
+              {played && <span>✓</span>}
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

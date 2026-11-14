@@ -79,7 +79,7 @@ def load(url: str, quiet: bool = False) -> dict:
                 "subskill_id = excluded.subskill_id, format = excluded.format, difficulty = excluded.difficulty, "
                 "discrimination = excluded.discrimination, body = excluded.body, langs = excluded.langs, "
                 "active = true, version = excluded.version where item.body is distinct from excluded.body or not item.active",
-                (it["id"], it["subskill"], it["format"], it["b"], it.get("a", 1.0), Jsonb(it), langs, version))
+                (it["id"], it.get("subskill") or it["domain"], it["format"], it["b"], it.get("a", 1.0), Jsonb(it), langs, version))
         con.execute("update item set active = false where active and not (id = any(%s))", (item_ids,))
 
         rubric_ids = []

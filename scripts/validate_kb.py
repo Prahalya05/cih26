@@ -127,6 +127,7 @@ def validate(kb_dir: Path = KB) -> tuple[list[str], list[str]]:
     return errors, warnings
 
 
+APTITUDES = {"apt_spatial", "apt_numeric", "apt_mechanical"}
 ITEM_FORMATS = {"choice", "estimate", "order_steps", "spot_mistake", "voice_scenario", "simulation"}
 
 
@@ -143,7 +144,10 @@ def check_items(errors: list[str], warnings: list[str], sub_ids: set[str]) -> No
             if iid in seen:
                 errors.append(f"{where}: duplicate id")
             seen.add(iid)
-            if it.get("subskill") not in sub_ids:
+            if "domain" in it:
+                if it["domain"] not in APTITUDES:
+                    errors.append(f"{where}: unknown aptitude {it['domain']}")
+            elif it.get("subskill") not in sub_ids:
                 errors.append(f"{where}: unknown sub-skill {it.get('subskill')}")
             fmt = it.get("format")
             if fmt not in ITEM_FORMATS:
@@ -159,8 +163,10 @@ def check_items(errors: list[str], warnings: list[str], sub_ids: set[str]) -> No
                 ids = [o.get("id") for o in it.get("options", [])]
                 if len(ids) < 2 or it.get("answer") not in ids:
                     errors.append(f"{where}: needs 2+ options and an answer among them")
+                if len(set(json.dumps(o.get("cells")) for o in it.get("options", []) if "cells" in o)) < sum(1 for o in it.get("options", []) if "cells" in o):
+                    errors.append(f"{where}: two shape options are the same")
                 for o in it.get("options", []):
-                    if not o.get("en") or not o.get("ta"):
+                    if "cells" not in o and (not o.get("en") or not o.get("ta")):
                         errors.append(f"{where}: option {o.get('id')} needs English and Tamil")
             elif fmt == "estimate":
                 if not isinstance(it.get("answer"), (int, float)) or not isinstance(it.get("tolerance", 0), (int, float)):
