@@ -27,7 +27,7 @@ export const GAMES = [
 export default function Game({ go, id, domain }: { go: Go; id: string; domain: string }) {
   const { t, pick } = useT();
   const apt = kb.graph!.aptitudes[domain];
-  const bank = useMemo(() => Object.values(ITEMS).filter((it) => (it as unknown as GameItem).domain === domain) as unknown as GameItem[], [domain]);
+  const bank = useMemo(() => Object.values(ITEMS).filter((it) => (it as unknown as GameItem).domain === domain && !(it as { retired?: boolean }).retired) as unknown as GameItem[], [domain]);
   const today = Math.floor(Date.now() / DAY);
   const answers = useLive(async () => (await db.events.where("student_id").equals(id).toArray())
     .filter((e) => e.kind === "aptitude_response" && e.payload.domain === domain && Math.floor(e.created_at / DAY) === today)

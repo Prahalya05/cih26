@@ -19,7 +19,8 @@ export default function Assess({ go, id, subskill }: { go: Go; id: string; subsk
   const { t, pick } = useT();
   const sub = kb.graph!.subskills[subskill];
   const bank = useMemo(() => Object.values(ITEMS).filter(
-    (it) => it.subskill === subskill && SUPPORTED_FORMATS.includes(String(it.format))) as BankItem[], [subskill]);
+    (it) => it.subskill === subskill && SUPPORTED_FORMATS.includes(String(it.format)) && !(it as { retired?: boolean }).retired) as BankItem[],
+    [subskill]); // retired questions are still scored, never asked
   const today = Math.floor(Date.now() / DAY);
   const answers = useLive(async () => (await db.events.where("student_id").equals(id).toArray())
     .filter((e) => e.kind === "item_response" && e.subskill_id === subskill && Math.floor(e.created_at / DAY) === today)

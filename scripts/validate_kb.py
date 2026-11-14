@@ -7,6 +7,7 @@ Errors fail CI. Warnings (such as Tamil text still to be written) are printed bu
 from __future__ import annotations
 
 import json
+from collections import defaultdict
 import re
 import sys
 from pathlib import Path
@@ -165,6 +166,7 @@ def check_items(errors: list[str], warnings: list[str], sub_ids: set[str]) -> No
     if not folder.is_dir():
         return
     seen: set[str] = set()
+    active: dict[str, int] = defaultdict(int)  # questions still asked (Step 12.4 retires misfits)
     unreviewed = 0
     for path in sorted(folder.glob("*.json")):
         for it in load(f"items/{path.name}"):
@@ -204,8 +206,15 @@ def check_items(errors: list[str], warnings: list[str], sub_ids: set[str]) -> No
                 ids = [s.get("id") for s in it.get("steps", [])]
                 if len(ids) < 3 or sorted(it.get("answer", [])) != sorted(ids):
                     errors.append(f"{where}: needs 3+ steps and an answer listing each step once")
+            if "retired" in it and not isinstance(it["retired"], bool):
+                errors.append(f"{where}: retired must be true or false")
+            if not it.get("retired"):
+                active[it.get("subskill") or it.get("domain")] += 1
             if not it.get("reviewed"):
                 unreviewed += 1
+    for group, n in sorted(active.items()):
+        if n < 4:
+            warnings.append(f"{group}: only {n} questions still asked (retired ones excluded)")
     if unreviewed:
         warnings.append(f"{unreviewed} questions not yet reviewed by a teacher (Step 5.4)")
 
