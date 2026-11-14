@@ -28,7 +28,24 @@ Tracks the build against `docs/Disha_Implementation_Plan.docx`. Last updated 14 
    - App: `cd apps/web && VITE_API_URL=http://localhost:8010 npx vite --port 5185`
 2. Phase 11: separate consent scopes on the consent screen, `DELETE /v2/student/{id}` with full erasure, block hazardous work samples for under-18s, CI check for name/phone columns.
 3. Phase 12: fairness tests in CI, pilot materials, Rasch recalibration script.
-4. Phase 13: rebuild demo students as event stories (so the demo class shows Strong matches), deploy, load test.
+4. Decide when to do the research follow-ups below (experience-first extraction, RPL opportunity).
+5. Phase 13: rebuild demo students as event stories (so the demo class shows Strong matches), deploy, load test.
+
+## Research follow-ups (from a review of skill-extraction methods, 14 November 2026)
+
+Not yet scheduled: decide whether to do items 1-2 before or after Phase 11.
+
+1. **Experience-first extraction.** Change the prompt and schema in `apps/api/app/adapters/gemini.py` so Gemini returns `experiences[]` (what the student does, e.g. "stitches blouses for neighbours"), each with `responsibilities[]` and `skill_ids[]` plus quoted evidence. Keep the existing flat `skills` field exactly as it is and add `experiences` beside it, so the app and evidence events do not change. Keyword fallback (`adapters/keywords.py`) puts everything under a single experience. This is the method used by Tabiya Compass (open-source skills agent).
+2. **RPL certification as an Opportunity.** Add NSQF level and an RPL note to relevant careers in `packages/kb/occupations.json`. When a sub-skill reaches level 4 (Strong), show "Eligible to apply for RPL certification under PMKVY". Check every job role against the official NSDC/NCVET Qualification Pack list; do not invent QP codes.
+3. **Pitch points (no code):**
+   - Against "isn't this just Compass?": Compass stops at what the student says; Disha uses speech only to decide what to test, then measures with adaptive tests, work samples and paid jobs.
+   - Harambee (South Africa): 20% of those doing poorly in school maths show enough problem-solving potential for entry-level roles. Supports measuring aptitude separately.
+   - IRT adaptive testing is the method behind the GRE, TOEFL, GMAT and the Duolingo English Test.
+   - Hand-set Bayesian tracing is the defensible choice without large answer logs; deep models (DKT) need big data. Evidence weights are starting values, recalibrated after the pilot (Phase 12: Rasch, DIF check).
+   - Open answers are scored per checklist item, never as one overall grade (more robust to padding and spelling errors).
+4. **Resolve before any slide quotes it:** paid-order weight is 2 per order (max 10) in code vs 5 (max 25) in the design doc (also listed under Open items).
+
+Sources: Tabiya Compass (globaldevincubator.org), Harambee "Breaking Barriers" (Feb 2024), CSAE Oxford skills-based hiring, JEDM "When is Deep Learning the Best Approach to Knowledge Tracing?", arXiv 2404.00712 (CAT survey), arXiv 2307.03539 (LLM ESCO matching), NSDC Recognition of Prior Learning.
 
 ## Open items
 
