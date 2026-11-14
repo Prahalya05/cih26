@@ -9,7 +9,7 @@ import { useT } from "../lib/i18n";
 import { kb } from "../lib/kb";
 import { formatDate, SCHEME_TYPE, SECTOR } from "../lib/labels";
 import { analyse, type Analysis } from "../lib/profile";
-import { ITEMS, profileOf } from "../lib/skills";
+import { ITEMS, RUBRICS, profileOf } from "../lib/skills";
 import { GAMES } from "./Game";
 import { nextToTest, personaFromProfile, type PersonaV2, type UnitState } from "@disha/engine";
 
@@ -120,7 +120,13 @@ function SkillLevels({ id, go, claimed, persona }: { id: string; go: Go; claimed
       )}
       {skills.map((sk) => (
         <article key={sk} className="rounded-3xl bg-white p-4 shadow-sm">
-          <h3 className="text-lg font-semibold">{pick(kb.skills[sk].name)}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="flex-1 text-lg font-semibold">{pick(kb.skills[sk].name)}</h3>
+            {Object.values(RUBRICS).filter((r) => r.skill === sk).map((r) => (
+              <button key={r.id} onClick={() => go({ name: "sample", id, rubric: r.id })}
+                className="rounded-xl bg-sun-soft px-3 py-2 text-sm font-semibold text-warn">📷 {t("showWork")}</button>
+            ))}
+          </div>
           <ul className="mt-2 flex flex-col gap-3">
             {g.bySkill[sk].map((u) => (
               <SubskillRow key={u} unitId={u} unit={profile.units[u]} canTest={testable.has(u)}

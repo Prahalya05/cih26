@@ -11,6 +11,9 @@ import { kb } from "../lib/kb";
 import { SECTOR } from "../lib/labels";
 import { analyse, isStrongMatch, type Analysis } from "../lib/profile";
 import { pullCohort, syncNow } from "../lib/sync";
+import { samplesToConfirm, type RubricFull } from "../lib/samples";
+import { RUBRICS } from "../lib/skills";
+import type { StoredEvent } from "../lib/db";
 
 const savedCode = () => { try { return localStorage.getItem("disha.code") ?? ""; } catch { return ""; } };
 
@@ -85,6 +88,8 @@ export default function Teacher({ go }: { go: Go }) {
       </div>
       {pending > 0 && online && <Button kind="soft" onClick={() => void syncNow()}>⇅ Sync ({pending})</Button>}
 
+      <WorkQueue students={students} />
+
       {rows.length === 0 && <p className="text-muted">{t("noStudents")}</p>}
 
       {rows.map(({ s, a, strong }) => (
@@ -97,6 +102,59 @@ export default function Teacher({ go }: { go: Go }) {
           : <Button kind="ghost" className="text-base" onClick={() => clearDemoClass()}>🧹 {t("simulated")} ✕</Button>}
       </div>
     </Screen>
+  );
+}
+
+/** Photos of students' work waiting for the teacher: confirm the AI's scores or correct them, one tap each. */
+function WorkQueue({ students }: { students: Student[] }) {
+  const { t } = useT();
+  const queue = useLive(() => samplesToConfirm(students.map((s) => s.id)), [students], [] as StoredEvent[]);
+  if (!queue.length) return null;
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="text-xl font-bold">📷 {t("workToCheck")} ({queue.length})</h2>
+      {queue.map((e) => <SampleCard key={e.id} sample={e} student={students.find((s) => s.id === e.student_id)} />)}
+    </section>
+  );
+}
+
+function SampleCard({ sample, student }: { sample: StoredEvent; student?: Student }) {
+  const { t, pick } = useT();
+  const rubric = RUBRICS[String(sample.payload.rubric_id)] as unknown as RubricFull | undefined;
+  const ai = (sample.payload.scores ?? {}) as Record<string, number>;
+  const reasons = (sample.payload.reasons ?? {}) as Record<string, string>;
+  const [scores, setScores] = useState<Record<string, number>>(ai);
+  const media = useLive(() => db.media.get(String(sample.payload.media_ref ?? "")), [sample.id], undefined);
+  const url = useMemo(() => (media ? URL.createObjectURL(media.blob) : null), [media]);
+  if (!rubric) return null;
+  const complete = rubric.criteria.every((c) => c.id in scores);
+  const confirm = async () => {
+    await recordEvent({ student_id: sample.student_id, kind: "rating", rater_id: await raterId(), refers_to: sample.id,
+      payload: { scores } });
+  };
+  return (
+    <article className="rounded-3xl bg-white p-4 shadow-sm">
+      <p className="font-semibold">{student?.avatar} {student?.name} · {pick(rubric.name)}</p>
+      {url ? <img src={url} alt="" className="mt-2 max-h-56 w-full rounded-2xl object-contain" />
+        : <p className="mt-1 text-sm text-muted">{t("noPhotoHere")}</p>}
+      <ul className="mt-3 flex flex-col gap-2">
+        {rubric.criteria.map((c) => (
+          <li key={c.id}>
+            <div className="flex items-center gap-2">
+              <span className="flex-1 text-sm font-medium">{pick(c.name)}</span>
+              {[0, 1, 2].map((v) => (
+                <button key={v} onClick={() => setScores({ ...scores, [c.id]: v })} aria-pressed={scores[c.id] === v}
+                  className={`size-10 rounded-xl border-2 font-bold ${scores[c.id] === v ? "border-brand bg-brand text-white" : "border-line"}`}>
+                  {v}
+                </button>
+              ))}
+            </div>
+            {reasons[c.id] && <p className="text-xs text-muted">🤖 {reasons[c.id]}</p>}
+          </li>
+        ))}
+      </ul>
+      <Button className="mt-3 w-full" disabled={!complete} onClick={() => void confirm()}>✔ {t("confirmScores")}</Button>
+    </article>
   );
 }
 

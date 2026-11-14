@@ -25,7 +25,7 @@ export interface Student {
   name: string;
   avatar: string;
   facilitator_code?: string;
-  consent?: { at: number };
+  consent?: { at: number; photos?: boolean };
   cards: Record<string, boolean>;
   answers: Record<string, Answer>;
   factAnswers: Record<string, unknown>;

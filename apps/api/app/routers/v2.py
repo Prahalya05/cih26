@@ -8,11 +8,13 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel, Field
 
 from .. import db, kb
+from ..adapters import gemini_vision
+from ..adapters.gemini import GeminiUnavailable
 from ..schemas import validate_event
 from ..services import tracing
 
@@ -182,3 +184,29 @@ def sync(req: SyncIn):
             cursor = max(cursor, top)
         return {"accepted": accepted, "rejected": rejected, "events": [_row_to_event(r) for r in rows],
                 "cursor": cursor, "more": more}
+
+
+# ---------- work samples ----------
+
+MAX_IMAGE_BYTES = 4_000_000
+
+
+@router.post("/work-sample/score", summary="Score a photo of a student's work against a checklist (AI; a teacher confirms)")
+async def score_work_sample(student_id: str = Form(...), rubric_id: str = Form(...), image: UploadFile = File(...)):
+    rubric = kb.rubrics().get(rubric_id)
+    if not rubric:
+        raise HTTPException(404, "Unknown checklist")
+    with db.connect() as con:
+        ok = con.execute("select 1 from consent where student_id = %s and revoked_at is null and 'photos' = any(scopes)",
+                         (student_id,)).fetchone()
+    if not ok:
+        raise HTTPException(403, "No consent to check photos for this student")
+    data = await image.read()
+    if len(data) > MAX_IMAGE_BYTES:
+        raise HTTPException(413, "Photo too large")
+    # The photo is scored in memory and never stored on the server.
+    try:
+        out = gemini_vision.score(rubric, data, image.content_type or "image/jpeg")
+    except GeminiUnavailable:
+        raise HTTPException(503, "AI scoring unavailable; a teacher will score this sample") from None
+    return {**out, "rubric_id": rubric_id, "scorer": "ai"}

@@ -119,7 +119,8 @@ function studentForServer(s: Student) {
     id: s.id,
     name: s.name,
     facilitator_code: s.facilitator_code ?? null,
-    consent: s.consent ? { id: `consent_${s.id}`, scopes: ["assess"], method: "app_checkbox", granted_at: s.consent.at } : null,
+    consent: s.consent ? { id: `consent_${s.id}`, scopes: ["assess", ...(s.consent.photos ? ["photos"] : [])],
+      method: "app_checkbox", granted_at: s.consent.at } : null,
   };
 }
 

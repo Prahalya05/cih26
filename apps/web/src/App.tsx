@@ -13,6 +13,8 @@ import CareerDetail from "./screens/CareerDetail";
 import Teacher from "./screens/Teacher";
 import Assess from "./screens/Assess";
 import Game from "./screens/Game";
+import WorkSample from "./screens/WorkSample";
+import { scorePending } from "./lib/samples";
 
 export type Route =
   | { name: "home" }
@@ -25,7 +27,8 @@ export type Route =
   | { name: "career"; id: string; occ: string }
   | { name: "teacher" }
   | { name: "assess"; id: string; subskill: string }
-  | { name: "game"; id: string; domain: string };
+  | { name: "game"; id: string; domain: string }
+  | { name: "sample"; id: string; rubric: string };
 
 export type Go = (r: Route) => void;
 
@@ -50,10 +53,11 @@ export default function App() {
 
   // Sync whenever we come online, and every 30 s while online.
   useEffect(() => {
-    void syncNow();
-    const onOnline = () => void syncNow();
+    const run = () => void syncNow().then(() => scorePending());
+    run();
+    const onOnline = () => run();
     window.addEventListener("online", onOnline);
-    const timer = window.setInterval(() => navigator.onLine && void syncNow(), 30_000);
+    const timer = window.setInterval(() => navigator.onLine && run(), 30_000);
     return () => { window.removeEventListener("online", onOnline); window.clearInterval(timer); };
   }, []);
 
@@ -70,6 +74,7 @@ export default function App() {
       {route.name === "teacher" && <Teacher go={go} />}
       {route.name === "assess" && <Assess go={go} id={route.id} subskill={route.subskill} />}
       {route.name === "game" && <Game go={go} id={route.id} domain={route.domain} />}
+      {route.name === "sample" && <WorkSample go={go} id={route.id} rubric={route.rubric} />}
     </LangContext.Provider>
   );
 }
