@@ -11,12 +11,21 @@ export interface SkillClaim {
   source: "tap" | "voice" | "text";
 }
 
+/** Something she actually does, from her answer (experience-first extraction). Not used for scoring. */
+export interface Experience {
+  what: string;
+  responsibilities: string[];
+  skill_ids: string[];
+  evidence: string;
+}
+
 export interface Answer {
   qid: string;
   chips: string[];
   text?: string;
   transcript?: string;
   extracted?: SkillClaim[];
+  experiences?: Experience[];
   via?: "gemini" | "keywords" | "unavailable";
 }
 

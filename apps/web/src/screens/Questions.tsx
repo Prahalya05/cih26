@@ -64,7 +64,8 @@ export default function Questions({ go, id }: { go: Go; id: string }) {
     setVoice("thinking");
     const remote = await extractRemote(pick(q), { text: value });
     const skills = remote?.skills ?? extractKeywords(value);
-    addExtracted(skills, (a) => ({ text: join(a.text, value), via: remote?.source ?? "keywords" }));
+    addExtracted(skills, (a) => ({ text: join(a.text, value), via: remote?.source ?? "keywords",
+      experiences: [...(a.experiences ?? []), ...(remote?.experiences ?? [])] }));
     setText("");
     setTyping(false);
     setVoice("idle");
@@ -89,7 +90,8 @@ export default function Questions({ go, id }: { go: Go; id: string }) {
     const remote = await extractRemote(pick(q), { audio });
     setVoice("idle");
     if (!remote || remote.source === "unavailable") { setNote(t("voiceOffline")); return; }
-    addExtracted(remote.skills, (a) => ({ transcript: join(a.transcript, remote.transcript), via: remote.source }));
+    addExtracted(remote.skills, (a) => ({ transcript: join(a.transcript, remote.transcript), via: remote.source,
+      experiences: [...(a.experiences ?? []), ...(remote.experiences ?? [])] }));
   };
 
   stopRef.current = () => void stopVoice();

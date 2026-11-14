@@ -15,6 +15,7 @@
     "skills": [{"id": "sk_stitching", "w": 3}, {"id": "sk_tools_handling", "w": 1}, {"id": "sk_organising", "w": 1}],
     "pathway": ["Register on the apprenticeship portal", "Join a garment-unit apprenticeship (stipend)", "Get NSQF certificate", "Move up to line supervisor / quality checker"],
     "exams": [], "local_demand_tn": "high",
+    "rpl": {"qp_code": "AMH/Q0301", "qp_name": "Sewing Machine Operator", "nsqf_level": null, "ssc": "Apparel, Made-Ups & Home Furnishing Sector Skill Council", "nqr_code": null, "subskills": ["ss_stitch_machine"], "source_url": "https://www.psscive.ac.in/storage/uploads/documents/1695384029_Sewing%20Machine%20Operator%20Class%209%20&%2010%20.pdf", "checked": "2026-11-14", "note_en": "Sources differ on the NSQF level (3 or 4); confirm with the sector skill council."},
     "source_url": "https://www.apprenticeshipindia.gov.in", "needs_verification": true
   },
   {
@@ -33,6 +34,7 @@
     "skills": [{"id": "sk_stitching", "w": 3}, {"id": "sk_money_handling", "w": 2}, {"id": "sk_selling", "w": 2}, {"id": "sk_colour_design", "w": 1}],
     "pathway": ["Take a short entrepreneurship / tailoring course", "Start taking orders from neighbours", "Apply for a micro-enterprise loan scheme", "Sell online via social media"],
     "exams": [], "local_demand_tn": "high",
+    "rpl": {"qp_code": "AMH/Q1947", "qp_name": "Self Employed Tailor", "nsqf_level": 4, "ssc": "Apparel, Made-Ups & Home Furnishing Sector Skill Council", "nqr_code": null, "subskills": ["ss_stitch_measure", "ss_stitch_cutting", "ss_stitch_machine", "ss_stitch_fitting"], "source_url": "https://www.psscive.ac.in/storage/uploads/curriculums/pdf/english/self-employed-tailor-english.pdf", "checked": "2026-11-14", "note_en": "NQR code not confirmed; check the current version with the sector skill council."},
     "source_url": "https://www.myscheme.gov.in", "needs_verification": true
   },
   {
@@ -60,6 +62,7 @@
     "skills": [{"id": "sk_machine_repair", "w": 3}, {"id": "sk_tools_handling", "w": 3}, {"id": "sk_driving", "w": 1}],
     "pathway": ["Join a short NSQF two-wheeler service course", "Apprentice at a service centre", "Learn EV servicing", "Open own workshop"],
     "exams": [], "local_demand_tn": "high",
+    "rpl": {"qp_code": "ASC/Q1411", "qp_name": "Two Wheeler Service Technician", "nsqf_level": 4, "ssc": "Automotive Skills Development Council", "nqr_code": "2022/AUT/ASDC/06571", "subskills": ["sk_machine_repair"], "source_url": "https://www.nqr.gov.in/qualifications/9528", "checked": "2026-11-14", "note_en": null},
     "source_url": "https://www.skillindiadigital.gov.in", "needs_verification": true
   },
   {
@@ -69,6 +72,7 @@
     "skills": [{"id": "sk_animal_care", "w": 3}, {"id": "sk_money_handling", "w": 2}, {"id": "sk_selling", "w": 1}],
     "pathway": ["Take a dairy-farming training (KVK / state dairy)", "Join the village milk cooperative", "Apply for dairy entrepreneurship support scheme", "Add value: curd, paneer, ghee"],
     "exams": [], "local_demand_tn": "medium",
+    "rpl": {"qp_code": "AGR/Q4101", "qp_name": "Dairy Farmer/Entrepreneur", "nsqf_level": 4, "ssc": "Agriculture Skill Council of India", "nqr_code": "QG-04-AG-03544-2025-V2-ASCI", "subskills": ["sk_animal_care"], "source_url": "https://www.nqr.gov.in/qualification/file/Q-file_Dairy%20Farmer_Entrepreneur%20Version_5.0.pdf", "checked": "2026-11-14", "note_en": null},
     "source_url": "https://www.myscheme.gov.in", "needs_verification": true
   },
   {
@@ -132,6 +136,7 @@
     "skills": [{"id": "sk_cooking", "w": 3}, {"id": "sk_organising", "w": 1}, {"id": "sk_colour_design", "w": 1}],
     "pathway": ["Short NSQF commis chef course or hotel-management diploma", "Apprenticeship in a hotel kitchen", "Specialise (bakery, South Indian, etc.)", "Catering / food-stall business"],
     "exams": ["NCHM JEE (for hotel management)"], "local_demand_tn": "high",
+    "rpl": {"qp_code": "THC/Q0406", "qp_name": "Commis Chef", "nsqf_level": 4, "ssc": "Tourism & Hospitality Skill Council", "nqr_code": "QG-04-TH-02001-2024-V1-THSC", "subskills": ["ss_cook_hygiene", "ss_cook_quantity"], "source_url": "https://nqr.gov.in/sites/default/files/Annexure%202_Commis%20Chef%20_%20THC_Q0406_v2.0.pdf", "checked": "2026-11-14", "note_en": "In January 2024 the NQR listed a newer version named 'Commis' (code above); confirm which one the RPL centre assesses."},
     "source_url": "https://nchm.gov.in", "needs_verification": true
   },
   {

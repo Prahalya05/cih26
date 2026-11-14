@@ -11,7 +11,7 @@ import { formatDate, SCHEME_TYPE, SECTOR } from "../lib/labels";
 import { analyse, type Analysis } from "../lib/profile";
 import { ITEMS, RUBRICS, profileOf } from "../lib/skills";
 import { GAMES } from "./Game";
-import { nextToTest, personaFromProfile, safeRubric, type PersonaV2, type UnitState } from "@disha/engine";
+import { nextToTest, personaFromProfile, rplOpportunities, safeRubric, type PersonaV2, type UnitState } from "@disha/engine";
 
 type Tab = "strengths" | "careers" | "schemes";
 
@@ -104,8 +104,20 @@ function SkillLevels({ id, go, claimed, persona }: { id: string; go: Go; claimed
   // The test most likely to change her career list (only sub-skills that have questions, not yet sure).
   const candidates = [...testable].filter((u) => (profile.units[u]?.confidence ?? 0) < 0.8 || (profile.units[u]?.n ?? 0) === 0);
   const best = nextToTest(kb, persona, candidates, 1)[0];
+  const rpl = rplOpportunities(kb, profile.units, minor);
   return (
     <section className="flex flex-col gap-3">
+      {rpl.map((r) => (
+        <button key={r.occupation} onClick={() => go({ name: "career", id, occ: r.occupation })}
+          className="flex items-start gap-3 rounded-3xl bg-good-soft p-4 text-left shadow-sm">
+          <span className="text-3xl">🎓</span>
+          <span className="flex-1">
+            <span className="block text-lg font-semibold">{r.rpl.qp_name}{r.rpl.nsqf_level ? ` · ${t("rplLevel", { n: r.rpl.nsqf_level })}` : ""}</span>
+            <span className="block">{t(r.status === "eligible" ? "rplEligible" : "rplAt18")}</span>
+            <span className="mt-1 block text-sm text-muted">{t("rplCheck")}</span>
+          </span>
+        </button>
+      ))}
       {skills.length > 0 && <h2 className="text-2xl font-bold">{t("skillLevels")}</h2>}
       {skills.length > 0 && <p className="text-muted">{t("skillLevelsHint")}</p>}
       {best && best.value > 0 && (

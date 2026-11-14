@@ -40,6 +40,16 @@ export default function CareerDetail({ go, id, occ }: { go: Go; id: string; occ:
         </section>
       )}
 
+      {o.rpl && (
+        <section className="rounded-3xl bg-white p-5 shadow-sm">
+          <h3 className="text-xl font-bold">🎓 {t("rplTitle")}</h3>
+          <p className="mt-2 font-semibold">{o.rpl.qp_name} ({o.rpl.qp_code}){o.rpl.nsqf_level ? ` · ${t("rplLevel", { n: o.rpl.nsqf_level })}` : ""}</p>
+          <p className="text-sm text-muted">{o.rpl.ssc}</p>
+          {o.rpl.note_en && <p className="mt-1 text-sm text-warn">{o.rpl.note_en}</p>}
+          <a className="mt-1 block text-sm underline" href={o.rpl.source_url} target="_blank" rel="noreferrer">{new URL(o.rpl.source_url).hostname}</a>
+        </section>
+      )}
+
       <p className="text-sm text-muted">
         {t("source")}: {o.source_url ? <a className="underline" href={o.source_url} target="_blank" rel="noreferrer">{new URL(o.source_url).hostname}</a> : "—"}
         {o.needs_verification && <> · <span className="text-warn">{t("notVerified")}</span></>}

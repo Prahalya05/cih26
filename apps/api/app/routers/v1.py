@@ -101,8 +101,9 @@ async def extract_profile(
         except gemini.GeminiUnavailable:
             pass
     if text:
-        return {"transcript": text, "skills": keywords.extract(text), "source": "keywords"}
-    return {"transcript": "", "skills": [], "source": "unavailable"}
+        found = keywords.extract(text)
+        return {"transcript": text, "skills": found, "experiences": keywords.experiences(text, found), "source": "keywords"}
+    return {"transcript": "", "skills": [], "experiences": [], "source": "unavailable"}
 
 
 # ---------- offline sync and facilitator ----------

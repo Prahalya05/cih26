@@ -24,6 +24,21 @@ export interface Occupation {
   local_demand_tn?: "high" | "medium" | "low";
   source_url?: string;
   needs_verification?: boolean;
+  rpl?: Rpl;
+}
+
+/** A national qualification she could be certified in through RPL (Recognition of Prior Learning). */
+export interface Rpl {
+  qp_code: string;
+  qp_name: string;
+  nsqf_level: number | null;
+  ssc: string;
+  nqr_code?: string | null;
+  /** Sub-skills (or whole skills) the qualification assesses. */
+  subskills: string[];
+  source_url: string;
+  checked: string;
+  note_en?: string | null;
 }
 
 export interface Scheme {

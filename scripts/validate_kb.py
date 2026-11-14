@@ -7,6 +7,7 @@ Errors fail CI. Warnings (such as Tamil text still to be written) are printed bu
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -69,6 +70,34 @@ def validate(kb_dir: Path = KB) -> tuple[list[str], list[str]]:
     for skill, n in per_skill.items():
         if not 3 <= n <= 6:
             errors.append(f"{skill}: has {n} sub-skills, needs 3-6")
+
+    # RPL certification (Recognition of Prior Learning): only qualification packs checked against official
+    # NQR / sector skill council documents. Never invent QP codes.
+    skill_ids = {s["id"] for s in skills}
+    for o in occupations:
+        r = o.get("rpl")
+        if r is None:
+            continue
+        label = f"{o['id']}.rpl"
+        if not re.fullmatch(r"[A-Z]{3}/Q\d{4}", str(r.get("qp_code", ""))):
+            errors.append(f"{label}: qp_code must look like ABC/Q1234")
+        if not r.get("qp_name") or not r.get("ssc"):
+            errors.append(f"{label}: needs qp_name and ssc")
+        lvl = r.get("nsqf_level")
+        if lvl is not None and not (isinstance(lvl, (int, float)) and 1 <= lvl <= 8):
+            errors.append(f"{label}: nsqf_level must be 1-8 or null")
+        if lvl is None and not r.get("note_en"):
+            errors.append(f"{label}: an unknown nsqf_level needs a note saying why")
+        if not str(r.get("source_url", "")).startswith("https://"):
+            errors.append(f"{label}: needs an https source_url")
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(r.get("checked", ""))):
+            errors.append(f"{label}: needs a checked date (YYYY-MM-DD)")
+        subs = r.get("subskills") or []
+        if not subs:
+            errors.append(f"{label}: needs the sub-skills the qualification assesses")
+        for sid in subs:
+            if sid not in sub_ids and sid not in skill_ids:
+                errors.append(f"{label}: unknown sub-skill {sid}")
 
     needs_count = {o: 0 for o in occ_ids}
     apt_count = {o: 0 for o in occ_ids}

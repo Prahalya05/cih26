@@ -30,3 +30,11 @@ def extract(text: str) -> list[dict]:
                 found.append({"id": sid, "confidence": 0.5, "evidence": evidence[:200]})
                 break
     return found
+
+
+def experiences(text: str, skills: list[dict]) -> list[dict]:
+    """Fallback: everything found goes under one experience, quoting the whole answer."""
+    if not skills or not text.strip():
+        return []
+    return [{"what": "From the student's answer", "responsibilities": [],
+             "skill_ids": [s["id"] for s in skills], "evidence": text.strip()[:200]}]

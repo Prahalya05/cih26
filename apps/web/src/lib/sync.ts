@@ -1,7 +1,7 @@
 // Talks to the Disha API. Everything here is optional: the student flow works without it.
 
 import type { EvidenceEvent } from "@disha/engine";
-import { db, deleteStudent, hasScope, type Action, type SkillClaim, type StoredEvent, type Student } from "./db";
+import { db, deleteStudent, hasScope, type Action, type Experience, type SkillClaim, type StoredEvent, type Student } from "./db";
 import { deviceId } from "./events";
 import { refreshSkillState } from "./skills";
 
@@ -197,6 +197,7 @@ export async function pullCohort(code: string): Promise<boolean> {
 export interface Extracted {
   transcript: string;
   skills: SkillClaim[];
+  experiences?: Experience[];
   source: "gemini" | "keywords" | "unavailable";
 }
 

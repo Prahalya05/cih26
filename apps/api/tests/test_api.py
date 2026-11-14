@@ -55,6 +55,24 @@ def test_extract_falls_back_to_keywords(client):
     ids = {s["id"] for s in out["skills"]}
     assert {"sk_stitching", "sk_drawing"} <= ids
     assert all(s["evidence"] for s in out["skills"])
+    # Keyword fallback: one experience holding every skill found.
+    assert len(out["experiences"]) == 1 and set(out["experiences"][0]["skill_ids"]) == ids
+
+
+def test_gemini_experiences_are_cleaned():
+    from app import kb
+    from app.adapters.gemini import clean_experiences
+    raw = [
+        {"what": "Stitches blouses for neighbours", "responsibilities": ["takes measurements", " "],
+         "skill_ids": ["sk_stitching", "sk_made_up", "sk_stitching"], "evidence": "I stitch blouses"},
+        {"what": "", "responsibilities": [], "skill_ids": ["sk_drawing"], "evidence": "kolam"},
+        {"what": "Draws kolam", "responsibilities": [], "skill_ids": ["sk_drawing"], "evidence": ""},
+        "not an object",
+    ]
+    out = clean_experiences(raw, kb.skills())
+    assert out == [{"what": "Stitches blouses for neighbours", "responsibilities": ["takes measurements"],
+                    "skill_ids": ["sk_stitching"], "evidence": "I stitch blouses"}]
+    assert clean_experiences(None, kb.skills()) == []
 
 
 def test_extract_needs_input(client):
