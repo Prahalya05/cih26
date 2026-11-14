@@ -42,3 +42,6 @@ def test_golden_is_current():
     from app.services import tracing
     for case in golden["fold"]:
         assert tracing.fold_events(case["events"], case["opts"]) == case["result"], case["name"]
+    from app.services import fitreach
+    for case in golden["recommend_v2"]:
+        assert fitreach.recommend_v2(case["persona"]) == case["result"]

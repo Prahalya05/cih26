@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "apps" / "api"))
 
 from app import kb  # noqa: E402
-from app.services import eligibility, irt, matcher, tracing  # noqa: E402
+from app.services import eligibility, fitreach, irt, matcher, tracing  # noqa: E402
 
 sys.path.insert(0, str(ROOT / "scripts"))
 import scenarios  # noqa: E402
@@ -124,6 +124,35 @@ def fold_cases() -> list[dict]:
     return cases
 
 
+def recommend_v2_cases(rng: random.Random) -> list[dict]:
+    """Fit/Reach/Worth matching on profiles from the stories and on random profiles."""
+    personas = []
+    events, opts, checkpoints = scenarios.meena()
+    for label, n in checkpoints:
+        prof = tracing.fold_events(events[:n], {**opts, "now": events[n - 1]["created_at"]})
+        personas.append(fitreach.persona_from_profile(prof, "class10", MEENA["riasec"]))
+    apt_events, apt_opts = scenarios.aptitude_story()
+    personas.append(fitreach.persona_from_profile(tracing.fold_events(apt_events, apt_opts), "class12",
+                                                  {"R": 0.8, "I": 0.6}))
+    units = list(kb.graph()["subskills"]) + list(kb.skills())
+    for _ in range(40):
+        levels = {}
+        for uid in rng.sample(units, rng.randint(0, 12)):
+            raw = [rng.random() for _ in range(4)]
+            total = sum(raw)
+            levels[uid] = [x / total for x in raw]
+        persona = {"levels": levels}
+        if rng.random() < 0.6:
+            persona["aptitude"] = {a: {"theta": round(rng.uniform(-2, 2), 2), "se": 0.5}
+                                   for a in rng.sample(["apt_spatial", "apt_numeric", "apt_mechanical"], rng.randint(1, 3))}
+        if rng.random() < 0.8:
+            persona["education"] = rng.choice(list(kb.EDUCATION_ORDER) + ["unknown"])
+        if rng.random() < 0.8:
+            persona["riasec"] = {l: round(rng.random(), 2) for l in "RIASEC" if rng.random() < 0.8}
+        personas.append(persona)
+    return [{"persona": p, "result": fitreach.recommend_v2(p)} for p in personas]
+
+
 def main() -> None:
     rng = random.Random(2026)
     personas = [MEENA, {}, {"education": "graduate", "skills": [{"id": "sk_coding"}]}]
@@ -142,6 +171,7 @@ def main() -> None:
         "eligibility": [{"facts": f, "result": eligibility.evaluate_all(f)} for f in facts_list],
         "irt": irt_cases(),
         "fold": fold_cases(),
+        "recommend_v2": recommend_v2_cases(rng),
     }
     OUT.write_text(json.dumps(golden, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"wrote {OUT.relative_to(ROOT)}: {len(personas)} students, {len(facts_list)} fact sets")

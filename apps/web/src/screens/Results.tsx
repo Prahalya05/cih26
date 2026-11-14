@@ -10,7 +10,7 @@ import { kb } from "../lib/kb";
 import { formatDate, SCHEME_TYPE, SECTOR } from "../lib/labels";
 import { analyse, type Analysis } from "../lib/profile";
 import { ITEMS, profileOf } from "../lib/skills";
-import type { UnitState } from "@disha/engine";
+import { nextToTest, personaFromProfile, type PersonaV2, type UnitState } from "@disha/engine";
 
 type Tab = "strengths" | "careers" | "schemes";
 
@@ -18,7 +18,8 @@ export default function Results({ go, id, tab }: { go: Go; id: string; tab: Tab 
   const { t, lang } = useT();
   const student = useLive(() => db.students.get(id), [id], undefined);
   const actions = useLive(() => db.actions.where("student_id").equals(id).toArray(), [id], [] as Action[]);
-  const analysis = useMemo(() => (student ? analyse(student, actions, lang) : null), [student, actions, lang]);
+  const profile = useLive(() => profileOf(id), [id], null);
+  const analysis = useMemo(() => (student && profile ? analyse(student, actions, lang, profile) : null), [student, actions, lang, profile]);
   if (!student || !analysis) return null;
 
   const tabs: { key: Tab; emoji: string }[] = [
@@ -44,7 +45,9 @@ export default function Results({ go, id, tab }: { go: Go; id: string; tab: Tab 
         ))}
       </nav>
 
-      {tab === "strengths" && <><SkillLevels id={id} go={go} claimed={analysis.skills.map((s) => s.id)} /><Strengths a={analysis} /></>}
+      {tab === "strengths" && <><SkillLevels id={id} go={go} claimed={analysis.skills.map((s) => s.id)}
+        persona={personaFromProfile(profile!, { education: analysis.persona.education, riasec: analysis.persona.riasec })} />
+        <Strengths a={analysis} /></>}
       {tab === "careers" && <Careers a={analysis} go={go} id={id} />}
       {tab === "schemes" && <Schemes a={analysis} student={student} />}
 
@@ -61,7 +64,7 @@ export default function Results({ go, id, tab }: { go: Go; id: string; tab: Tab 
 }
 
 /** Levels 1-4 per sub-skill, rebuilt from evidence events, with a test button where questions exist. */
-function SkillLevels({ id, go, claimed }: { id: string; go: Go; claimed: string[] }) {
+function SkillLevels({ id, go, claimed, persona }: { id: string; go: Go; claimed: string[]; persona: PersonaV2 }) {
   const { t, pick } = useT();
   const profile = useLive(() => profileOf(id), [id], null);
   if (!profile) return null;
@@ -69,11 +72,24 @@ function SkillLevels({ id, go, claimed }: { id: string; go: Go; claimed: string[
   const testable = new Set(Object.values(ITEMS).map((it) => it.subskill));
   const skills = Object.keys(g.bySkill).filter((sk) =>
     claimed.includes(sk) || g.bySkill[sk].some((u) => (profile.units[u]?.n ?? 0) > 0));
-  if (!skills.length) return null;
+  // The test most likely to change her career list (only sub-skills that have questions, not yet sure).
+  const candidates = [...testable].filter((u) => (profile.units[u]?.confidence ?? 0) < 0.8 || (profile.units[u]?.n ?? 0) === 0);
+  const best = nextToTest(kb, persona, candidates, 1)[0];
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-2xl font-bold">{t("skillLevels")}</h2>
-      <p className="text-muted">{t("skillLevelsHint")}</p>
+      {skills.length > 0 && <h2 className="text-2xl font-bold">{t("skillLevels")}</h2>}
+      {skills.length > 0 && <p className="text-muted">{t("skillLevelsHint")}</p>}
+      {best && best.value > 0 && (
+        <button onClick={() => go({ name: "assess", id, subskill: best.id })}
+          className="flex items-center gap-3 rounded-3xl bg-brand p-4 text-left text-white shadow-sm active:bg-brand-dark">
+          <span className="text-3xl">🎯</span>
+          <span className="flex-1">
+            <span className="block text-sm opacity-90">{t("nextTest")}</span>
+            <span className="block text-lg font-semibold">{pick(g.subskills[best.id].name)}</span>
+          </span>
+          <span className="text-2xl">›</span>
+        </button>
+      )}
       {skills.map((sk) => (
         <article key={sk} className="rounded-3xl bg-white p-4 shadow-sm">
           <h3 className="text-lg font-semibold">{pick(kb.skills[sk].name)}</h3>
@@ -189,10 +205,11 @@ function Careers({ a, go, id }: { a: Analysis; go: Go; id: string }) {
             </div>
             {recommended && <Pill tone="good">⭐ {t("recommended")}</Pill>}
             <div className="grid grid-cols-3 gap-2 text-xs">
-              <Bar label={t("skillMatch")} value={c.parts.skill} />
-              <Bar label={t("interestFit")} value={c.parts.riasec} />
-              <Bar label={t("reachable")} value={c.parts.feas} />
+              <Bar label={t("skillMatch")} value={c.parts.fit} />
+              <Bar label={t("reachable")} value={c.parts.reach} />
+              <Bar label={t("interestFit")} value={c.parts.worth} />
             </div>
+            {c.could_learn && <Pill tone="sun">🚀 {t("couldLearn")}</Pill>}
             {c.matched_skills.length > 0 && (
               <p className="text-sm text-muted">{t("whyFits")}: {c.matched_skills.map((s) => pick(kb.skills[s].name)).join(", ")}</p>
             )}
@@ -208,7 +225,7 @@ function Careers({ a, go, id }: { a: Analysis; go: Go; id: string }) {
               const [kind, value] = w.lever.split(":");
               const label = kind === "education"
                 ? t("whatIfEdu", { level: t(`edu_${value}` as Parameters<typeof t>[0]) })
-                : t("whatIfSkill", { skill: pick(kb.skills[value]?.name ?? { en: value }) });
+                : t("whatIfSkill", { skill: pick(kb.graph!.subskills[value]?.name ?? kb.skills[value]?.name ?? { en: value }) });
               return (
                 <li key={w.lever}>
                   <p className="font-semibold">{label}:</p>

@@ -1,7 +1,7 @@
 // Builds the student's profile (for matching) and facts (for scheme rules) from their answers.
 // Pure functions: easy to test and the same on every phone.
 
-import { evaluateAll, recommend, type Facts, type Persona } from "@disha/engine";
+import { evaluateAll, personaFromProfile, recommendV2, type Facts, type Persona, type Profile } from "@disha/engine";
 import { riasecFromCards } from "../data/cards";
 import { educationFromLevel, factsFromAnswers } from "../data/facts";
 import { QUESTIONS } from "../data/questions";
@@ -65,12 +65,15 @@ export function factsOf(student: Student): Facts {
   return factsFromAnswers(student.factAnswers);
 }
 
-/** Everything the results screens and the teacher view need, computed on the phone. */
-export function analyse(student: Student, actions: Action[], lang: "ta" | "en") {
+export const EMPTY_PROFILE: Profile = { units: {}, aptitude: {} };
+
+/** Everything the results screens and the teacher view need, computed on the phone.
+ * Careers come from measured skill levels (profile, rebuilt from evidence events). */
+export function analyse(student: Student, actions: Action[], lang: "ta" | "en", profile: Profile = EMPTY_PROFILE) {
   const skills = claimedSkills(student, actions, lang);
   const persona = personaOf(student, skills);
   const facts = factsOf(student);
-  const careers = recommend(kb, persona);
+  const careers = recommendV2(kb, personaFromProfile(profile, { education: persona.education, riasec: persona.riasec }));
   const schemes = evaluateAll(kb, facts);
   const recommendations = actions.filter((a) => a.kind === "recommend" && a.student_id === student.id);
   return { skills, persona, facts, careers, schemes, recommendations };
@@ -78,10 +81,9 @@ export function analyse(student: Student, actions: Action[], lang: "ta" | "en") 
 
 export type Analysis = ReturnType<typeof analyse>;
 
-/** Talent flag for the teacher: the student's best career fits very well (75%+). In the demo class,
- * scores run from about 58% to 85%, so this picks out roughly the top third. */
-export const STRONG_MATCH_SCORE = 0.75;
+/** Talent flag for the teacher: she can already do most of what one of her careers needs (Fit 80%+). */
+export const STRONG_FIT = 0.8;
 
 export function isStrongMatch(a: Analysis) {
-  return (a.careers.careers[0]?.score ?? 0) >= STRONG_MATCH_SCORE;
+  return a.careers.careers.some((c) => c.parts.fit >= STRONG_FIT);
 }

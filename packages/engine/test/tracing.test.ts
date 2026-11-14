@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import {
-  eap, foldEvents, levelLikelihood, levelProbs, nextItem, prior, se, seededRandom, shouldStop, update,
+  eap, foldEvents, recommendV2, levelLikelihood, levelProbs, nextItem, prior, se, seededRandom, shouldStop, update,
   type EvidenceEvent, type ItemParams,
 } from "../src/index.ts";
 import { loadKb } from "./loadKb.ts";
@@ -98,4 +98,10 @@ test("a tap taken back cancels the self-report; a lenient rater counts less", ()
   assert.ok(r.ss_teach_explain.strong);
   assert.equal(r.sk_driving.level, 2); // endorsement from a low-weight rater: not Strong, still level 2
   assert.equal(r.sk_driving.strong, false);
+});
+
+test("Fit/Reach/Worth matching matches Python", () => {
+  for (const { persona, result } of golden.recommend_v2) {
+    close(recommendV2(kb, persona), result, JSON.stringify(persona).slice(0, 80));
+  }
 });

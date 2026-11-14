@@ -3,6 +3,8 @@ import type { Go } from "../App";
 import { Button, Pill, Screen, useLive, useOnline } from "../components/ui";
 import { addAction, db, type Action, type Student } from "../lib/db";
 import { raterId, recordEvent } from "../lib/events";
+import { profileOf } from "../lib/skills";
+import type { Profile } from "@disha/engine";
 import { clearDemoClass, loadDemoClass } from "../lib/demo";
 import { useT } from "../lib/i18n";
 import { kb } from "../lib/kb";
@@ -31,6 +33,12 @@ export default function Teacher({ go }: { go: Go }) {
     [] as Student[],
   );
   const actions = useLive(() => db.actions.toArray(), [], [] as Action[]);
+  // Skill levels for every student, rebuilt from their events.
+  const profiles = useLive(async () => {
+    const out: Record<string, Profile> = {};
+    for (const s of students) out[s.id] = await profileOf(s.id);
+    return out;
+  }, [students], {} as Record<string, Profile>);
   const pending = actions.filter((a) => !a.synced).length;
 
   useEffect(() => {
@@ -39,11 +47,11 @@ export default function Teacher({ go }: { go: Go }) {
 
   const rows = useMemo(() => {
     const list = students.map((s) => {
-      const a = analyse(s, actions.filter((x) => x.student_id === s.id), lang);
+      const a = analyse(s, actions.filter((x) => x.student_id === s.id), lang, profiles[s.id]);
       return { s, a, strong: isStrongMatch(a) };
     });
     return list.sort((x, y) => Number(y.strong) - Number(x.strong) || (y.a.careers.careers[0]?.score ?? 0) - (x.a.careers.careers[0]?.score ?? 0));
-  }, [students, actions, lang]);
+  }, [students, actions, lang, profiles]);
 
   if (!code) {
     return (
