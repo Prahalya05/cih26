@@ -16,11 +16,14 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import os
 
 import httpx
 
 from .. import kb
+
+log = logging.getLogger("disha.gemini")
 
 API = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 TIMEOUT = 25.0
@@ -31,7 +34,21 @@ class GeminiUnavailable(Exception):
 
 
 def enabled() -> bool:
-    return bool(os.getenv("GEMINI_API_KEY"))
+    return bool(api_key())
+
+
+def api_key() -> str:
+    """The key without stray spaces or line breaks (easy to paste into a hosting dashboard by mistake)."""
+    return (os.getenv("GEMINI_API_KEY") or "").strip()
+
+
+def unavailable(e: Exception, model: str) -> GeminiUnavailable:
+    """Logs why a call failed (never the key), so a broken key or retired model shows in the server log."""
+    detail = str(e)
+    if isinstance(e, httpx.HTTPStatusError):
+        detail = f"HTTP {e.response.status_code}: {e.response.text[:300]}"
+    log.warning("Gemini call failed (model %s), using the fallback: %s", model, detail)
+    return GeminiUnavailable(detail)
 
 
 def _prompt(question: str) -> str:
@@ -91,7 +108,7 @@ def clean_experiences(raw: object, valid: dict) -> list[dict]:
 
 def extract(question: str, text: str | None = None, audio: bytes | None = None,
             mime_type: str = "audio/webm") -> dict:
-    key = os.getenv("GEMINI_API_KEY")
+    key = api_key()
     if not key:
         raise GeminiUnavailable("GEMINI_API_KEY not set")
     parts: list[dict] = [{"text": _prompt(question)}]
@@ -110,7 +127,7 @@ def extract(question: str, text: str | None = None, audio: bytes | None = None,
         raw = r.json()["candidates"][0]["content"]["parts"][0]["text"]
         data = json.loads(raw)
     except (httpx.HTTPError, KeyError, IndexError, json.JSONDecodeError) as e:
-        raise GeminiUnavailable(str(e)) from e
+        raise unavailable(e, model) from e
 
     valid = kb.skills()
     skills, seen = [], set()

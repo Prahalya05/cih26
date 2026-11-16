@@ -12,7 +12,7 @@ import os
 
 import httpx
 
-from .gemini import API, GeminiUnavailable
+from .gemini import API, GeminiUnavailable, api_key, unavailable
 
 TIMEOUT = 40.0
 
@@ -42,7 +42,7 @@ def _checklist(rubric: dict) -> str:
 
 def score(rubric: dict, image: bytes, mime_type: str = "image/jpeg") -> dict:
     """Returns {"scores": {criterion: 0|1|2}, "reasons": {criterion: text}, "cannot_see": [criterion, ...]}."""
-    key = os.getenv("GEMINI_API_KEY")
+    key = api_key()
     if not key:
         raise GeminiUnavailable("GEMINI_API_KEY not set")
     body = {
@@ -59,7 +59,7 @@ def score(rubric: dict, image: bytes, mime_type: str = "image/jpeg") -> dict:
         r.raise_for_status()
         data = json.loads(r.json()["candidates"][0]["content"]["parts"][0]["text"])
     except (httpx.HTTPError, KeyError, IndexError, json.JSONDecodeError) as e:
-        raise GeminiUnavailable(str(e)) from e
+        raise unavailable(e, model) from e
     return clean(rubric, data)
 
 
