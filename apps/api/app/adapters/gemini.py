@@ -9,7 +9,7 @@ Any skill id it invents is dropped. Eligibility is never decided here.
 
 Config (environment variables):
   GEMINI_API_KEY   required to enable; without it the keyword fallback is used
-  GEMINI_MODEL     default "gemini-2.5-flash"
+  GEMINI_MODEL     default "gemini-3.5-flash"
 Use a paid-tier key for real students: free-tier inputs may be used by Google to improve its products.
 """
 from __future__ import annotations
@@ -103,7 +103,7 @@ def extract(question: str, text: str | None = None, audio: bytes | None = None,
         "contents": [{"role": "user", "parts": parts}],
         "generationConfig": {"responseMimeType": "application/json", "responseSchema": SCHEMA, "temperature": 0.1},
     }
-    model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
     try:
         r = httpx.post(API.format(model=model), json=body, headers={"x-goog-api-key": key}, timeout=TIMEOUT)
         r.raise_for_status()
