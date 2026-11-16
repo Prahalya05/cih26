@@ -8,17 +8,27 @@ If apps/web/dist exists (after `npm run build`), the app itself is served at / a
 from __future__ import annotations
 
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from . import settings
+from . import db, settings
 from .adapters import gemini
 from .routers import v1, v2
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    db.pool()  # one pool, made before the first request instead of by whichever request comes first
+    yield
+    db.close_pool()
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="Disha API",
     version="0.1.0",
     description="Career matching, scheme eligibility and facilitator sync for rural students. Apache-2.0.",

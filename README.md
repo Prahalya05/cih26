@@ -72,7 +72,7 @@ Key design choices:
 - **Evidence is the record.** Every answer, rating, photo score and paid job is an immutable event. Skill levels are always recomputed from events, never edited by hand.
 - **One engine, two languages.** The TypeScript engine and the Python services implement the same maths. Golden tests (`packages/engine/test/golden.json`) make sure both give identical results.
 - **AI is grounded and replaceable.** Gemini may only pick skill IDs from our list and must quote the student's words; invented IDs are dropped. Without an API key, a keyword matcher takes over and photos wait for the teacher. Rules, not AI, decide eligibility.
-- **Privacy by design.** Demo students never leave the phone, photo scoring needs its own consent, photos are scored in memory and never stored on the server, and database rows are isolated by school.
+- **Privacy by design.** Demo students never leave the phone, photo scoring needs its own consent, photos are scored in memory and never stored on the server, and each phone's device token limits it to its own school's students (enforced by row-level security in the database).
 
 More detail, including the skill-tracing model and the data model, is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -118,7 +118,13 @@ cp .env.example .env          # then fill in the values you need
 docker compose up -d          # PostgreSQL 16 + pgvector on port 5432
 python scripts/migrate.py     # create the schema
 python scripts/load_kb.py     # load the knowledge base
+
+# a school and a class: prints the class code (students) and a secret teacher code
+python scripts/add_join_code.py school sch_psg "PSG Higher Secondary School" Coimbatore
+python scripts/add_join_code.py class sch_psg PSG01
 ```
+
+Phones register with one of these codes (the class code on the new-student screen, the teacher code in Teacher view) and get a device token. Every API call that reads or writes student data needs that token and only sees its own school; only teachers' phones can rate students or open the class list. `python scripts/add_join_code.py revoke-device <id>` switches off a lost phone.
 
 ### 3. Run
 
@@ -141,7 +147,7 @@ To serve everything from one process, run `npm run build`; the API then serves `
 | --- | --- | --- |
 | `DATABASE_URL` | yes (API) | PostgreSQL connection string |
 | `GEMINI_API_KEY` | no | Turns on AI skill extraction and photo scoring. Without it, keyword matching and teacher-only scoring are used. Use a paid-tier key for real students. |
-| `GEMINI_MODEL` | no | Defaults to `gemini-2.5-flash` |
+| `GEMINI_MODEL` | no | Defaults to `gemini-3.5-flash` (2.5 Flash no longer answers new keys, November 2026) |
 | `CORS_ORIGINS` | yes (API) | Browser origins allowed to call the API |
 | `VITE_API_URL` | no | Where the web app finds the API; empty means same origin |
 | `ADMIN_TOKEN` | yes (API) | Protects admin-only endpoints |

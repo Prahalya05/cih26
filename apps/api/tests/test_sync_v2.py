@@ -1,5 +1,6 @@
 """/v2/sync: idempotent upload, consent check, two devices, cursor paging."""
 import pytest
+from phones import PhoneClient
 from fastapi.testclient import TestClient
 
 B32 = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
@@ -19,7 +20,7 @@ def uid(n: int) -> str:
 def client(pg, monkeypatch):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     from app.main import app
-    return TestClient(app)
+    return PhoneClient(app, pg)
 
 
 STUDENT = {"id": "st1", "name": "Meena", "class": 11, "gender": "female", "district": "Dharmapuri",

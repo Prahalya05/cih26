@@ -3,17 +3,21 @@
 POST /v2/sync is the only way events reach the server. Phones send what they recorded offline and get
 back events made on other devices (teacher ratings, buyer confirmations) for the students they hold.
 Sending the same event twice is harmless: ids are ULIDs made on the phone.
+
+Every endpoint that touches student data needs a device token (app/auth.py) and only sees that phone's
+school. Phones get the token from POST /v2/devices with a join code.
 """
 from __future__ import annotations
 
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel, Field
 
-from .. import db, kb
+from .. import auth, db, kb
+from ..auth import Device
 from ..adapters import gemini_vision
 from ..adapters.gemini import GeminiUnavailable
 from ..schemas import new_ulid, validate_event
@@ -27,6 +31,38 @@ PAGE = 500
 # when phones sync at the same time. So the cursor never moves past events younger than this: a late commit
 # with a lower number is then still sent. Recent events may be sent twice; phones skip ids they already have.
 SETTLE_SECONDS = 60
+# Raters a phone may register. Buyers are created only by the buyer's own confirmation link.
+PHONE_RATER_ROLES = {"teacher", "mentor", "family", "facilitator"}
+
+
+# ---------- registering a phone ----------
+
+class EnrolIn(BaseModel):
+    device_id: str = Field(min_length=4, max_length=100)
+    code: str = Field(min_length=1, max_length=64, description="Class code (student phone) or teacher code")
+
+
+@router.post("/devices", summary="Register this phone with a class or teacher code; returns its device token")
+def enrol(body: EnrolIn):
+    code = body.code.strip().upper()
+    with db.connect() as con:
+        jc = con.execute("select school_id, role, class_code from join_code where code = %s and revoked_at is null",
+                         (code,)).fetchone()
+        if not jc:
+            raise HTTPException(404, "Unknown class code")
+        old = con.execute("select school_id, role, revoked_at from device where id = %s", (body.device_id,)).fetchone()
+        if old and old["revoked_at"] is not None:
+            raise HTTPException(403, "This phone has been switched off; ask the school")
+        if old and old["school_id"] != jc["school_id"]:
+            raise HTTPException(409, "This phone is registered with another school")
+        # The role comes only from the code typed now, so a class code can never take over a teacher's phone.
+        if old and old["role"] == "teacher" and jc["role"] != "teacher":
+            raise HTTPException(409, "This is a teacher's phone; enter the teacher code")
+        token = auth.new_token()
+        con.execute("insert into device(id, school_id, role, token_hash) values (%s, %s, %s, %s) "
+                    "on conflict (id) do update set role = excluded.role, token_hash = excluded.token_hash",
+                    (body.device_id, jc["school_id"], jc["role"], auth.hash_token(token)))
+    return {"token": token, "school_id": jc["school_id"], "role": jc["role"], "class_code": jc["class_code"]}
 
 
 class ConsentIn(BaseModel):
@@ -75,7 +111,23 @@ def _ms(dt: datetime) -> int:
     return int(dt.timestamp() * 1000)
 
 
-def _save_students(con, students: list[StudentIn]) -> None:
+def _claim_students(dev: Device, ids: set) -> set[str]:
+    """Returns the ids that belong to another school. Students synced before phones had tokens have no school:
+    the first school to sync them takes them."""
+    ids = {i for i in ids if isinstance(i, str)}
+    if not ids:
+        return set()
+    with db.connect() as con:  # trusted: must see every school to tell "another school" from "new"
+        rows = con.execute("select id, school_id from student where id = any(%s)", (sorted(ids),)).fetchall()
+        orphans = [r["id"] for r in rows if r["school_id"] is None]
+        if orphans:
+            con.execute("update student set school_id = %s where id = any(%s) and school_id is null",
+                        (dev.school_id, orphans))
+    return {r["id"] for r in rows if r["school_id"] not in (None, dev.school_id)}
+
+
+def _save_students(con, students: list[StudentIn], school_id: str) -> None:
+    """The school always comes from the phone's token, never from what the phone says."""
     for s in students:
         con.execute(
             "insert into student(id, school_id, facilitator_code, district, class, gender, medium, birth_year) "
@@ -85,7 +137,7 @@ def _save_students(con, students: list[StudentIn]) -> None:
             "district = coalesce(excluded.district, student.district), class = coalesce(excluded.class, student.class), "
             "gender = coalesce(excluded.gender, student.gender), medium = coalesce(excluded.medium, student.medium), "
             "birth_year = coalesce(excluded.birth_year, student.birth_year)",
-            (s.id, s.school_id, s.facilitator_code, s.district, s.class_, s.gender, s.medium, s.birth_year))
+            (s.id, school_id, s.facilitator_code, s.district, s.class_, s.gender, s.medium, s.birth_year))
         guardian = s.consent.guardian_name if s.consent else None
         if s.name is not None or guardian is not None:
             # Names are kept only in student_private (checked in CI by scripts/check_privacy.py).
@@ -122,20 +174,25 @@ def _consented(con, student_ids: set[str]) -> set[str]:
     return {r["student_id"] for r in rows}
 
 
-def _insert_events(con, device_id: str, events: list[dict]) -> tuple[list[str], list[dict]]:
+def _insert_events(con, dev: Device, events: list[dict], foreign: set[str]) -> tuple[list[str], list[dict]]:
     accepted: list[str] = []
     rejected: list[dict] = []
-    ok_students = _consented(con, {e.get("student_id") for e in events if e.get("student_id")})
-    known_raters = {r["id"] for r in con.execute("select id from rater where id = any(%s)",
-                                                 ([e["rater_id"] for e in events if e.get("rater_id")],))}
+    ok_students = _consented(con, {e.get("student_id") for e in events if e.get("student_id")} - foreign)
+    # A rating counts only from a teacher's phone, and only with a rater of the same school.
+    known_raters = {r["id"] for r in con.execute("select id from rater where id = any(%s) and school_id = %s",
+                                                 ([e["rater_id"] for e in events if e.get("rater_id")], dev.school_id))}
     refs = list({e["refers_to"] for e in events if isinstance(e.get("refers_to"), str)})
     known_refs = {r["id"] for r in con.execute("select id from evidence_event where id = any(%s)", (refs,))} if refs else set()
     rows = []
     # Oldest first, so a rating can refer to a sample sent in the same batch.
     for e in sorted(events, key=lambda x: str(x.get("id"))):
         errs = validate_event(e)
+        if not errs and e["student_id"] in foreign:
+            errs = ["student belongs to another school"]
         if not errs and e["student_id"] not in ok_students:
             errs = ["no consent to assess this student"]
+        if not errs and e.get("rater_id") and not dev.is_teacher:
+            errs = ["only a teacher's phone can rate"]
         if not errs and e.get("rater_id") and e["rater_id"] not in known_raters:
             errs = ["unknown rater"]
         if not errs and e.get("refers_to") and e["refers_to"] not in known_refs:
@@ -143,7 +200,7 @@ def _insert_events(con, device_id: str, events: list[dict]) -> tuple[list[str], 
         if errs:
             rejected.append({"id": e.get("id"), "errors": errs})
             continue
-        rows.append((e["id"], e["student_id"], e["device_id"] or device_id, e["kind"], e.get("skill_id"),
+        rows.append((e["id"], e["student_id"], e["device_id"] or dev.id, e["kind"], e.get("skill_id"),
                      e.get("subskill_id"), e.get("item_id"), Jsonb(e.get("payload") or {}), e.get("rater_id"),
                      e.get("refers_to"), _ts(e["created_at"])))
         known_refs.add(e["id"])
@@ -186,16 +243,22 @@ def _row_to_event(r: dict) -> dict:
 
 
 @router.post("/sync", summary="Send events recorded offline; receive events from other devices")
-def sync(req: SyncIn):
-    with db.connect() as con:
-        _save_students(con, req.students)
-        for r in req.raters:
-            con.execute("insert into rater(id, role, school_id) values (%s, %s, %s) on conflict (id) do nothing",
-                        (r.id, r.role, r.school_id))
-        accepted, rejected = _insert_events(con, req.device_id, req.events)
+def sync(req: SyncIn, dev: Device = Depends(auth.device)):
+    if req.device_id != dev.id:
+        raise HTTPException(403, "device_id does not match this phone's token")
+    foreign = _claim_students(dev, {s.id for s in req.students} | set(req.student_ids)
+                              | {e.get("student_id") for e in req.events})
+    with db.connect(dev.schools) as con:
+        _save_students(con, [s for s in req.students if s.id not in foreign], dev.school_id)
+        if dev.is_teacher:
+            for r in req.raters:
+                if r.role in PHONE_RATER_ROLES:
+                    con.execute("insert into rater(id, role, school_id) values (%s, %s, %s) on conflict (id) do nothing",
+                                (r.id, r.role, dev.school_id))
+        accepted, rejected = _insert_events(con, dev, req.events, foreign)
         refresh_state(con, {e["student_id"] for e in req.events if e.get("id") in set(accepted)})
         # Withdrawn consent stops sync both ways: nothing is accepted or sent back for that student.
-        wanted = sorted(_consented(con, set(req.student_ids) | {s.id for s in req.students}))
+        wanted = sorted(_consented(con, (set(req.student_ids) | {s.id for s in req.students}) - foreign))
         rows = con.execute(
             "select * from evidence_event where student_id = any(%s) and seq > %s and device_id <> %s "
             "order by seq limit %s", (wanted, max(req.cursor, req.page_from or 0), req.device_id, PAGE + 1)).fetchall()
@@ -222,11 +285,12 @@ MAX_IMAGE_BYTES = 4_000_000
 
 
 @router.post("/work-sample/score", summary="Score a photo of a student's work against a checklist (AI; a teacher confirms)")
-async def score_work_sample(student_id: str = Form(...), rubric_id: str = Form(...), image: UploadFile = File(...)):
+async def score_work_sample(student_id: str = Form(...), rubric_id: str = Form(...), image: UploadFile = File(...),
+                            dev: Device = Depends(auth.device)):
     rubric = kb.rubrics().get(rubric_id)
     if not rubric:
         raise HTTPException(404, "Unknown checklist")
-    with db.connect() as con:
+    with db.connect(dev.schools) as con:  # another school's student has no visible consent, so is refused below
         ok = con.execute("select 1 from consent where student_id = %s and revoked_at is null and 'photos' = any(scopes)",
                          (student_id,)).fetchone()
         st = con.execute("select birth_year from student where id = %s", (student_id,)).fetchone()
@@ -259,8 +323,8 @@ class ConfirmIn(BaseModel):
 
 
 @router.post("/orders/{event_id}/link", summary="Make a one-time link the buyer opens to confirm a paid job")
-def order_link(event_id: str):
-    with db.connect() as con:
+def order_link(event_id: str, dev: Device = Depends(auth.device)):
+    with db.connect(dev.schools) as con:
         ev = con.execute("select id, student_id, kind from evidence_event where id = %s", (event_id,)).fetchone()
         if not ev or ev["kind"] != "order":
             raise HTTPException(404, "Unknown job; sync the phone first")
@@ -320,9 +384,14 @@ class DeleteIn(BaseModel):
 
 
 @router.delete("/student/{student_id}", summary="Erase a student and everything about her. Keeps only a count.")
-def delete_student(student_id: str, body: DeleteIn):
+def delete_student(student_id: str, body: DeleteIn, dev: Device = Depends(auth.device)):
     if body.confirmed_by not in ("guardian", "student"):
         raise HTTPException(400, "A guardian (or the student, if 18 or over) must confirm")
+    with db.connect() as con:  # trusted look-up, so another school's student is refused rather than skipped
+        rows = [con.execute(f"select school_id from {t} where id = %s", (student_id,)).fetchone()
+                for t in ("student", "legacy_student_doc")]
+    if any(r and r["school_id"] not in (None, dev.school_id) for r in rows):
+        raise HTTPException(403, "This student belongs to another school")
     with db.connect() as con:
         # Every table with a student_id cascades from student (migrations 0001, 0005); the legacy v1
         # tables have no foreign key, so they are cleared by hand.

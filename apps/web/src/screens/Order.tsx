@@ -9,14 +9,14 @@ import { recordEvent } from "../lib/events";
 import { useT } from "../lib/i18n";
 import { kb } from "../lib/kb";
 import { isOnline, syncEvents } from "../lib/sync";
+import { apiFetch } from "../lib/api";
 
-const API = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 
 async function makeLink(orderId: string): Promise<string | null> {
   if (!isOnline()) return null;
   await syncEvents();
   try {
-    const res = await fetch(`${API}/v2/orders/${orderId}/link`, { method: "POST" });
+    const res = await apiFetch(`/v2/orders/${orderId}/link`, { method: "POST" });
     if (!res.ok) return null;
     const { token } = (await res.json()) as { token: string };
     return `${location.origin}/?confirm=${encodeURIComponent(token)}`;

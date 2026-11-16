@@ -1,5 +1,6 @@
 """Paid jobs: one-time buyer link, confirmation becomes a rating event that reaches the phone."""
 import pytest
+from phones import PhoneClient
 from fastapi.testclient import TestClient
 
 NOW = 1763000000000
@@ -10,7 +11,7 @@ ORDER_ID = "01KA0000000000000000000001"
 def client(pg, monkeypatch):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     from app.main import app
-    c = TestClient(app)
+    c = PhoneClient(app, pg)
     c.post("/v2/sync", json={"device_id": "phoneA", "students": [
         {"id": "st1", "name": "Meena Kumari", "consent": {"id": "c1", "scopes": ["assess"], "method": "paper_form", "granted_at": NOW}}],
         "events": [{"id": ORDER_ID, "student_id": "st1", "device_id": "phoneA", "kind": "order", "skill_id": "sk_stitching",

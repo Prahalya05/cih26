@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from phones import PhoneClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -12,7 +13,7 @@ def client(pg, monkeypatch):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     from fastapi.testclient import TestClient
     from app.main import app
-    return TestClient(app)
+    return PhoneClient(app, pg)
 
 
 MEENA = {"education": "class10", "riasec": {"A": 0.9, "E": 0.6, "R": 0.5},
@@ -82,11 +83,17 @@ def test_extract_needs_input(client):
 def test_sync_and_cohort(client):
     student = {"id": "s1", "name": "Meena", "facilitator_code": "PSG01", "updated_at": 2}
     action = {"id": "a1", "student_id": "s1", "kind": "endorse", "payload": {"skill_id": "sk_stitching"}, "by": "teacher"}
+    teacher = client.as_phone("phoneT")
+    # A student phone may not endorse; a teacher's phone may.
     out = client.post("/v1/sync", json={"students": [student], "actions": [action]}).json()
-    assert out["stored_students"] == 1 and out["added_actions"] == 1
+    assert out["stored_students"] == 1 and out["added_actions"] == 0
+    out = client.post("/v1/sync", json={"actions": [action]}, headers=teacher).json()
+    assert out["added_actions"] == 1
     # older copy is ignored, same action is not duplicated
-    out = client.post("/v1/sync", json={"students": [{**student, "updated_at": 1}], "actions": [action]}).json()
+    out = client.post("/v1/sync", json={"students": [{**student, "updated_at": 1}], "actions": [action]},
+                      headers=teacher).json()
     assert out["stored_students"] == 0 and out["added_actions"] == 0
-    cohort = client.get("/v1/facilitator/PSG01/cohort").json()
+    assert client.get("/v1/facilitator/PSG01/cohort").status_code == 403  # student phone
+    cohort = client.get("/v1/facilitator/PSG01/cohort", headers=teacher).json()
     assert [s["id"] for s in cohort["students"]] == ["s1"]
     assert cohort["actions"][0]["payload"] == {"skill_id": "sk_stitching"}

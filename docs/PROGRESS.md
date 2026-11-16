@@ -57,15 +57,20 @@ Sources: Tabiya Compass (globaldevincubator.org), Harambee "Breaking Barriers" (
 - The legacy `/v1/sync` table `legacy_student_doc` stores whole student records, including the name, as JSON; the CI column check cannot see this. Erasure clears it. Drop it once phones are on v2.
 - Server access logs include buyer-link tokens in the URL path (`/v2/confirm/{token}`).
 
-- Teacher and mentor PIN login (9.1) not built: any phone in teacher mode counts as a teacher.
+- Device tokens and school scoping (16 November 2026, after a code review found every endpoint open and row-level security never applied): phones register with a join code (`POST /v2/devices`, `scripts/add_join_code.py`, migration 0008) and every student-data endpoint takes the token and opens the database with `connect(schools=[...])`. Only teacher-code phones can rate or see the cohort; phones cannot create buyer raters. Students synced before this have no school and are taken by the first school that syncs them. Tests: `tests/test_auth.py`; checked over HTTP with `load_test.py --code`. Still open:
+  - Not yet clicked through in a browser (registration on the new-student and Teacher screens).
+  - Teacher codes replace the 9.1 PIN for now: a teacher's phone is any phone registered with the teacher code, and there is no per-teacher login or PIN on a shared phone.
+  - Class codes act as passwords for joining a school as a student phone; `POST /v2/devices` has no rate limit, so use codes that are hard to guess.
+  - `notTeacherPhone` and `teacherCodeHint` Tamil strings need a native speaker's check.
+  - The Render deploy needs a school and codes created with `add_join_code.py` after `migrate.py`.
 - Rater leniency is measured but scores are not yet shifted by it.
 - Tamil level descriptions (128) and all questions need a teacher's review.
-- No GitHub remote yet; nothing pushed. No Supabase project yet.
+- GitHub remote `Prahalya05/cih26` is set up and `main` is pushed. No Supabase project yet.
 - `Disha_Skill_Assessment_and_Database.docx` and `Disha_Implementation_Plan.docx` still need the paid-order weight (2 per order, max 10) and the Meena numbers above. Close them in Word first.
 - No Gemini key in `.env`: photos wait for the teacher until one is added.
 
 ## How to run
 
-- Database: `docker compose up -d`, then `python scripts/migrate.py` and `python scripts/load_kb.py`
+- Database: `docker compose up -d`, then `python scripts/migrate.py` and `python scripts/load_kb.py`, then a school and class with `python scripts/add_join_code.py` (see README)
 - Tests: `npm test` (engine + web typecheck) and `cd apps/api && python -m pytest -q` (needs the database)
 - After changing engine logic: `python scripts/gen_golden.py`, then both test suites

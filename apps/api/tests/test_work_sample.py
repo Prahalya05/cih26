@@ -1,5 +1,6 @@
 """Work-sample scoring: consent check, AI unavailable, cleaning of model output."""
 import pytest
+from phones import PhoneClient
 from fastapi.testclient import TestClient
 
 from app import kb
@@ -12,7 +13,7 @@ NOW = 1763000000000
 def client(pg, monkeypatch):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     from app.main import app
-    return TestClient(app)
+    return PhoneClient(app, pg)
 
 
 def student(scopes):

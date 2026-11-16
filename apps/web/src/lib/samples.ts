@@ -9,8 +9,8 @@ import { kb } from "./kb";
 import { RUBRICS } from "./skills";
 import { recordEvent } from "./events";
 import { isOnline, syncEvents } from "./sync";
+import { apiFetch } from "./api";
 
-const API = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 const MAX_SIDE = 1280;
 
 export interface RubricFull {
@@ -72,7 +72,7 @@ export async function scoreSample(pending: EvidenceEvent): Promise<ScoreResult |
   form.set("rubric_id", String(pending.payload.rubric_id));
   form.set("image", media.blob, "work.jpg");
   try {
-    const res = await fetch(`${API}/v2/work-sample/score`, { method: "POST", body: form });
+    const res = await apiFetch(`/v2/work-sample/score`, { method: "POST", body: form });
     if (!res.ok) return null;
     const out = (await res.json()) as ScoreResult;
     if (Object.keys(out.scores).length > 0) {

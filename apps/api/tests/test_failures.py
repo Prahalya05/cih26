@@ -13,6 +13,7 @@ import random
 
 import httpx
 import pytest
+from phones import PhoneClient
 from fastapi.testclient import TestClient
 
 from scenarios import ulid_at
@@ -24,7 +25,7 @@ CONSENT = {"scopes": ["assess", "photos"], "method": "paper_form", "granted_at":
 @pytest.fixture()
 def client(pg, monkeypatch):
     from app.main import app
-    return TestClient(app)
+    return PhoneClient(app, pg)
 
 
 # ---------- Gemini down ----------

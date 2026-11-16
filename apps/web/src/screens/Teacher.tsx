@@ -12,6 +12,7 @@ import { kb } from "../lib/kb";
 import { SECTOR } from "../lib/labels";
 import { analyse, isStrongMatch, type Analysis } from "../lib/profile";
 import { pullCohort, syncNow } from "../lib/sync";
+import { deviceRole, register, type Role } from "../lib/api";
 import { rubricFor, samplesToConfirm } from "../lib/samples";
 import type { StoredEvent } from "../lib/db";
 
@@ -29,6 +30,8 @@ export default function Teacher({ go }: { go: Go }) {
   const [code, setCode] = useState(savedCode);
   const [draft, setDraft] = useState(code);
   const [open, setOpen] = useState<string | null>(null);
+  const [joining, setJoining] = useState(false);
+  const role = useLive(() => deviceRole(), [code, joining], null as Role | null);
 
   const students = useLive(
     () => (code ? db.students.where("facilitator_code").equals(code).toArray() : Promise.resolve([] as Student[])),
@@ -64,8 +67,15 @@ export default function Teacher({ go }: { go: Go }) {
           <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="PSG01"
             className="min-h-14 rounded-2xl border-2 border-line bg-white px-4 text-lg uppercase" />
         </label>
-        <Button disabled={!draft.trim()} onClick={() => {
-          const c = draft.trim().toUpperCase();
+        <p className="text-muted">{t("teacherCodeHint")}</p>
+        <Button disabled={!draft.trim() || joining} onClick={async () => {
+          const typed = draft.trim().toUpperCase();
+          // A teacher code registers this phone as a teacher's phone and tells us which class it is for.
+          // Offline (or for the made-up demo class) the code is used as typed.
+          setJoining(true);
+          const reg = online ? await register(typed) : null;
+          setJoining(false);
+          const c = reg?.class_code ?? typed;
           try { localStorage.setItem("disha.code", c); } catch { /* ignore */ }
           setCode(c);
         }}>{t("next")} →</Button>
@@ -87,6 +97,7 @@ export default function Teacher({ go }: { go: Go }) {
         <Stat value={pending} label={online ? "⇅" : "📴"} />
       </div>
       {pending > 0 && online && <Button kind="soft" onClick={() => void syncNow()}>⇅ Sync ({pending})</Button>}
+      {role === "student" && <p className="rounded-2xl bg-brand-soft p-3 text-sm">{t("notTeacherPhone")}</p>}
 
       <WorkQueue students={students} />
 

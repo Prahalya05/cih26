@@ -26,3 +26,5 @@ CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1
 MEDIA_BUCKET = os.getenv("MEDIA_BUCKET", "")
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")
 DB_POOL_MAX = int(os.getenv("DB_POOL_MAX", "20"))  # database connections per server process
+# Seconds a request waits for a free database connection before failing with an error (instead of hanging).
+DB_POOL_TIMEOUT = float(os.getenv("DB_POOL_TIMEOUT", "10"))

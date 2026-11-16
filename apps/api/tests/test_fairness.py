@@ -13,6 +13,7 @@ import re
 from pathlib import Path
 
 import pytest
+from phones import PhoneClient
 from fastapi.testclient import TestClient
 
 import simulate
@@ -76,14 +77,14 @@ def test_gender_swap_through_sync(pg, monkeypatch, bench):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     from app import db
     from app.main import app
-    client = TestClient(app)
+    client = PhoneClient(app, pg, teachers=("sim",))
     banks, _ = bench
     consent = {"scopes": ["assess"], "method": "paper_form", "granted_at": 1763000000000}
     for k, seed in enumerate(range(20)):
         evs = student(seed, banks)
         for gender in ("female", "male"):
             sid = f"{gender}_{seed}"
-            body = {"device_id": "sim", "raters": [{"id": "buyer", "role": "buyer"}],
+            body = {"device_id": "sim", "raters": [{"id": "buyer", "role": "teacher"}],
                     "students": [{"id": sid, "gender": gender, "consent": {"id": f"c_{sid}", **consent}}],
                     "events": _copy_for(evs, sid, (k * 2 + (gender == "male")) * 1000)}
             out = client.post("/v2/sync", json=body).json()

@@ -10,6 +10,7 @@ The v1 functions below keep /v1/sync working on the legacy tables until phones m
 from __future__ import annotations
 
 import json
+import threading
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -30,22 +31,37 @@ def _configure(con: psycopg.Connection) -> None:
     con.commit()
 
 
+_pool_lock = threading.Lock()
+
+
 def pool() -> ConnectionPool:
+    """The process's one connection pool, made on first use (or at startup, see main.py).
+
+    Sync endpoints run on many threads at once, so making the pool is locked. Without the lock, two first
+    requests could each make a pool; the one that lost was never closed, and when it was garbage-collected on
+    one of its own worker threads its close() failed with "cannot join current thread" (seen in the 13.3 load test).
+    """
     global _pool, _url
-    if _pool is None or _url != settings.DATABASE_URL:
-        if _pool is not None:
-            _pool.close()
-        _url = settings.DATABASE_URL
-        _pool = ConnectionPool(_url, min_size=1, max_size=settings.DB_POOL_MAX, kwargs={"row_factory": dict_row},
-                               configure=_configure, open=True)
-    return _pool
+    p = _pool
+    if p is not None and _url == settings.DATABASE_URL:
+        return p
+    with _pool_lock:
+        if _pool is None or _url != settings.DATABASE_URL:  # the URL changes only in tests
+            old = _pool
+            _url = settings.DATABASE_URL
+            _pool = ConnectionPool(_url, min_size=1, max_size=settings.DB_POOL_MAX, kwargs={"row_factory": dict_row},
+                                   configure=_configure, open=True, timeout=settings.DB_POOL_TIMEOUT)
+            if old is not None:
+                old.close()
+        return _pool
 
 
 def close_pool() -> None:
     global _pool
-    if _pool is not None:
-        _pool.close()
-        _pool = None
+    with _pool_lock:
+        old, _pool = _pool, None
+    if old is not None:
+        old.close()
 
 
 @contextmanager
@@ -63,16 +79,28 @@ def now_ms() -> int:
 
 # ---------- v1 (legacy) ----------
 
-def upsert_student(con, doc: dict) -> bool:
-    """Save if newer than what we have. Returns True if stored."""
+def upsert_student(con, doc: dict, school_id: str) -> bool:
+    """Save if newer than what we have and not another school's. Returns True if stored."""
     updated = int(doc.get("updated_at") or now_ms())
     cur = con.execute(
-        "insert into legacy_student_doc(id, facilitator_code, doc, updated_at) values (%s, %s, %s, %s) "
+        "insert into legacy_student_doc(id, facilitator_code, doc, updated_at, school_id) values (%s, %s, %s, %s, %s) "
         "on conflict (id) do update set facilitator_code = excluded.facilitator_code, doc = excluded.doc, "
-        "updated_at = excluded.updated_at where legacy_student_doc.updated_at < excluded.updated_at",
-        (doc["id"], doc.get("facilitator_code"), json.dumps(doc, ensure_ascii=False), updated),
+        "updated_at = excluded.updated_at, school_id = excluded.school_id "
+        "where legacy_student_doc.updated_at < excluded.updated_at "
+        "and coalesce(legacy_student_doc.school_id, excluded.school_id) = excluded.school_id",
+        (doc["id"], doc.get("facilitator_code"), json.dumps(doc, ensure_ascii=False), updated, school_id),
     )
     return cur.rowcount == 1
+
+
+def other_schools_students(con, school_id: str, student_ids: list[str]) -> set[str]:
+    """Which of these students (v1 documents or v2 students) belong to a school other than this one."""
+    if not student_ids:
+        return set()
+    rows = con.execute("select id from legacy_student_doc where id = any(%s) and school_id <> %s "
+                       "union select id from student where id = any(%s) and school_id <> %s",
+                       (student_ids, school_id, student_ids, school_id)).fetchall()
+    return {r["id"] for r in rows}
 
 
 def add_action(con, action: dict) -> bool:
@@ -93,7 +121,7 @@ def actions_for(con, student_ids: list[str]) -> list[dict]:
     return [dict(r) for r in rows]
 
 
-def cohort(con, facilitator_code: str) -> list[dict]:
-    rows = con.execute("select doc from legacy_student_doc where facilitator_code = %s order by updated_at desc",
-                       (facilitator_code,)).fetchall()
+def cohort(con, facilitator_code: str, school_id: str) -> list[dict]:
+    rows = con.execute("select doc from legacy_student_doc where facilitator_code = %s and school_id = %s "
+                       "order by updated_at desc", (facilitator_code, school_id)).fetchall()
     return [r["doc"] for r in rows]

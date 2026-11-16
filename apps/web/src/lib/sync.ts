@@ -4,8 +4,8 @@ import type { EvidenceEvent } from "@disha/engine";
 import { db, deleteStudent, hasScope, type Action, type Experience, type SkillClaim, type StoredEvent, type Student } from "./db";
 import { deviceId } from "./events";
 import { refreshSkillState } from "./skills";
+import { apiFetch } from "./api";
 
-const API = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 
 export const isOnline = () => navigator.onLine;
 
@@ -19,7 +19,7 @@ export async function syncNow(): Promise<boolean> {
   const actions = (await db.actions.where("synced").equals(0).toArray()).filter((a) => sharedIds.has(a.student_id));
   const allIds = [...sharedIds];
   try {
-    const res = await fetch(`${API}/v1/sync`, {
+    const res = await apiFetch(`/v1/sync`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -46,7 +46,9 @@ export async function syncNow(): Promise<boolean> {
 
 const BATCH = 200;
 /** Server answers that mean "try again later" rather than "this event is wrong". */
-const RETRY = ["refers_to an event the server does not have yet", "no consent to assess this student"];
+// "only a teacher's phone can rate": kept until the teacher enters the teacher code on this phone.
+const RETRY = ["refers_to an event the server does not have yet", "no consent to assess this student",
+  "only a teacher's phone can rate"];
 
 interface SyncOut {
   accepted: string[];
@@ -75,7 +77,7 @@ export async function syncEvents(): Promise<boolean> {
   let cursor = Number((await db.meta.get("event_cursor"))?.value ?? 0);
 
   const post = async (events: StoredEvent[], pageFrom: number | null = null): Promise<SyncOut | null> => {
-    const res = await fetch(`${API}/v2/sync`, {
+    const res = await apiFetch(`/v2/sync`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -165,7 +167,7 @@ async function flushErasures(): Promise<void> {
   const left: Erasure[] = [];
   for (const x of list) {
     try {
-      const res = await fetch(`${API}/v2/student/${encodeURIComponent(x.id)}`, {
+      const res = await apiFetch(`/v2/student/${encodeURIComponent(x.id)}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ confirmed_by: x.by }),
@@ -181,7 +183,7 @@ async function flushErasures(): Promise<void> {
 export async function pullCohort(code: string): Promise<boolean> {
   if (!isOnline()) return false;
   try {
-    const res = await fetch(`${API}/v1/facilitator/${encodeURIComponent(code)}/cohort`);
+    const res = await apiFetch(`/v1/facilitator/${encodeURIComponent(code)}/cohort`);
     if (!res.ok) return false;
     const out = (await res.json()) as { students: Student[]; actions: Omit<Action, "synced">[] };
     await db.transaction("rw", db.students, db.actions, async () => {
@@ -211,7 +213,7 @@ export async function extractRemote(question: string, input: { text?: string; au
   if (input.text) form.set("text", input.text);
   if (input.audio) form.set("audio", input.audio, "answer.webm");
   try {
-    const res = await fetch(`${API}/v1/profile/extract`, { method: "POST", body: form });
+    const res = await apiFetch(`/v1/profile/extract`, { method: "POST", body: form });
     if (!res.ok) return null;
     const out = await res.json();
     const source: SkillClaim["source"] = input.audio ? "voice" : "text";

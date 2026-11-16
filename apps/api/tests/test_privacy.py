@@ -1,5 +1,6 @@
 """Phase 11: consent scopes and withdrawal, full erasure, under-18 safety."""
 import pytest
+from phones import PhoneClient
 from fastapi.testclient import TestClient
 
 NOW = 1763000000000
@@ -24,7 +25,7 @@ def order(n, sid="st1"):
 def client(pg, monkeypatch):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     from app.main import app
-    return TestClient(app)
+    return PhoneClient(app, pg)
 
 
 def test_withdrawn_consent_stops_sync_both_ways(client):

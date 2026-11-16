@@ -9,10 +9,11 @@ import hashlib
 import json
 from typing import Literal
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
-from .. import db, kb
+from .. import auth, db, kb
+from ..auth import Device
 from ..adapters import gemini, keywords
 from ..services import eligibility, matcher
 
@@ -86,6 +87,7 @@ async def extract_profile(
     question: str = Form(...),
     text: str | None = Form(None),
     audio: UploadFile | None = File(None),
+    _dev: Device = Depends(auth.device),  # registered phones only: student speech, and AI calls cost money
 ):
     audio_bytes = await audio.read() if audio else None
     if audio_bytes and len(audio_bytes) > MAX_AUDIO_BYTES:
@@ -124,20 +126,24 @@ class SyncRequest(BaseModel):
 
 
 @router.post("/sync", summary="Upload students and actions saved offline; get back actions for those students")
-def sync(req: SyncRequest):
+def sync(req: SyncRequest, dev: Device = Depends(auth.device)):
     for s in req.students:
         if not isinstance(s.get("id"), str):
             raise HTTPException(422, "Each student needs a string id")
+    # The legacy tables have no row-level security, so the school check is done here.
     with db.connect() as con:
-        stored = sum(db.upsert_student(con, s) for s in req.students)
-        added = sum(db.add_action(con, a.model_dump()) for a in req.actions)
-        ids = [s["id"] for s in req.students] + [a.student_id for a in req.actions] + req.pull
+        ids = sorted({s["id"] for s in req.students} | {a.student_id for a in req.actions} | set(req.pull))
+        others = db.other_schools_students(con, dev.school_id, ids)
+        stored = sum(db.upsert_student(con, s, dev.school_id) for s in req.students if s["id"] not in others)
+        # Endorsing and recommending are a teacher's actions.
+        added = sum(db.add_action(con, a.model_dump()) for a in req.actions
+                    if a.student_id not in others and (dev.is_teacher or a.kind not in ("endorse", "recommend")))
         return {"stored_students": stored, "added_actions": added,
-                "actions": db.actions_for(con, sorted(set(ids)))}
+                "actions": db.actions_for(con, [i for i in ids if i not in others])}
 
 
 @router.get("/facilitator/{code}/cohort", summary="All students linked to a facilitator code, with their actions")
-def cohort(code: str):
+def cohort(code: str, dev: Device = Depends(auth.teacher)):
     with db.connect() as con:
-        students = db.cohort(con, code)
+        students = db.cohort(con, code, dev.school_id)
         return {"students": students, "actions": db.actions_for(con, [s["id"] for s in students])}
