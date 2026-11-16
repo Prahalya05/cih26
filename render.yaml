@@ -5,11 +5,11 @@ services:
     name: disha
     runtime: docker
     region: singapore          # closest Render region to Tamil Nadu
-    plan: starter
+    plan: free                 # sleeps when idle (about 1 min to wake); starter (paid) stays up
     healthCheckPath: /health
     autoDeploy: true
     envVars:
-      - key: DATABASE_URL      # Supabase session pooler URL (see docs/DEPLOY.md)
+      - key: DATABASE_URL      # Supabase session pooler URL (IPv4); percent-encode the password
         sync: false
       - key: GEMINI_API_KEY    # optional; paid tier for real students
         sync: false
@@ -20,4 +20,4 @@ services:
       - key: WEB_CONCURRENCY
         value: "2"
       - key: DB_POOL_MAX       # per worker; keep workers x this under the Supabase pooler limit
-        value: "8"
+        value: "5"             # 2 workers x 5 = 10, under the Supabase free pool of 15
