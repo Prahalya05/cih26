@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Go } from "../App";
 import { Button, Pill, Screen, useLive, useOnline } from "../components/ui";
 import { addAction, db, type Action, type Student } from "../lib/db";
@@ -134,6 +134,13 @@ function SampleCard({ sample, student }: { sample: StoredEvent; student?: Studen
   const rubric = rubricFor(student, String(sample.payload.rubric_id));
   const ai = (sample.payload.scores ?? {}) as Record<string, number>;
   const reasons = (sample.payload.reasons ?? {}) as Record<string, string>;
+  const times = (sample.payload.times ?? {}) as Record<string, string>;
+  const safetyNotes = (sample.payload.safety ?? []) as { time: string; note: string }[];
+  const player = useRef<HTMLVideoElement>(null);
+  const jump = (mmss: string) => {
+    const [m, s] = mmss.split(":").map(Number);
+    if (player.current) { player.current.currentTime = m * 60 + s; void player.current.play(); }
+  };
   const [scores, setScores] = useState<Record<string, number>>(ai);
   const media = useLive(() => db.media.get(String(sample.payload.media_ref ?? "")), [sample.id], undefined);
   const url = useMemo(() => (media ? URL.createObjectURL(media.blob) : null), [media]);
@@ -146,8 +153,11 @@ function SampleCard({ sample, student }: { sample: StoredEvent; student?: Studen
   return (
     <article className="rounded-3xl bg-white p-4 shadow-sm">
       <p className="font-semibold">{student?.avatar} {student?.name} · {pick(rubric.name)}</p>
-      {url ? <img src={url} alt="" className="mt-2 max-h-56 w-full rounded-2xl object-contain" />
+      {url && media?.blob.type.startsWith("video/")
+        ? <video ref={player} src={url} controls playsInline className="mt-2 max-h-56 w-full rounded-2xl bg-black" />
+        : url ? <img src={url} alt="" className="mt-2 max-h-56 w-full rounded-2xl object-contain" />
         : <p className="mt-1 text-sm text-muted">{t("noPhotoHere")}</p>}
+      {safetyNotes.map((n, i) => <p key={i} className="mt-1 text-sm text-warn">⚠ {n.time} — {n.note}</p>)}
       <ul className="mt-3 flex flex-col gap-2">
         {rubric.criteria.map((c) => (
           <li key={c.id}>
@@ -160,7 +170,9 @@ function SampleCard({ sample, student }: { sample: StoredEvent; student?: Studen
                 </button>
               ))}
             </div>
-            {reasons[c.id] && <p className="text-xs text-muted">🤖 {reasons[c.id]}</p>}
+            {reasons[c.id] && <p className="text-xs text-muted">🤖 {times[c.id] && (
+              <button className="mr-1 rounded bg-brand-soft px-1 font-mono text-brand" onClick={() => jump(times[c.id])}>▶ {times[c.id]}</button>
+            )}{reasons[c.id]}</p>}
           </li>
         ))}
       </ul>

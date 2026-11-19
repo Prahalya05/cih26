@@ -21,6 +21,23 @@ Tracks the build against `docs/Disha_Implementation_Plan.docx`. Last updated 14 
 | 12 Validation and pilot | Code done; pilot not run | 12.1 `tests/test_fairness.py` (gender swap through scoring and through sync, under-claiming, sector spread; 200 synthetic students). 12.2 `docs/Disha_Pilot_Pack.docx` (plan, headteacher letter, Tamil/English consent form, teacher rating sheet, student questions; built by `scripts/make_pilot_pack.py`). 12.3 `scripts/pilot_report.py` (kappa, within-one, retest, effort, survey, questions to fix; `--simulate` dry run in `docs/benchmarks/pilot_dry_run.md`). 12.4 `scripts/calibrate.py` (Rasch, fit, Mantel-Haenszel by gender and medium; `--write` updates the bank, retired questions are scored but not asked) |
 | 13 Demo and launch | In progress | 13.1 done: `storyData.ts`/`stories.ts` (Meena, Karthik, Arun as event stories, Play the story button, step banner; engine test `stories.test.ts`); not yet clicked through in airplane mode. 13.2 prepared: `Dockerfile`, `scripts/start.sh`, `render.yaml`; image built and run against a fresh database OK; accounts (Render, Supabase session pooler, domain) not created. 13.3: `scripts/load_test.py`, `tests/test_failures.py` (Gemini down, network flapping) pass; sync batched; cursor now waits 60 s before passing new events (fixes late-commit loss, migration 0007, `page_from` for paging). Load target NOT met on laptop (burst p95 6.2 s; Docker Desktop adds 3 ms per query and 40 ms per request over 8 KB). A 20 s ramp run hit a 60 s timeout and a psycopg_pool 'cannot join current thread' error in the server log: investigate next. 13.4 pitch not started |
 
+## Proof Pays (branch feat/proof-pays, 19 November 2026; design in docs/INNOVATION.md)
+
+| Layer | Status | Where |
+| --- | --- | --- |
+| SEE | Built; not yet tried with a real camera | `lib/video.ts` (MediaPipe face pixelation + hand landmarks on the phone; only the blurred canvas is recorded; filming refused if the face model fails), `WorkSample.tsx` "Film it", `saveVideoSample`/`scoreSample` in `lib/samples.ts`, teacher queue plays the video with MM:SS jump buttons, `POST /v2/work-sample/video` (`routers/see.py`, `adapters/gemini_video.py`). AI rater kappa: `GET /v2/ai-rater` |
+| PROVE | Built and checked end to end | `packages/zk` (circom circuit, Poseidon, EdDSA, 8 tests), `apps/api/app/zk`, `POST /v2/credential` (needs share_portfolio), `lib/proof.ts`, `screens/Proof.tsx`. Proof made in about 2.9 s on the laptop (Node); phone time not measured yet |
+| PAY | Built and checked on Anvil | `contracts/` (9 Foundry tests), `scripts/deploy_contracts.py`, `app/chain.py` relayer, `POST /v2/pay/claim`, `screens/Funder.tsx` (reads `Paid` events from the chain, live; also at `/?funder`) |
+| PLAN, TRUST | Not started | |
+
+Checked on 19 November 2026 against a local stack (Postgres, Anvil, API, 5 buyer-confirmed orders): credential signed and verified on the phone side, milestone 1 proved, a thief sending the proof to another address is refused (InvalidProof), the real claim pays 2000 Demo Rupees, the replay is refused (AlreadyPaid). The contract checks the nullifier before the proof, so the thief demo must run before the real claim; the Proof screen now proves and claims in two steps for this. API tests: `tests/test_proof_pays.py` (119 API tests pass).
+
+Still to do for Proof Pays:
+- Click through Proof, Funder and filming in a browser (the Chrome extension was not connected), and on a low-end Android phone (proving time for the metrics slide).
+- Deploy to Sepolia (`deploy_contracts.py --rpc <sepolia> --explorer https://sepolia.etherscan.io --public-rpc <public rpc>`), fund the relayer from a faucet, then set `ZK_ISSUER_KEY`, `RELAYER_PRIVATE_KEY` and `CHAIN_DEPLOYMENT` on Render. `requirements.txt` now lists eth-abi/eth-account/eth-utils and the Dockerfile copies `packages/zk/package.json` and `contracts/deployments` (without these the deploy would fail).
+- `contracts/deployments/31337.json` is the local Anvil deployment; keep only the Sepolia file in the image, or set `CHAIN_DEPLOYMENT`.
+- MediaPipe face/hand models load from Google's model bucket on first use; the wasm runtime is copied from node_modules by `apps/web/scripts/copy-assets.mjs` (git-ignored output).
+
 ## Next steps, in order
 
 1. Click through the app in a browser (Chrome extension was not connected): new student with birth year, consent scopes, Privacy screen (toggle photos, withdraw, delete), and the paid-job "Confirmed" badge.

@@ -182,8 +182,10 @@ export async function addAction(a: Omit<Action, "id" | "created_at" | "synced">)
 }
 
 export async function deleteStudent(id: string) {
-  await db.transaction("rw", [db.students, db.actions, db.events, db.skillState, db.media], async () => {
+  await db.transaction("rw", [db.students, db.actions, db.events, db.skillState, db.media, db.meta], async () => {
     await db.students.delete(id);
+    // Proof Pays: her credential, proof secret and demo payout wallet (lib/proof.ts)
+    await db.meta.bulkDelete([`zk.secret.${id}`, `zk.cred.${id}`, `zk.wallet.${id}`]);
     await db.actions.where("student_id").equals(id).delete();
     await db.events.where("student_id").equals(id).delete();
     await db.skillState.where("student_id").equals(id).delete();

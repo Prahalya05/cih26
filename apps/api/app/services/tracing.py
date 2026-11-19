@@ -26,6 +26,7 @@ LEARN_MAX = 0.2
 SPREAD_HOP1 = 0.5
 SPREAD_HOP2 = 0.25
 STRONG_CONFIDENCE = 0.8
+AI_RATER = "ai_vision"  # AI-scored work samples count as this rater (weight follows its agreement with teachers)
 MAX_HISTORY = 20
 
 SAID = [0.1, 0.3, 0.35, 0.25]
@@ -183,9 +184,10 @@ def _pieces(events: list[dict], g: dict, opts: dict) -> list[dict]:
                 continue
             rubric = rubrics.get(str(p.get("rubric_id")))
             w = EVIDENCE_WEIGHTS["work_sample_teacher"] if p.get("scorer") == "teacher" else EVIDENCE_WEIGHTS["work_sample_ai"]
+            rater = AI_RATER if p.get("scorer") == "ai" else None
             for units, s in _sample_scores(g, e["skill_id"], p["scores"], rubric):
                 pieces.append({**base, "units": units, "lik": _gauss(s, WORK_MU, SCORE_SD), "weight": w,
-                               "said": False, "shown": True})
+                               "said": False, "shown": True, "rater": rater})
         elif kind == "rating":
             if e.get("refers_to"):
                 target = by_id.get(e["refers_to"])
@@ -202,7 +204,8 @@ def _pieces(events: list[dict], g: dict, opts: dict) -> list[dict]:
                                        "weight": EVIDENCE_WEIGHTS["work_sample_teacher"], "said": False,
                                        "rater": e.get("rater_id"), "shown": True,
                                        "undo": {"lik": _gauss(old[1], WORK_MU, SCORE_SD), "weight": before_w,
-                                                "at": target["created_at"]} if old else None})
+                                                "at": target["created_at"],
+                                                "rater": AI_RATER if tp.get("scorer") == "ai" else None} if old else None})
                 elif target["kind"] == "order" and target.get("skill_id"):
                     units = _targets(g, target)
                     key = ",".join(units)
@@ -272,7 +275,7 @@ def fold_events(events: list[dict], opts: dict, g: dict | None = None) -> dict:
             if u["last_at"] > 0:
                 u["p"] = _learn(u["p"], (piece["at"] - u["last_at"]) / (7 * DAY))
             if piece["undo"]:
-                wu = piece["undo"]["weight"] * _age(piece["undo"]["at"], now, False)
+                wu = piece["undo"]["weight"] * _age(piece["undo"]["at"], now, False) * rater_w(piece["undo"].get("rater"))
                 u["p"] = _temper(u["p"], piece["undo"]["lik"], -wu)
             u["p"] = _temper(u["p"], piece["lik"], w)
             u["last_at"] = piece["at"]

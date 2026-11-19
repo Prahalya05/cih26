@@ -1,0 +1,25 @@
+{
+  "name": "@disha/zk",
+  "version": "0.1.0",
+  "description": "Disha zero-knowledge skill credentials: Poseidon, Baby Jubjub EdDSA, the circom circuit and proof helpers.",
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build:circuit": "node scripts/build.mjs",
+    "test": "node --test test/*.test.ts"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "devDependencies": {
+    "circomlibjs": "0.1.7"
+  },
+  "dependencies": {
+    "circomlib": "2.0.5",
+    "snarkjs": "0.7.6"
+  }
+}

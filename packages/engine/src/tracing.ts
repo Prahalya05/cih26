@@ -38,6 +38,8 @@ const LEARN_MAX = 0.2;
 const SPREAD_HOP1 = 0.5;
 const SPREAD_HOP2 = 0.25;
 export const STRONG_CONFIDENCE = 0.8;
+/** AI-scored work samples count as this rater, so their weight follows the AI's agreement with teachers. */
+export const AI_RATER = "ai_vision";
 const MAX_HISTORY = 20;
 
 const SAID = [0.1, 0.3, 0.35, 0.25];
@@ -115,7 +117,7 @@ interface Piece {
   spreads?: boolean;        // test answers also spread to related sub-skills, without making Strong
   paid?: boolean;
   /** For corrections: the likelihood and weight to divide out (an AI score replaced by a teacher's). */
-  undo?: { lik: number[]; weight: number; at: number };
+  undo?: { lik: number[]; weight: number; at: number; rater?: string };
 }
 
 // ---------- helpers ----------
@@ -265,8 +267,9 @@ function evidencePieces(events: EvidenceEvent[], g: Graph, opts: TraceOptions): 
         if (p.scorer === "pending" || !e.skill_id) break;
         const rubric = opts.rubrics?.[String(p.rubric_id)];
         const w = p.scorer === "teacher" ? EVIDENCE_WEIGHTS.work_sample_teacher : EVIDENCE_WEIGHTS.work_sample_ai;
+        const rater = p.scorer === "ai" ? AI_RATER : undefined;
         for (const [units, s] of sampleScores(g, e.skill_id, p.scores as Record<string, number>, rubric)) {
-          pieces.push({ ...base, units, lik: gauss(s, WORK_MU, SCORE_SD), weight: w, said: false, shown: true });
+          pieces.push({ ...base, units, lik: gauss(s, WORK_MU, SCORE_SD), weight: w, said: false, shown: true, rater });
         }
         break;
       }
@@ -283,7 +286,8 @@ function evidencePieces(events: EvidenceEvent[], g: Graph, opts: TraceOptions): 
               const old = before?.find(([u]) => u.join() === units.join());
               pieces.push({ ...base, kind: "confirmation", units, lik: gauss(s, WORK_MU, SCORE_SD), weight: EVIDENCE_WEIGHTS.work_sample_teacher,
                 said: false, rater: e.rater_id, shown: true,
-                undo: old ? { lik: gauss(old[1], WORK_MU, SCORE_SD), weight: beforeW, at: target.created_at } : undefined });
+                undo: old ? { lik: gauss(old[1], WORK_MU, SCORE_SD), weight: beforeW, at: target.created_at,
+                  rater: tp.scorer === "ai" ? AI_RATER : undefined } : undefined });
             }
           } else if (target.kind === "order" && target.skill_id) {
             const units = targets(g, target);
@@ -349,7 +353,7 @@ export function foldEvents(events: EvidenceEvent[], g: Graph, opts: TraceOptions
       const before = finish(u);
       if (u.last_at > 0) u.p = learn(u.p, (piece.at - u.last_at) / (7 * DAY));
       if (piece.undo) {
-        const wu = piece.undo.weight * ageFactor(piece.undo.at, opts.now, false);
+        const wu = piece.undo.weight * ageFactor(piece.undo.at, opts.now, false) * raterW(piece.undo.rater);
         u.p = temper(u.p, piece.undo.lik, -wu);
       }
       u.p = temper(u.p, piece.lik, w);

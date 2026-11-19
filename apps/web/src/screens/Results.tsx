@@ -48,7 +48,9 @@ export default function Results({ go, id, tab }: { go: Go; id: string; tab: Tab 
       </nav>
 
       {tab === "strengths" && <><Games id={id} go={go} />
-        <Button kind="soft" onClick={() => go({ name: "order", id })}>💼 {t("paidJob")}</Button><SkillLevels id={id} go={go} claimed={analysis.skills.map((s) => s.id)}
+        <Button kind="soft" onClick={() => go({ name: "order", id })}>💼 {t("paidJob")}</Button>
+        <Button kind="soft" onClick={() => go({ name: "proof", id })}>🔐 {t("proofPays")}</Button>
+        <SkillLevels id={id} go={go} claimed={analysis.skills.map((s) => s.id)}
         persona={personaFromProfile(profile!, { education: analysis.persona.education, riasec: analysis.persona.riasec })} />
         <Strengths a={analysis} /></>}
       {tab === "careers" && <Careers a={analysis} go={go} id={id} />}

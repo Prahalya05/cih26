@@ -5,6 +5,7 @@ WORKDIR /src
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/package.json
 COPY packages/engine/package.json packages/engine/package.json
+COPY packages/zk/package.json packages/zk/package.json
 RUN npm ci
 COPY packages packages
 COPY apps/web apps/web
@@ -20,6 +21,8 @@ RUN pip install --no-cache-dir -r apps/api/requirements.txt
 COPY apps/api apps/api
 COPY packages/kb packages/kb
 COPY scripts scripts
+# Proof Pays contract addresses (pick one with CHAIN_DEPLOYMENT)
+COPY contracts/deployments contracts/deployments
 COPY --from=web /src/apps/web/dist apps/web/dist
 RUN useradd --create-home disha && chown -R disha /app
 USER disha

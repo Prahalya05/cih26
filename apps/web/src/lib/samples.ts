@@ -25,6 +25,8 @@ export interface ScoreResult {
   scores: Record<string, number>;
   reasons: Record<string, string>;
   cannot_see: string[];
+  times?: Record<string, string>; // video only: MM:SS moment for each checklist item
+  safety?: { time: string; note: string }[];
 }
 
 /**
@@ -59,6 +61,18 @@ export async function saveSample(studentId: string, rubric: RubricFull, photo: B
   return ev.id;
 }
 
+/** Saves a filmed task (faces already blurred on the phone) as a pending work sample. Returns the event id. */
+export async function saveVideoSample(studentId: string, rubric: RubricFull, video: Blob, process: object): Promise<string | null> {
+  const mediaId = newId();
+  const ev = await recordEvent({
+    student_id: studentId, kind: "work_sample", skill_id: rubric.skill,
+    payload: { rubric_id: rubric.id, scorer: "pending", media_ref: mediaId, media: "video", process },
+  });
+  if (!ev) return null;
+  await db.media.put({ id: mediaId, student_id: studentId, event_id: ev.id, blob: video, created_at: Date.now() });
+  return ev.id;
+}
+
 /** Sends a pending sample for AI scoring. Returns the scores, or null if offline, no consent, or AI unavailable. */
 export async function scoreSample(pending: EvidenceEvent): Promise<ScoreResult | null> {
   if (!isOnline()) return null;
@@ -67,19 +81,27 @@ export async function scoreSample(pending: EvidenceEvent): Promise<ScoreResult |
   const media = await db.media.get(String(pending.payload.media_ref));
   if (!media) return null;
   await syncEvents(); // the server must know about the consent and the sample first
+  const isVideo = pending.payload.media === "video";
   const form = new FormData();
   form.set("student_id", pending.student_id);
   form.set("rubric_id", String(pending.payload.rubric_id));
-  form.set("image", media.blob, "work.jpg");
+  if (isVideo) {
+    const ext = media.blob.type.includes("mp4") ? "mp4" : "webm";
+    form.set("video", media.blob, `work.${ext}`);
+    form.set("process", JSON.stringify(pending.payload.process ?? {}));
+  } else {
+    form.set("image", media.blob, "work.jpg");
+  }
   try {
-    const res = await apiFetch(`/v2/work-sample/score`, { method: "POST", body: form });
+    const res = await apiFetch(isVideo ? `/v2/work-sample/video` : `/v2/work-sample/score`, { method: "POST", body: form });
     if (!res.ok) return null;
     const out = (await res.json()) as ScoreResult;
     if (Object.keys(out.scores).length > 0) {
       await recordEvent({
         student_id: pending.student_id, kind: "work_sample", skill_id: pending.skill_id,
         payload: { rubric_id: pending.payload.rubric_id, scorer: "ai", scores: out.scores, reasons: out.reasons,
-          cannot_see: out.cannot_see, media_ref: pending.payload.media_ref, replaces: pending.id },
+          cannot_see: out.cannot_see, media_ref: pending.payload.media_ref, replaces: pending.id,
+          ...(isVideo ? { media: "video", times: out.times ?? {}, safety: out.safety ?? [], process: pending.payload.process } : {}) },
       });
     }
     return out;

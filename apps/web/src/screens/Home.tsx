@@ -59,6 +59,9 @@ export default function Home({ go }: { go: Go }) {
         <Button kind="ghost" className="w-full" onClick={() => go({ name: "teacher" })}>
           🧑‍🏫 {t("teacher")}
         </Button>
+        <Button kind="ghost" className="w-full text-base" onClick={() => go({ name: "funder" })}>
+          📊 {t("funderView")}
+        </Button>
       </div>
     </Screen>
   );

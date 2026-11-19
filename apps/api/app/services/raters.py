@@ -15,6 +15,8 @@ from .. import kb
 from . import tracing
 
 MIN_RATINGS = 10
+AI_RATER = tracing.AI_RATER
+MIN_AI_PAIRS = 20  # checklist items scored by both the AI and a teacher before the AI's weight moves
 
 
 def _rater_levels(e: dict, by_id: dict) -> list[tuple[str, int]]:
@@ -87,6 +89,33 @@ def compute(events_by_student: dict[str, list[dict]], now_ms: float) -> dict[str
     return out
 
 
+def ai_agreement(events: list[dict]) -> dict:
+    """How far AI work-sample scores agree with the teacher who checked the same sample, item by item.
+
+    Each pair is (AI score, teacher score) for one checklist item, both 0-2. agreement is the quadratic weighted
+    kappa; weight is what the tracer will multiply AI evidence by (floor 0.3), and stays 1 until MIN_AI_PAIRS.
+    """
+    by_id = {e["id"]: e for e in events}
+    pairs: list[tuple[int, int]] = []
+    for e in events:
+        target = by_id.get(e.get("refers_to") or "")
+        if e["kind"] != "rating" or not target or target["kind"] != "work_sample":
+            continue
+        tp, p = target.get("payload") or {}, e.get("payload") or {}
+        if tp.get("scorer") != "ai" or not isinstance(p.get("scores"), dict):
+            continue
+        for cid, ai in (tp.get("scores") or {}).items():
+            teacher = p["scores"].get(cid)
+            if isinstance(ai, int) and isinstance(teacher, int) and 0 <= ai <= 2 and 0 <= teacher <= 2:
+                pairs.append((ai, teacher))
+    n = len(pairs)
+    kappa = weighted_kappa([x + 1 for x, _ in pairs], [y + 1 for _, y in pairs], k=3) if n else 0.0
+    exact = sum(1 for x, y in pairs if x == y) / n if n else 0.0
+    weight = max(0.3, kappa) if n >= MIN_AI_PAIRS else 1.0
+    return {"n": n, "agreement": round(max(0.0, kappa), 3), "exact": round(exact, 3), "weight": round(weight, 3),
+            "bias": round(sum(x - y for x, y in pairs) / n, 3) if n else 0.0}
+
+
 def update_all(con) -> dict[str, dict]:
     """Recomputes every rater's numbers from the database and stores them in the rater table."""
     from ..routers.v2 import _row_to_event
@@ -97,4 +126,7 @@ def update_all(con) -> dict[str, dict]:
     stats = compute(by_student, datetime.now(tz=timezone.utc).timestamp() * 1000)
     for rid, s in stats.items():
         con.execute("update rater set leniency = %s, agreement = %s where id = %s", (s["leniency"], s["agreement"], rid))
+    ai = ai_agreement([e for lst in by_student.values() for e in lst])
+    con.execute("update rater set leniency = %s, agreement = %s where id = %s", (ai["bias"], ai["weight"], AI_RATER))
+    stats[AI_RATER] = ai
     return stats

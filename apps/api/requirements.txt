@@ -7,3 +7,6 @@ pytest>=8
 psycopg[binary]>=3.2
 psycopg_pool>=3.2
 python-ulid>=3.0
+eth-abi>=6.0
+eth-account>=0.14
+eth-utils>=5.0
