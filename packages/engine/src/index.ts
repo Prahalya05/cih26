@@ -17,3 +17,13 @@ export { check, evaluateAll, joined, NEXT_STAGES } from "./eligibility.ts";
 export type { SchemeResult, Status } from "./eligibility.ts";
 export { feasibility, mmrRerank, recommend, scoreAll, skillOverlap, whatIf, WEIGHTS } from "./matcher.ts";
 export type { ScoredCareer, WhatIf } from "./matcher.ts";
+// Explainability (decision X-ray), onboarding mode, interests from words, opportunities and the per-student graph.
+export { explainScheme } from "./eligibility.ts";
+export { describeLeaf, type Leaf } from "./jsonlogic.ts";
+export * from "./trace.ts";
+export * from "./registry.ts";
+export * from "./uimode.ts";
+export * from "./interests.ts";
+export * from "./readiness.ts";
+export * from "./persongraph.ts";
+export * from "./aichecks.ts";

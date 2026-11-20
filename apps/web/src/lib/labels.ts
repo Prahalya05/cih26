@@ -18,8 +18,8 @@ export const SCHEME_TYPE: Record<string, string> = {
   internship: "💼",
 };
 
-export function formatDate(iso: string | null | undefined, lang: "ta" | "en") {
+export function formatDate(iso: string | null | undefined, lang: string) {
   if (!iso) return "";
   const d = new Date(`${iso}T00:00:00`);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString(lang === "ta" ? "ta-IN" : "en-IN", { day: "numeric", month: "short", year: "numeric" });
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString(lang === "ta" ? "ta-IN" : lang === "hi" ? "hi-IN" : "en-IN", { day: "numeric", month: "short", year: "numeric" });
 }

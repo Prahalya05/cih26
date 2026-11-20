@@ -85,3 +85,18 @@ export function evaluateAll(kb: KB, facts: Facts): SchemeResult[] {
     order[a.status] - order[b.status] || Number(a.eligible_if === null) - Number(b.eligible_if === null));
   return results;
 }
+
+/** The same check as `check`, plus every comparison the rule made, for the "Why?" view. Result is identical. */
+export function explainScheme(kb: KB, schemeId: string, facts: Facts) {
+  const ev = new Evaluation({ record: true });
+  const result = apply(kb.rules[schemeId].rule, facts, ev);
+  const status: Status = result === UNKNOWN ? "need_info" : pyTruthy(result) ? "eligible" : "not_eligible";
+  return {
+    scheme_id: schemeId,
+    status,
+    missing_facts: [...ev.missing].sort(byCodePoint),
+    leaves: ev.leaves ?? [],
+    notes: kb.rules[schemeId].notes ?? null,
+    rule_updated: kb.rules[schemeId].updated ?? null,
+  };
+}

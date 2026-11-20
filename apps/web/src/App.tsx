@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { LangContext, type LangCode } from "./lib/i18n";
 import { stopSpeaking } from "./lib/speech";
 import { syncNow } from "./lib/sync";
+import { refreshSchemes } from "./lib/schemes";
 import Home from "./screens/Home";
 import NewStudent from "./screens/NewStudent";
 import Consent from "./screens/Consent";
@@ -18,6 +19,9 @@ import Rate from "./screens/Rate";
 import ConfirmJob from "./screens/ConfirmJob";
 import Privacy from "./screens/Privacy";
 import { scorePending } from "./lib/samples";
+import Situation from "./screens/Situation";
+import Talk from "./screens/Talk";
+import { setXrayOn, xrayInitiallyOn } from "./lib/xray";
 
 // Camera (MediaPipe), zero-knowledge and chain code load only when these screens open, so the everyday
 // student flow stays small on low-end phones.
@@ -27,15 +31,23 @@ const Funder = lazy(() => import("./screens/Funder"));
 // Aim High screens (higher-study routes, readiness checks, practice).
 const AimTrack = lazy(() => import("./screens/AimTrack"));
 const AimQuiz = lazy(() => import("./screens/AimQuiz"));
+// Decision X-ray panel, "How Disha decides" and the per-student map (graph).
+const XRay = lazy(() => import("./components/XRay"));
+const HowItDecides = lazy(() => import("./screens/HowItDecides"));
+const GraphScreen = lazy(() => import("./screens/Graph"));
 
 export type Route =
   | { name: "home" }
   | { name: "new" }
+  | { name: "situation"; id: string }
+  | { name: "talk"; id: string }
+  | { name: "how"; from?: Route }
+  | { name: "graph"; id: string; from?: Route }
   | { name: "consent"; id: string }
   | { name: "cards"; id: string }
   | { name: "questions"; id: string }
   | { name: "facts"; id: string }
-  | { name: "results"; id: string; tab?: "strengths" | "careers" | "schemes" | "aim" }
+  | { name: "results"; id: string; tab?: "strengths" | "careers" | "schemes" | "opps" | "map" | "aim" }
   | { name: "career"; id: string; occ: string }
   | { name: "teacher" }
   | { name: "assess"; id: string; subskill: string }
@@ -60,6 +72,13 @@ export default function App() {
   // A buyer opening a job-confirmation link (?confirm=token) sees only that page.
   const [confirmToken, setConfirmToken] = useState(() => new URLSearchParams(location.search).get("confirm"));
   const [lang, setLangState] = useState<LangCode>(() => (read("disha.lang") as LangCode) || "ta");
+  // Decision X-ray: ?xray=1 (or holding the logo) shows every decision as RULE / AI live, for demos.
+  const [xray, setXray] = useState(xrayInitiallyOn);
+  useEffect(() => {
+    const toggle = () => setXray((on) => { setXrayOn(!on); return !on; });
+    window.addEventListener("disha:xray-toggle", toggle);
+    return () => window.removeEventListener("disha:xray-toggle", toggle);
+  }, []);
 
   const setLang = (l: LangCode) => {
     setLangState(l);
@@ -75,7 +94,7 @@ export default function App() {
 
   // Sync whenever we come online, and every 30 s while online.
   useEffect(() => {
-    const run = () => void syncNow().then(() => scorePending());
+    const run = () => { void syncNow().then(() => scorePending()); void refreshSchemes(); };
     run();
     const onOnline = () => run();
     window.addEventListener("online", onOnline);
@@ -85,9 +104,12 @@ export default function App() {
 
   return (
     <LangContext.Provider value={{ lang, setLang }}>
+      <div className={xray ? "lg:pr-[440px]" : ""}>
       {confirmToken && <ConfirmJob token={confirmToken} onClose={() => { history.replaceState(null, "", "/"); setConfirmToken(null); }} />}
       {!confirmToken && route.name === "home" && <Home go={go} />}
       {route.name === "new" && <NewStudent go={go} />}
+      {route.name === "situation" && <Situation go={go} id={route.id} />}
+      {route.name === "talk" && <Talk go={go} id={route.id} />}
       {route.name === "consent" && <Consent go={go} id={route.id} />}
       {route.name === "cards" && <Cards go={go} id={route.id} />}
       {route.name === "questions" && <Questions go={go} id={route.id} />}
@@ -102,11 +124,19 @@ export default function App() {
         {route.name === "proof" && <Proof go={go} id={route.id} />}
         {route.name === "funder" && <Funder go={go} />}
         {route.name === "aimTrack" && <AimTrack go={go} id={route.id} track={route.track} />}
+        {route.name === "how" && <HowItDecides go={go} back={route.from ? () => go(route.from!) : undefined} />}
+        {route.name === "graph" && <GraphScreen go={go} id={route.id} back={route.from ? () => go(route.from!) : undefined} />}
         {route.name === "aimQuiz" && <AimQuiz key={`${route.subject}|${route.mode}`} go={go} id={route.id} subject={route.subject} mode={route.mode} track={route.track} />}
       </Suspense>
       {route.name === "order" && <Order go={go} id={route.id} />}
       {route.name === "rate" && <Rate go={go} id={route.id} mode={route.mode} />}
       {route.name === "privacy" && <Privacy go={go} id={route.id} />}
+      </div>
+      {xray && (
+        <Suspense fallback={null}>
+          <XRay onClose={() => { setXray(false); setXrayOn(false); }} onHow={() => go({ name: "how", from: route })} />
+        </Suspense>
+      )}
     </LangContext.Provider>
   );
 }

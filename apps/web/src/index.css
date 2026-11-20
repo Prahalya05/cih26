@@ -80,3 +80,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--color-brand); 
 @media (prefers-reduced-motion: reduce) {
   .pop, .pulse-ring, .animate-bounce { animation: none; }
 }
+
+/* Decision X-ray: new entries slide in */
+@keyframes xray-in { from { opacity: 0; transform: translateY(-6px); background: rgb(22 179 202 / 0.25); } to { opacity: 1; transform: none; } }
+.xray-in { animation: xray-in 0.6s ease-out; }

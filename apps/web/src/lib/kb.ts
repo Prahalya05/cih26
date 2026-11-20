@@ -1,10 +1,11 @@
 // The knowledge base is bundled into the app, so matching and eligibility work with no internet.
 
-import { buildKb, type Aptitude, type Edge, type Occupation, type Rule, type Scheme, type Skill, type Subskill } from "@disha/engine";
+import { buildKb, type Opportunity, type Aptitude, type Edge, type Occupation, type Rule, type Scheme, type Skill, type Subskill } from "@disha/engine";
 import aptitudes from "@kb/graph/aptitudes.json";
 import edges from "@kb/graph/edges.json";
 import subskills from "@kb/graph/subskills.json";
 import occupations from "@kb/occupations.json";
+import opportunities from "@kb/opportunities.json";
 import schemes from "@kb/schemes.json";
 import skills from "@kb/skills.json";
 
@@ -23,3 +24,7 @@ export const kb = buildKb({
     edges: edges as Edge[],
   },
 });
+
+/** Internships, apprenticeships, jobs, mentors and trainings (real programmes plus marked sample listings). */
+export const OPPORTUNITIES = opportunities as unknown as Opportunity[];
+export const opportunityById = Object.fromEntries(OPPORTUNITIES.map((o) => [o.id, o]));

@@ -5,10 +5,15 @@ import { CARDS } from "../data/cards";
 import { db, hasScope, type Student } from "../lib/db";
 import { useT } from "../lib/i18n";
 
+/** Interests are done when every card is answered, or she told us in her own words, or chose "don't know yet". */
+export const interestsDone = (s: Student) => Object.keys(s.cards).length >= CARDS.length || !!s.interests;
+
 /** Where to send a returning student: the first step they haven't finished. */
 export function nextStep(s: Student): Parameters<Go>[0] {
+  if (!s.scenario && !s.simulated) return { name: "situation", id: s.id };
   if (!hasScope(s, "assess")) return { name: "consent", id: s.id };
-  if (Object.keys(s.cards).length < CARDS.length) return { name: "cards", id: s.id };
+  // Voice/text mode starts with "tell us about yourself"; picture and mixed modes start with the picture cards.
+  if (!interestsDone(s)) return s.uiMode === "voice_text" ? { name: "talk", id: s.id } : { name: "cards", id: s.id };
   if (Object.keys(s.answers).length === 0) return { name: "questions", id: s.id };
   if (Object.keys(s.factAnswers).length === 0) return { name: "facts", id: s.id };
   return { name: "results", id: s.id };
@@ -64,6 +69,7 @@ export default function Home({ go }: { go: Go }) {
       <nav className="mt-auto flex flex-col divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
         <HomeLink icon="teacher" label={t("teacher")} onClick={() => go({ name: "teacher" })} />
         <HomeLink icon="chart" label={t("funderView")} onClick={() => go({ name: "funder" })} />
+        <HomeLink icon="scan" label={t("howDecides")} onClick={() => go({ name: "how" })} />
       </nav>
     </Screen>
   );

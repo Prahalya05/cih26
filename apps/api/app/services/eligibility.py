@@ -4,8 +4,7 @@ Mirrored in packages/engine/src/eligibility.ts (the phone runs the same code off
 """
 from __future__ import annotations
 
-from .. import kb
-from . import jsonlogic
+from . import jsonlogic, schemes as catalog
 
 # Next study stages a student could move into; used to show "eligible later" opportunities.
 NEXT_STAGES = {"school": ["iti", "diploma", "ug"], "iti": ["diploma"], "diploma": ["ug"], "ug": ["pg"]}
@@ -14,7 +13,7 @@ STAGE_MIN_PASSED = {"iti": 10, "diploma": 10, "ug": 12, "pg": 15}
 
 
 def check(scheme_id: str, facts: dict) -> dict:
-    rule = kb.rules()[scheme_id]["rule"]
+    rule = catalog.rules()[scheme_id]["rule"]
     ev = jsonlogic.Evaluation()
     result = jsonlogic.apply(rule, facts, ev)
     if result is jsonlogic.UNKNOWN:
@@ -33,8 +32,9 @@ def joined(facts: dict, stage: str, course_type: str) -> dict:
 
 def evaluate_all(facts: dict) -> list[dict]:
     results = []
-    for sid, scheme in kb.schemes().items():
-        if sid not in kb.rules():
+    rules = catalog.rules()
+    for sid, scheme in catalog.schemes().items():
+        if sid not in rules:
             continue
         res = check(sid, facts)
         later = None
@@ -46,7 +46,7 @@ def evaluate_all(facts: dict) -> list[dict]:
                         break
                 if later:
                     break
-        rule = kb.rules()[sid]
+        rule = rules[sid]
         results.append({
             "scheme_id": sid,
             "name": scheme["name"],

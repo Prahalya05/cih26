@@ -2,7 +2,9 @@
 
 Citi India Hackathon 2026 · Team AdaMinds · PSG College of Technology
 
-Status as of 20 November 2026. "Live" = deployed at disha-pa6e.onrender.com from the main branch. "Built" = on the feat/proof-pays branch, not yet live.
+Status as of 20 November 2026. "Live" = deployed at disha-pa6e.onrender.com from the main branch. "Built" = on a feature branch, not yet live: feat/proof-pays (video, ZK credential, payouts) and feat/aim-high (Aim High higher-study pathways and the UI refresh; it sits on top of feat/proof-pays).
+
+For every command to run, test, deploy and inspect the project, see docs/Disha_Commands.md.
 
 ---
 
@@ -36,6 +38,8 @@ At a glance:
 | Questions + aptitude puzzles | 42 + 59 = 101 |
 | Careers | 16, across 8 sectors |
 | Schemes and opportunities | 9 |
+| Higher-study tracks (Aim High) | 14, with 23 entrance exams |
+| Aim High subject questions | 43, across 7 subjects |
 | Languages | Tamil, English |
 
 Three rules hold everywhere:
@@ -51,6 +55,7 @@ Three rules hold everywhere:
 |---|---|---|
 | Discover: local-language voice/text profile, wide options | Picture cards (RIASEC), Tamil/English voice, AI extraction limited to a fixed skill list with quotes | Live |
 | Learn: pathway, competitive exams, widen options | 16 careers in 8 sectors, 4-step pathways, entrance exams, variety re-rank, what-if hints, best next test | Live |
+| Learn: aim higher (school students) | Aim High: 14 higher-study tracks, shortest route and open doors, Class 11 group choice, exam readiness, week-by-week study plan, spaced practice | Built (feat/aim-high) |
 | Opportunity: scholarships, schemes, apprenticeships | 9 rule files: eligible now / need info / eligible later; documents and apply links | Live |
 | Connect and earn | Buyer-confirmed paid jobs; Proof Pays funder payouts | Live / payouts built |
 | Facilitator enablement | Teacher view: class list, review queue, ratings, endorse, recommend | Live |
@@ -161,8 +166,9 @@ Technology choices:
 ```
 apps/
   web/              React 19 + Vite PWA (student, teacher, funder screens)
-    src/screens/    one file per screen (18 screens)
-    src/lib/        db, sync, speech, i18n, proof, video, proctor, integrity
+    src/screens/    one file per screen (21 screens, incl. AimHigh, AimTrack, AimQuiz)
+    src/components/ shared UI, question formats, Icon (one icon set)
+    src/lib/        db, sync, speech, i18n, proof, video, proctor, integrity, aim
   api/              FastAPI server
     app/routers/    v1, v2, see (video), proof (credential and pay)
     app/services/   Python engine twin: irt, tracing, fitreach, eligibility, raters
@@ -171,8 +177,8 @@ apps/
     migrations/     PostgreSQL schema 0001-0009
     tests/          pytest (auth, privacy, fairness, failures, proof pays)
 packages/
-  engine/           shared TypeScript engine + golden tests
-  kb/               skills, sub-skill graph, careers, schemes, rules, items, rubrics
+  engine/           shared TypeScript engine + golden tests; src/pathways.ts (Aim High maths)
+  kb/               skills, sub-skill graph, careers, schemes, rules, items, rubrics; pathways/ (Aim High)
   zk/               circom circuit and prover (GPL-3.0)
 contracts/          ProofPays.sol, DemoRupee.sol, Groth16Verifier.sol, Foundry tests
 scripts/            validate_kb, load_kb, simulate, calibrate, load_test, deploy_contracts
@@ -193,6 +199,7 @@ All domain data is JSON in packages/kb. Teachers or NGOs can add a skill, career
 | schemes.json + rules/ | Scheme facts, documents, apply link, JSON Logic rule + fixtures | 9 |
 | items/ | Test questions and aptitude puzzles | 42 + 59 |
 | rubrics/ | Work-sample checklists | 2 (stitching, basic electrical) |
+| pathways/ (graph, exams, tracks, subjects, items) | Aim High: study-route graph, entrance exams, higher-study tracks, subjects with topic prerequisites, bilingual questions with explanations | 14 tracks, 23 exams, 7 subjects, 43 questions |
 
 How the graph connects (stitching as the example):
 
@@ -391,7 +398,60 @@ AI never decides eligibility.
 
 ---
 
-## 10. Voice and language
+## 10. Aim High (higher-study pathways)
+
+A fourth Results tab for students in or near school who could go further. It answers: which higher-study careers are still open from where I am, which Class 11 group keeps them open, how ready am I for the entrance exam, and what do I study each week.
+
+14 tracks: doctor, engineer, chartered accountant, lawyer, IAS / TNPSC, scientist, IIT Madras BS in data science, NDA (armed forces officer), nurse, pharmacist, veterinarian, agriculture, architect, designer.
+
+```
+ Facts screen: class, Class 11-12 group or degree, birth year
+        |
+        v
+ START node (e.g. "Class 10", "Class 12 PCM", "UG science")
+        |
+        v
+ Route graph (school -> stream -> course -> goal; each edge = years + exams + age limit)
+        |
+        +--> Dijkstra: shortest route to each goal (NDA age limit checked during the search)
+        +--> Doors: open / closed / closed by age, for every track
+        +--> Class 11 group chooser: which group keeps which doors open (PCMB, PCM, PCB, commerce, humanities)
+        |
+ Subject check (adaptive, up to 6 questions, same 2PL IRT as skill tests)
+        |
+        v
+ Ability per subject --> Readiness at the first exam (growth 0.05 ability a month, max 24 months)
+        |
+        v
+ Study plan: Kahn topological sort of topics (prerequisites first), value-per-hour priority,
+             20% of hours kept for practice, topics at 85%+ mastery skipped
+        |
+        v
+ Daily practice: Leitner boxes (review after 1, 2, 4, 8, 16 days)
+```
+
+| Part | How it works |
+|---|---|
+| Route | Dijkstra over study stages weighted by years; an edge with max_age (NDA) is refused when she would be too old |
+| Doors | Every track marked open, closed (wrong group or stage) or closed by age |
+| Class 11 group | For each group, how many of her interesting tracks stay open (interest from RIASEC cards) |
+| Ability | 2PL IRT per subject from Aim quiz answers |
+| Readiness | Ability projected to the month of the first exam on the route, against the track's bar |
+| Study plan | Topics in prerequisite order (Kahn), highest value per hour first, packed into her weekly hours |
+| Practice | Wrong or due questions come back by Leitner box; each answer shows why |
+| Money and help | Track pages reuse the scheme rules; flags the Tamil Nadu 7.5% government-school quota |
+
+Screens: Aim High tab (inside Results), Aim track page (route, exams, readiness, plan, funding), Aim quiz (subject check and daily practice).
+
+Privacy: quiz answers, practice cards and the goal stay on the phone (IndexedDB meta key aim.<student>), are erased with the student, and are not synced. The teacher cannot see goals yet.
+
+Status: built on feat/aim-high, 14 engine tests, validate_kb.py checks the pathway files (unknown nodes, unreachable goals, prerequisite loops, bilingual text). Clicked through in a browser. Every exam rule, quota and fee note is marked needs_verification; readiness bars and the growth rate are planning assumptions; the 43 questions are team estimates awaiting teacher review; IIT JAM and Tamil Nadu lateral entry have no official link yet.
+
+UI refresh (same branch): Plus Jakarta Sans for English and Noto Sans Tamil for Tamil (bundled, work offline), one icon set (components/Icon.tsx) across all screens, cleaner cards and tabs.
+
+---
+
+## 11. Voice and language
 
 - Output: recorded prompt if available, else the phone's text-to-speech (many cheap phones lack a Tamil voice).
 - Input: push-to-talk. Record, then upload. Live streaming fails on 2G/3G.
@@ -413,7 +473,7 @@ No key or no network: keyword matcher runs instead.
 
 ---
 
-## 11. Offline and sync
+## 12. Offline and sync
 
 ```
  Phone (IndexedDB)                 API /v2/sync                  PostgreSQL
@@ -435,7 +495,7 @@ No key or no network: keyword matcher runs instead.
 
 ---
 
-## 12. Facilitator mode
+## 13. Facilitator mode
 
 ```
  Phone registers with secret teacher code         Student phones join with class code
@@ -454,7 +514,7 @@ Only teacher-code phones can rate or see the class list. Rater leniency and weig
 
 ---
 
-## 13. Video assessment and fair-test check
+## 14. Video assessment and fair-test check
 
 Both run MediaPipe on the phone. Faces never leave the device.
 
@@ -486,7 +546,7 @@ Status: built on feat/proof-pays; real-camera testing on phones still to do. Ele
 
 ---
 
-## 14. Proof Pays (innovation)
+## 15. Proof Pays (innovation)
 
 "The phone sees the skill, maths proves it, and money follows." Funders put money on a skill milestone. A smart contract pays when a zero-knowledge proof shows the milestone was reached. Funders learn the statement is true and nothing else.
 
@@ -533,7 +593,7 @@ Proof made in about 2.9 s on a laptop (phone not measured). 9 Foundry tests, 8 Z
 
 ---
 
-## 15. Privacy, safety and fairness
+## 16. Privacy, safety and fairness
 
 Consent lifecycle:
 
@@ -557,7 +617,7 @@ Consent lifecycle:
 
 ---
 
-## 16. Data model (PostgreSQL, migrations 0001-0009)
+## 17. Data model (PostgreSQL, migrations 0001-0009)
 
 ```
  SCHOOL 1--* STUDENT 1--1 STUDENT_PRIVATE
@@ -574,7 +634,7 @@ evidence_event is the source of truth; *_state tables are caches.
 
 ---
 
-## 17. API reference
+## 18. API reference
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -599,9 +659,9 @@ Interactive OpenAPI docs at /docs. Student-data endpoints need a device token an
 
 ---
 
-## 18. Screens and wireframes
+## 19. Screens and wireframes
 
-Screen map (18 screens):
+Screen map (21 screens):
 
 ```
  Home --new--> New student -> Consent -> Picture cards -> Questions -> Facts -> RESULTS
@@ -611,6 +671,7 @@ Screen map (18 screens):
  Career detail  Adaptive    Aptitude     Work sample  Paid job   Privacy     Proof
                 test        game                        |
                                                   (buyer link) -> Confirm job
+ RESULTS --Aim High tab--> Aim High --> Aim track (route, plan) --> Aim quiz (check / practice)
  Home --teacher--> Teacher -> Rate
  Funder dashboard (/?funder)
 ```
@@ -670,11 +731,25 @@ Wireframes (layout sketches, not screenshots; sample text is illustrative):
 | PAID · tx link        |  |                       |  | This link works once  |
 +-----------------------+  +-----------------------+  +-----------------------+
    PROOF                      FUNDER                     BUYER CONFIRMATION
+
++-----------------------+  +-----------------------+
+| Meena                 |  | < Doctor (MBBS)       |
+| Str Car Sch [Aim High]|  | Route: Class 10 ->    |
+| Doors from Class 10:  |  |  PCB -> NEET -> MBBS  |
+| Doctor      OPEN      |  | Exams: NEET-UG        |
+| Engineer    OPEN      |  | Readiness  Bio [###.] |
+| NDA      AGE LIMIT    |  |            Chem[##..] |
+| Pick a Class 11 group:|  | Week 1: Cell biology  |
+|  PCB keeps 6 open     |  | Week 2: Mole concept  |
+| [ Check a subject ]   |  | 7.5% govt quota: yes  |
+| [ Today's practice ]  |  | [ Check Chemistry ]   |
++-----------------------+  +-----------------------+
+   AIM HIGH TAB               AIM TRACK
 ```
 
 ---
 
-## 19. Testing and deployment
+## 20. Testing and deployment
 
 ```
  Push / PR --> Node job:   npm ci, npm test (engine + typecheck), build
@@ -694,10 +769,11 @@ Wireframes (layout sketches, not screenshots; sample text is illustrative):
 | simulate.py | Adaptive test accuracy on 500 simulated students |
 | load_test.py | Sync latency with 200 phones at once |
 | Foundry (9) and ZK (8) tests | Contract rules and circuit correctness (run locally) |
+| pathways.test.ts (14) | Aim High routes, age limit, doors, abilities, readiness, study plan order, Leitner |
 
 ---
 
-## 20. Metrics
+## 21. Metrics
 
 | Metric | Value | Basis |
 |---|---|---|
@@ -711,12 +787,12 @@ These are simulation and lab numbers. No school pilot has run yet, so no field a
 
 ---
 
-## 21. Status, roadmap and business model
+## 22. Status, roadmap and business model
 
 | Live | Built, in testing | Next | Known gaps |
 |---|---|---|---|
 | Student flow, Tamil/English | Video scoring with MM:SS | Sepolia deploy + browser click-through | Guardian OTP not built |
-| Voice + AI skill extraction | Fair-test check | Proving time on low-end Android | No per-teacher login on shared phones |
+| Voice + AI skill extraction | Fair-test check, Aim High pathways | Proving time on low-end Android | No per-teacher login on shared phones |
 | Tests, games, photo work samples | ZK credential and proof | School pilot (pack ready), recalibration | Device registration has no rate limit |
 | Careers, schemes, what-ifs | Payout contract (local chain) | AI counsellor (MCP tools) + scheme-document search | Tamil content needs teacher review |
 | Teacher view, sync, buyer links, privacy | Funder dashboard | Teacher module marketplace, more languages | Paid Gemini key needed before real students |
@@ -731,7 +807,7 @@ Monetisation (plan, not yet validated):
 
 ---
 
-## 22. Glossary
+## 23. Glossary
 
 | Term | Meaning |
 |---|---|
@@ -747,5 +823,9 @@ Monetisation (plan, not yet validated):
 | Nullifier | One-time tag per student and milestone that stops double payment |
 | Relayer | Server account that sends the claim and pays test gas |
 | PWA | Progressive web app: a website that installs and works offline |
+| 2PL | Two-parameter IRT model: difficulty and discrimination per question |
+| Dijkstra | Shortest-path search; finds the fewest years from where she is to a goal |
+| Kahn's sort | Orders topics so every prerequisite comes first |
+| Leitner boxes | Spaced practice: a right answer moves a card to a longer gap, a wrong one back to day 1 |
 
 Sources: Disha repository (README, docs/ARCHITECTURE.md, docs/INNOVATION.md, docs/PROGRESS.md, code), the Citi India Hackathon problem statement, and the Crisil FY25 CSR study.

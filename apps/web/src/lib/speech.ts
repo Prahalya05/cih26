@@ -10,7 +10,7 @@ fetch("/audio/manifest.json")
   .then((m) => { manifest = m.files ?? {}; })
   .catch(() => { manifest = {}; });
 
-const BCP47: Record<LangCode, string> = { ta: "ta-IN", en: "en-IN" };
+const BCP47: Record<LangCode, string> = { ta: "ta-IN", en: "en-IN", hi: "hi-IN" };
 
 function voiceFor(lang: LangCode): SpeechSynthesisVoice | undefined {
   if (!("speechSynthesis" in window)) return undefined;

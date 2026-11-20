@@ -41,7 +41,7 @@ export function Screen({ children, title, onBack, right }: { children: ReactNode
             <Icon name="back" className="size-[22px]" />
           </button>
         ) : (
-          <Mark className="ml-1 size-8" />
+          <LongPressMark />
         )}
         {title ? (
           <h1 className="flex-1 truncate text-[17px] font-bold">{title}</h1>
@@ -50,10 +50,10 @@ export function Screen({ children, title, onBack, right }: { children: ReactNode
         )}
         {right}
         <div className="flex rounded-lg bg-paper p-0.5 text-xs font-bold" role="group" aria-label="Language">
-          {(["ta", "en"] as const).map((l) => (
+          {(["ta", "hi", "en"] as const).map((l) => (
             <button key={l} onClick={() => setLang(l)} aria-pressed={lang === l}
               className={`rounded-md px-2.5 py-1.5 ${lang === l ? "bg-surface text-brand shadow-[0_1px_2px_rgb(11_31_58/0.12)]" : "text-muted"}`}>
-              {l === "ta" ? "த" : "En"}
+              {l === "ta" ? "த" : l === "hi" ? "हि" : "En"}
             </button>
           ))}
         </div>
@@ -161,4 +161,16 @@ export function Pill({ children, tone = "neutral" }: { children: ReactNode; tone
     bad: "bg-bad-soft text-bad",
   }[tone];
   return <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-bold ${styles}`}>{children}</span>;
+}
+
+/** The Disha logo. Holding it for a second turns the decision X-ray on or off (for demos). */
+function LongPressMark() {
+  let timer: number | undefined;
+  const start = () => { timer = window.setTimeout(() => window.dispatchEvent(new Event("disha:xray-toggle")), 900); };
+  const cancel = () => window.clearTimeout(timer);
+  return (
+    <span onPointerDown={start} onPointerUp={cancel} onPointerLeave={cancel} onContextMenu={(e) => e.preventDefault()} className="select-none">
+      <Mark className="ml-1 size-8" />
+    </span>
+  );
 }

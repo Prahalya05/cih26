@@ -8,7 +8,7 @@ import type { Profile } from "@disha/engine";
 import { clearDemoClass, loadDemoClass, storyOf } from "../lib/demo";
 import { playStory } from "../lib/stories";
 import { useT } from "../lib/i18n";
-import { kb } from "../lib/kb";
+import { kb, opportunityById } from "../lib/kb";
 import { SECTOR } from "../lib/labels";
 import { analyse, isStrongMatch, type Analysis } from "../lib/profile";
 import { pullCohort, syncNow } from "../lib/sync";
@@ -224,6 +224,32 @@ function StudentRow({ s, a, strong, open, onToggle, go }: { s: Student; a: Analy
           {storyOf(s.id) && (
             <button onClick={() => { go({ name: "results", id: s.id, tab: "strengths" }); void playStory(s.id, storyOf(s.id)!); }}
               className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand px-3 text-base font-bold text-white"><Icon name="play" className="size-4" />{t("playStory")}</button>
+          )}
+          <button onClick={() => go({ name: "graph", id: s.id, from: { name: "teacher" } })}
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-accent bg-surface px-3 text-sm font-bold text-accent-dark"><Icon name="chain" className="size-4" />{t("viewMap")}</button>
+          {a.applications.length > 0 && (
+            <div>
+              <p className="mb-2 text-sm font-semibold text-muted">{t("applications")}</p>
+              <ul className="flex flex-col gap-2">
+                {a.applications.map((ap) => {
+                  const oid = String(ap.payload.opportunity_id);
+                  const opp = opportunityById[oid];
+                  if (!opp) return null;
+                  const rec = a.recommendations.some((r) => r.payload.opportunity_id === oid);
+                  return (
+                    <li key={ap.id} className="flex items-center gap-2">
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium">{pick(opp.title)}</span>
+                        <span className="block text-xs text-muted">{t(`opp_${String(ap.payload.readiness) as "ready" | "almost" | "later"}`)}{ap.payload.message ? ` · “${String(ap.payload.message)}”` : ""}</span>
+                      </span>
+                      {rec ? <Pill tone="good"><Icon name="star" className="size-3.5" /></Pill>
+                        : <button onClick={() => addAction({ student_id: s.id, kind: "recommend", payload: { opportunity_id: oid }, by: "teacher" })}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-sun-soft px-3 py-2 text-sm font-bold text-warn"><Icon name="star" className="size-4" />{t("recommend")}</button>}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           )}
           <div className="grid grid-cols-2 gap-2">
             <button onClick={() => go({ name: "rate", id: s.id, mode: "term" })} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-soft px-3 text-sm font-bold text-brand"><Icon name="clipboard" className="size-4" />{t("rateTerm")}</button>

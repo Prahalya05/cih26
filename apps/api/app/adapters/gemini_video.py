@@ -8,13 +8,10 @@ is processed in memory and never stored. The phone's hand-tracking summary is gi
 from __future__ import annotations
 
 import base64
-import json
-import os
 import re
 
-import httpx
 
-from .gemini import API, GeminiUnavailable, api_key, unavailable
+from .gemini import GeminiUnavailable, api_key, generate
 from .gemini_vision import _checklist, clean
 
 TIMEOUT = 90.0
@@ -66,13 +63,7 @@ def score(rubric: dict, video: bytes, mime_type: str = "video/webm", process: di
         ]}],
         "generationConfig": {"responseMimeType": "application/json", "responseSchema": SCHEMA, "temperature": 0.0},
     }
-    model = os.getenv("GEMINI_VISION_MODEL", os.getenv("GEMINI_MODEL", "gemini-3.5-flash"))
-    try:
-        r = httpx.post(API.format(model=model), json=body, headers={"x-goog-api-key": key}, timeout=TIMEOUT)
-        r.raise_for_status()
-        data = json.loads(r.json()["candidates"][0]["content"]["parts"][0]["text"])
-    except (httpx.HTTPError, KeyError, IndexError, json.JSONDecodeError) as e:
-        raise unavailable(e, model) from e
+    data, _model = generate(body, timeout=TIMEOUT, env="GEMINI_VISION_MODEL")
     return clean_video(rubric, data)
 
 

@@ -9,8 +9,41 @@ import { pyEq, pyTruthy } from "./pymath.ts";
 
 export const UNKNOWN: unique symbol = Symbol("UNKNOWN");
 
+/** One comparison inside a rule and how it came out, for the "Why?" view. */
+export interface Leaf {
+  op: string;
+  /** the rule's own arguments, e.g. [{var:"age"}, 14] */
+  args: unknown[];
+  /** what those arguments were for this student (UNKNOWN shows as "?") */
+  values: unknown[];
+  result: boolean | "unknown";
+}
+
 export class Evaluation {
   missing = new Set<string>();
+  /** Set to [] to record every comparison (explain mode). Left undefined, nothing is recorded. */
+  leaves?: Leaf[];
+  constructor(opts: { record?: boolean } = {}) {
+    if (opts.record) this.leaves = [];
+  }
+}
+
+const LEAF_OPS = new Set(["==", "!=", "<", "<=", ">", ">=", "in"]);
+
+/** Plain-text form of one comparison, e.g. "age (17) >= 14 ✓". */
+export function describeLeaf(l: Leaf): string {
+  const show = (arg: unknown, val: unknown) => {
+    const v = val === UNKNOWN ? "?" : JSON.stringify(val);
+    if (isDict(arg) && "var" in arg) {
+      const name = Array.isArray(arg.var) ? String(arg.var[0]) : String(arg.var);
+      return `${name} (${v})`;
+    }
+    return v;
+  };
+  const mark = l.result === "unknown" ? "?" : l.result ? "✓" : "✗";
+  const parts = l.args.map((a, i) => show(a, l.values[i]));
+  if ((l.op === "<" || l.op === "<=") && parts.length === 3) return `${parts[0]} ${l.op} ${parts[1]} ${l.op} ${parts[2]} ${mark}`;
+  return `${parts[0]} ${l.op} ${parts[1]} ${mark}`;
 }
 
 const isDict = (v: unknown): v is Record<string, unknown> =>
@@ -92,7 +125,16 @@ export function apply(rule: unknown, data: Record<string, unknown>, ev: Evaluati
   }
 
   const vals = list.map((a) => apply(a, data, ev));
+  if (ev.leaves && LEAF_OPS.has(op)) {
+    const out = vals.some((v) => v === UNKNOWN) ? UNKNOWN : leaf(op, vals);
+    ev.leaves.push({ op, args: list, values: vals, result: out === UNKNOWN ? "unknown" : pyTruthy(out) });
+    return out;
+  }
   if (vals.some((v) => v === UNKNOWN)) return UNKNOWN;
+  return leaf(op, vals);
+}
+
+function leaf(op: string, vals: unknown[]): unknown {
   if (op === "==") return pyEq(vals[0], vals[1]);
   if (op === "!=") return !pyEq(vals[0], vals[1]);
   if (op === "!") return !pyTruthy(vals[0]);

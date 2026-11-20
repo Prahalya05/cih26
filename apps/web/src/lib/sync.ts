@@ -1,6 +1,6 @@
 // Talks to the Disha API. Everything here is optional: the student flow works without it.
 
-import type { EvidenceEvent } from "@disha/engine";
+import type { EvidenceEvent, InterestClaim } from "@disha/engine";
 import { db, deleteStudent, hasScope, type Action, type Experience, type SkillClaim, type StoredEvent, type Student } from "./db";
 import { deviceId } from "./events";
 import { refreshSkillState } from "./skills";
@@ -204,6 +204,7 @@ export interface Extracted {
   skills: SkillClaim[];
   experiences?: Experience[];
   source: "gemini" | "keywords" | "unavailable";
+  trace?: AiTrace;
 }
 
 export async function extractRemote(question: string, input: { text?: string; audio?: Blob }): Promise<Extracted | null> {
@@ -218,6 +219,90 @@ export async function extractRemote(question: string, input: { text?: string; au
     const out = await res.json();
     const source: SkillClaim["source"] = input.audio ? "voice" : "text";
     return { ...out, skills: (out.skills ?? []).map((s: SkillClaim) => ({ ...s, source })) };
+  } catch {
+    return null;
+  }
+}
+
+/** What the server's AI step reports about itself (shown in the X-ray). */
+export interface AiTrace {
+  model: string;
+  latency_ms?: number;
+  kept?: string[];
+  dropped?: { value: string; reason: string }[];
+  fallback?: string;
+  cached?: boolean;
+}
+
+export interface InterestsResult {
+  transcript: string;
+  interests: InterestClaim[];
+  source: "gemini" | "keywords" | "unavailable" | "cached";
+  trace?: AiTrace;
+}
+
+/** Interests from her own words (POST /v1/profile/interests). Null when offline or the server can't be reached. */
+export async function interestsRemote(input: { text?: string; audio?: Blob }, lang: string): Promise<InterestsResult | null> {
+  if (!isOnline()) return null;
+  const form = new FormData();
+  form.set("lang", lang);
+  if (input.text) form.set("text", input.text);
+  if (input.audio) form.set("audio", input.audio, "answer.webm");
+  try {
+    const res = await apiFetch(`/v1/profile/interests`, { method: "POST", body: form });
+    if (!res.ok) return null;
+    return (await res.json()) as InterestsResult;
+  } catch {
+    return null;
+  }
+}
+
+export interface CareerIdea { id: string; why: string }
+export interface CareerIdeasResult { ideas: CareerIdea[]; source: "gemini" | "unavailable" | "cached"; trace?: AiTrace }
+
+/** Wider career ideas from the AI, picked only from our catalogue (POST /v1/careers/suggest). */
+export async function careerIdeasRemote(profile: { riasec?: Record<string, number>; skills: string[]; education?: string; interests_text?: string; exclude: string[] }, lang: string): Promise<CareerIdeasResult | null> {
+  if (!isOnline()) return null;
+  try {
+    const res = await apiFetch(`/v1/careers/suggest`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...profile, lang }) });
+    if (!res.ok) return null;
+    return (await res.json()) as CareerIdeasResult;
+  } catch {
+    return null;
+  }
+}
+
+export interface PersonalisedCareers {
+  order: string[];
+  order_reason: string;
+  why: Record<string, { why: string; quote: string }>;
+  source: "gemini" | "unavailable" | "cached";
+  trace?: AiTrace;
+}
+
+/** The AI orders the formula's shortlist for her and explains each career with her own words (POST /v1/careers/personalise). */
+export async function personaliseRemote(body: {
+  shortlist: { id: string; score: number; matched_skills: string[] }[]; quotes: string[]; riasec?: Record<string, number>; education?: string;
+}, lang: string): Promise<PersonalisedCareers | null> {
+  if (!isOnline()) return null;
+  try {
+    const res = await apiFetch(`/v1/careers/personalise`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, lang }) });
+    if (!res.ok) return null;
+    return (await res.json()) as PersonalisedCareers;
+  } catch {
+    return null;
+  }
+}
+
+export interface FollowupResult { question: string | null; aim?: string; source: "gemini" | "unavailable"; trace?: AiTrace }
+
+/** One follow-up question when her answer was vague (POST /v1/talk/followup). */
+export async function followupRemote(turns: { q?: string; said: string }[], found: string[], lang: string): Promise<FollowupResult | null> {
+  if (!isOnline()) return null;
+  try {
+    const res = await apiFetch(`/v1/talk/followup`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ turns, found, lang }) });
+    if (!res.ok) return null;
+    return (await res.json()) as FollowupResult;
   } catch {
     return null;
   }

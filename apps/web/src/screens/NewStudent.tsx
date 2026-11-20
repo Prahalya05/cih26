@@ -26,7 +26,7 @@ export default function NewStudent({ go }: { go: Go }) {
       id, name: name.trim() || avatar, avatar, facilitator_code, birth_year: validYear ? year : undefined,
       cards: {}, answers: {}, factAnswers: {}, updated_at: Date.now(),
     });
-    go({ name: "consent", id });
+    go({ name: "situation", id });
   };
 
   return (

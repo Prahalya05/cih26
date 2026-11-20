@@ -12,13 +12,13 @@ import { pyRound, pySum } from "./pymath.ts";
 import type { KB, Occupation, Persona } from "./types.ts";
 
 export const FRW_WEIGHTS = { fit: 0.4, reach: 0.35, worth: 0.25 };
-const REACH_PARTS = { aptitude: 0.4, closeness: 0.3, education: 0.3 };
-const WORTH_PARTS = { interest: 0.6, demand: 0.4 };
-const DEMAND: Record<string, number> = { high: 1.0, medium: 0.7, low: 0.4 };
+export const REACH_PARTS = { aptitude: 0.4, closeness: 0.3, education: 0.3 };
+export const WORTH_PARTS = { interest: 0.6, demand: 0.4 };
+export const DEMAND: Record<string, number> = { high: 1.0, medium: 0.7, low: 0.4 };
 /** For a sub-skill with no evidence at all: most students are at level 1 or 2. */
 export const UNKNOWN_LEVELS = [0.5, 0.3, 0.15, 0.05];
 const UNKNOWN_CREDIT = 0.5;
-const MET = 0.6;          // a need counts as met when she is 60%+ likely to be at that level
+export const MET = 0.6;          // a need counts as met when she is 60%+ likely to be at that level
 const COULD_LEARN_APTITUDE = 0.65;
 
 export interface PersonaV2 {
@@ -58,7 +58,21 @@ function cosine(a: number[], b: number[]): number {
 
 const sigmoid = (x: number) => 1 / (1 + Math.exp(-x));
 
+/** Every number behind one career's score, for the "Why?" view. */
+export interface CareerBreakdown {
+  occupation_id: string;
+  fit: number;
+  reach: { aptitude: number; closeness: number; education: number; total: number; edu_gap: number };
+  worth: { interest: number; demand: number; total: number };
+  total: number;
+  needs: { id: string; level: number; weight: number; chance: number; known: boolean; met: boolean }[];
+}
+
 function scoreOne(kb: KB, occ: Occupation, persona: PersonaV2): CareerV2 {
+  return scoreDetail(kb, occ, persona).career;
+}
+
+function scoreDetail(kb: KB, occ: Occupation, persona: PersonaV2): { career: CareerV2; detail: CareerBreakdown } {
   const g = kb.graph!;
   const needs = needsOf(g, occ.id);
   const wTotal = pySum(needs.map((n) => n.weight));
@@ -66,6 +80,7 @@ function scoreOne(kb: KB, occ: Occupation, persona: PersonaV2): CareerV2 {
   let shortfall = 0;
   const met: string[] = [];
   const gaps: { id: string; w: number }[] = [];
+  const needRows: CareerBreakdown["needs"] = [];
   for (const n of needs) {
     const known = persona.levels[n.id];
     const p = known ?? UNKNOWN_LEVELS;
@@ -75,6 +90,7 @@ function scoreOne(kb: KB, occ: Occupation, persona: PersonaV2): CareerV2 {
     let short = 0;
     for (let L = 1; L <= 4; L++) short += p[L - 1] * Math.max(0, n.level - L);
     shortfall += n.weight * (short / 3);
+    needRows.push({ id: n.id, level: n.level, weight: n.weight, chance: pyRound(ok, 3), known: !!known, met: ok >= MET });
     if (ok >= MET) met.push(n.id);
     else gaps.push({ id: n.id, w: n.weight * (1 - ok) });
   }
@@ -101,7 +117,15 @@ function scoreOne(kb: KB, occ: Occupation, persona: PersonaV2): CareerV2 {
 
   const total = FRW_WEIGHTS.fit * fit + FRW_WEIGHTS.reach * reach + FRW_WEIGHTS.worth * worth;
   gaps.sort((x, y) => y.w - x.w);
-  return {
+  const detail: CareerBreakdown = {
+    occupation_id: occ.id,
+    fit: pyRound(fit, 3),
+    reach: { aptitude: pyRound(apt, 3), closeness: pyRound(closeness, 3), education: pyRound(education, 3), total: pyRound(reach, 3), edu_gap: eduGap },
+    worth: { interest: pyRound(interest, 3), demand, total: pyRound(worth, 3) },
+    total: pyRound(total, 4),
+    needs: needRows,
+  };
+  const career: CareerV2 = {
     occupation_id: occ.id,
     sector: occ.sector,
     score: pyRound(total, 4),
@@ -111,6 +135,13 @@ function scoreOne(kb: KB, occ: Occupation, persona: PersonaV2): CareerV2 {
     gaps: gaps.map((x) => x.id),
     could_learn: aptKnown && apt >= COULD_LEARN_APTITUDE && fit < 0.5,
   };
+  return { career, detail };
+}
+
+/** The full breakdown of one career's score (same numbers as scoreAllV2). */
+export function explainCareer(kb: KB, persona: PersonaV2, occupationId: string): CareerBreakdown | null {
+  const occ = kb.occupations[occupationId];
+  return occ ? scoreDetail(kb, occ, persona).detail : null;
 }
 
 export function scoreAllV2(kb: KB, persona: PersonaV2): CareerV2[] {

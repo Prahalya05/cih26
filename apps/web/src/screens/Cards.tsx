@@ -6,6 +6,7 @@ import { db, patchStudent } from "../lib/db";
 import { recordEvent } from "../lib/events";
 import { useT } from "../lib/i18n";
 import { speak } from "../lib/speech";
+import { emit } from "../lib/xray";
 import { Icon } from "../components/Icon";
 
 export default function Cards({ go, id }: { go: Go; id: string }) {
@@ -32,6 +33,16 @@ export default function Cards({ go, id }: { go: Go; id: string }) {
 
   if (!student || index === null || !card) return null;
 
+  const skipToWords = () => go({ name: "talk", id });
+  const dontKnow = async () => {
+    emit({ step: "interests", source: "RULE", ref: "rule.interest_unknown", title: "She chose 'I don't know yet'", subject: `interests:${id}`,
+      output: "interests not guessed", why: ["no interests given → nothing is guessed", "interest part of Worth = 0 for every career"] });
+    await patchStudent(id, (s) => ({ ...s, interests: { mode: "skipped", at: Date.now() } }));
+    await recordEvent({ student_id: id, kind: "interest_choice", payload: { card: "skipped", like: false, mode: "skipped" } });
+    go({ name: "questions", id });
+  };
+  const picture = student.uiMode === "picture";
+
   const answer = async (like: boolean) => {
     await patchStudent(id, (s) => ({ ...s, cards: { ...s.cards, [card.id]: like } }));
     await recordEvent({ student_id: id, kind: "interest_choice", payload: { card: card.id, like } });
@@ -41,10 +52,10 @@ export default function Cards({ go, id }: { go: Go; id: string }) {
   return (
     <Screen title={t("cardsTitle")} onBack={() => (index > 0 ? setIndex(index - 1) : go({ name: "home" }))}>
       <Progress step={index} total={CARDS.length} />
-      <p className="text-center text-muted">{t("cardsHint")}</p>
+      {!picture && <p className="text-center text-muted">{t("cardsHint")}</p>}
       <div key={card.id} className="pop flex flex-1 flex-col items-center justify-center gap-4 rounded-3xl bg-surface p-6 border border-line">
         <span className="text-[7rem] leading-none">{card.emoji}</span>
-        <p className="text-center text-2xl font-semibold">{pick(card)}</p>
+        <p className={`text-center font-semibold ${picture ? "text-xl text-muted" : "text-2xl"}`}>{pick(card)}</p>
         <SpeakButton text={pick(card)} audioKey={`card_${card.id}`} />
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -54,6 +65,13 @@ export default function Cards({ go, id }: { go: Go; id: string }) {
         <button onClick={() => answer(true)} className="flex min-h-20 flex-col items-center justify-center rounded-2xl bg-brand text-lg font-semibold text-white active:bg-brand-dark">
           <Icon name="up" className="size-8" />{t("like")}
         </button>
+      </div>
+      {/* Always visible: she never has to use the cards. */}
+      <div className="grid grid-cols-2 gap-2">
+        <button onClick={skipToWords} className="flex min-h-12 items-center justify-center gap-1.5 rounded-xl border border-dashed border-accent bg-brand-soft/60 px-2 text-sm font-bold text-accent-dark">
+          <Icon name="mic" className="size-4" />{t("skipCards")}
+        </button>
+        <button onClick={dontKnow} className="min-h-12 rounded-xl border border-line bg-surface px-2 text-sm font-bold text-muted">🤷 {t("dontKnowYet")}</button>
       </div>
     </Screen>
   );

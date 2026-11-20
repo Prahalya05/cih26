@@ -17,6 +17,9 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "apps" / "api"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
+# Tests register many phones from one address; the rate limit has its own test (test_ai_checks.py).
+os.environ.setdefault("RATE_LIMIT_SCALE", "0")
+
 from app import db, settings  # noqa: E402
 import migrate  # noqa: E402
 

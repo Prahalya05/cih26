@@ -8,7 +8,8 @@ import { useT } from "../lib/i18n";
 import { extractKeywords } from "../lib/keywords";
 import { kb } from "../lib/kb";
 import { Recorder, speak } from "../lib/speech";
-import { extractRemote } from "../lib/sync";
+import { extractRemote, type Extracted } from "../lib/sync";
+import { emit } from "../lib/xray";
 import { Icon } from "../components/Icon";
 
 type VoiceState = "idle" | "recording" | "thinking";
@@ -32,6 +33,10 @@ export default function Questions({ go, id }: { go: Go; id: string }) {
     setText("");
     setNote("");
   }, [q, lang]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Voice/text mode opens the typing box straight away (the mic is always there too).
+  const voiceText = student?.uiMode === "voice_text";
+  useEffect(() => { if (voiceText) setTyping(true); }, [voiceText, index]);
 
   if (!student) return null;
   const answer: Answer = student.answers[q.id] ?? { qid: q.id, chips: [] };
@@ -59,12 +64,27 @@ export default function Questions({ go, id }: { go: Go; id: string }) {
     });
   };
 
+  /** X-ray: what the AI (or the offline word list) found in this answer, and what the skill-list rule kept. */
+  const traceExtract = (said: string, remote: Extracted | null, skills: SkillClaim[]) => {
+    const ai = remote?.source === "gemini";
+    emit({
+      step: "skills", source: ai ? "AI_CHECKED" : "RULE", ref: ai ? "ai.extract_skills" : "guard.skill_ids",
+      title: `Skills from her answer: ${skills.map((s) => kb.skills[s.id]?.name.en ?? s.id).join(", ") || "none found"}`,
+      subject: `answer:${id}:${q.id}`, inputs: { question: q.en, said: said.slice(0, 120) },
+      output: skills.map((s) => `${s.id} (${s.confidence})`).join(", ") || "none",
+      why: ai ? [...skills.map((s) => `${s.id} ✓ in skill list, quote: "${s.evidence}"`), "any id not in the skill list or without a quote is dropped", "counts as self-report evidence (weight 0.5) in skill tracing"]
+        : [remote?.trace?.fallback ?? "no internet", "offline word list matched skill names and aliases", ...skills.map((s) => `${s.id}: "${s.evidence}"`)],
+      ai: ai ? { model: remote?.trace?.model ?? "gemini", latency_ms: remote?.trace?.latency_ms, kept: remote?.trace?.kept } : undefined,
+    });
+  };
+
   const submitText = async () => {
     const value = text.trim();
     if (!value) return;
     setVoice("thinking");
     const remote = await extractRemote(pick(q), { text: value });
     const skills = remote?.skills ?? extractKeywords(value);
+    traceExtract(value, remote, skills);
     addExtracted(skills, (a) => ({ text: join(a.text, value), via: remote?.source ?? "keywords",
       experiences: [...(a.experiences ?? []), ...(remote?.experiences ?? [])] }));
     setText("");
@@ -91,6 +111,7 @@ export default function Questions({ go, id }: { go: Go; id: string }) {
     const remote = await extractRemote(pick(q), { audio });
     setVoice("idle");
     if (!remote || remote.source === "unavailable") { setNote(t("voiceOffline")); return; }
+    traceExtract(remote.transcript, remote, remote.skills);
     addExtracted(remote.skills, (a) => ({ transcript: join(a.transcript, remote.transcript), via: remote.source,
       experiences: [...(a.experiences ?? []), ...(remote.experiences ?? [])] }));
   };

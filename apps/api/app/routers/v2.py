@@ -17,6 +17,7 @@ from psycopg.types.json import Jsonb
 from pydantic import BaseModel, Field
 
 from .. import auth, db, kb
+from ..ratelimit import limit
 from ..auth import Device
 from ..adapters import gemini_vision
 from ..adapters.gemini import GeminiUnavailable
@@ -42,7 +43,8 @@ class EnrolIn(BaseModel):
     code: str = Field(min_length=1, max_length=64, description="Class code (student phone) or teacher code")
 
 
-@router.post("/devices", summary="Register this phone with a class or teacher code; returns its device token")
+@router.post("/devices", summary="Register this phone with a class or teacher code; returns its device token",
+             dependencies=[Depends(limit("devices", per_minute=10))])  # class codes must not be guessable by brute force
 def enrol(body: EnrolIn):
     code = body.code.strip().upper()
     with db.connect() as con:

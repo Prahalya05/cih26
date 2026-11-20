@@ -152,10 +152,51 @@ def validate(kb_dir: Path = KB) -> tuple[list[str], list[str]]:
         if n == 0:
             errors.append(f"{s}: has no RELATED edge")
 
+    check_opportunities(errors, sub_ids | skill_ids, occ_ids)
     check_items(errors, warnings, sub_ids)
     check_rubrics(errors, skill_ids, sub_ids)
     check_pathways(errors, warnings, skill_ids, {s["id"] for s in load("schemes.json")})
     return errors, warnings
+
+
+OPP_KINDS = {"internship", "apprenticeship", "job", "mentorship", "training"}
+ORG_TYPES = {"company", "msme", "ngo", "govt", "mentor"}
+
+
+def check_opportunities(errors: list[str], unit_ids: set[str], occ_ids: set[str]) -> None:
+    """Internships, apprenticeships, jobs, mentors, trainings (packages/kb/opportunities.json)."""
+    if not (KB / "opportunities.json").exists():
+        return
+    rules = {p.stem for p in (KB / "rules").glob("*.json")}
+    seen: set[str] = set()
+    for o in load("opportunities.json"):
+        oid = o.get("id", "?")
+        if oid in seen:
+            errors.append(f"{oid}: duplicate opportunity id")
+        seen.add(oid)
+        if o.get("kind") not in OPP_KINDS:
+            errors.append(f"{oid}: kind must be one of {sorted(OPP_KINDS)}")
+        if o.get("org_type") not in ORG_TYPES:
+            errors.append(f"{oid}: org_type must be one of {sorted(ORG_TYPES)}")
+        if not o.get("title", {}).get("en") or not o.get("title", {}).get("ta"):
+            errors.append(f"{oid}: needs an English and a Tamil title")
+        for n in o.get("needs", []):
+            if n.get("id") not in unit_ids:
+                errors.append(f"{oid}: unknown skill or sub-skill {n.get('id')}")
+            if n.get("level") not in (1, 2, 3, 4):
+                errors.append(f"{oid}: need level must be 1-4")
+        for c in o.get("careers", []):
+            if c not in occ_ids:
+                errors.append(f"{oid}: unknown career {c}")
+        if o.get("rule") and o["rule"] not in rules:
+            errors.append(f"{oid}: unknown rule {o['rule']}")
+        a = o.get("apply", {})
+        if a.get("mode") not in ("in_app", "external"):
+            errors.append(f"{oid}: apply.mode must be in_app or external")
+        if a.get("mode") == "external" and not str(a.get("url", "")).startswith("https://"):
+            errors.append(f"{oid}: an external listing needs an https apply url")
+        if not o.get("sample") and not str(o.get("source_url", "")).startswith("https://"):
+            errors.append(f"{oid}: a real programme needs an https source_url (or mark it sample)")
 
 
 PATH_SECTORS = {"stem", "vocational", "agri", "creative", "services", "govt", "health", "entrepreneurship"}

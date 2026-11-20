@@ -27,7 +27,8 @@ export default function FactsScreen({ go, id }: { go: Go; id: string }) {
         <SpeakButton text={t("factsHint")} audioKey="facts_hint" />
       </div>
       <div className="flex flex-col gap-6 rounded-2xl bg-surface p-5 border border-line">
-        {FIRST_QUESTIONS.map((key) => (
+        {/* Age is known from the birth year asked at the start, so it is not asked twice. */}
+        {FIRST_QUESTIONS.filter((key) => !(key === "age" && student.birth_year)).map((key) => (
           <FactQuestionView key={key} q={FACT_QUESTIONS[key] ?? { key, en: key, ta: key }} value={student.factAnswers[key]} onChange={(v) => set(key, v)} />
         ))}
         {!isSchool && typeof student.factAnswers.level === "string" && student.factAnswers.level !== "out" && (

@@ -1,7 +1,7 @@
 // On-phone storage (IndexedDB). Several students can share one phone; each has their own record.
 // Teacher actions are saved here first and sent to the server when there is internet.
 
-import { isMinor, ulid, type EvidenceEvent } from "@disha/engine";
+import { isMinor, ulid, type EvidenceEvent, type InterestClaim, type Literacy, type Scenario, type UiMode } from "@disha/engine";
 import Dexie, { type EntityTable, type Table } from "dexie";
 
 export interface SkillClaim {
@@ -44,12 +44,30 @@ export interface Consent {
   photos?: boolean;
 }
 
+/** Interests in her own words, when she skips (or adds to) the picture cards. */
+export interface Interests {
+  mode: "cards" | "text" | "voice" | "skipped";
+  text?: string;
+  claims?: InterestClaim[];
+  via?: "gemini" | "keywords" | "cached";
+  at: number;
+}
+
 export interface Student {
   id: string;
   name: string;
   avatar: string;
   facilitator_code?: string;
   birth_year?: number;
+  /** In school, college/ITI, stopped studying, finished and looking for work, or working. */
+  scenario?: Scenario;
+  /** "I read easily" / "a little" / "someone helps me" */
+  literacy?: Literacy;
+  /** Which screens she starts with (rule.uimode); she can switch any time. */
+  uiMode?: UiMode;
+  /** Class (8-12) when scenario is school. */
+  current_class?: number;
+  interests?: Interests;
   consent?: Consent;
   cards: Record<string, boolean>;
   answers: Record<string, Answer>;
@@ -62,7 +80,7 @@ export interface Student {
 export interface Action {
   id: string;
   student_id: string;
-  kind: "endorse" | "recommend" | "feedback" | "checkin";
+  kind: "endorse" | "recommend" | "feedback" | "checkin" | "apply";
   payload: Record<string, unknown>;
   by?: string;
   created_at: number;

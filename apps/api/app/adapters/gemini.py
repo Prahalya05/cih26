@@ -9,7 +9,8 @@ Any skill id it invents is dropped. Eligibility is never decided here.
 
 Config (environment variables):
   GEMINI_API_KEY   required to enable; without it the keyword fallback is used
-  GEMINI_MODEL     default "gemini-3.5-flash"
+  GEMINI_MODEL     one model or a comma-separated list tried in order (default DEFAULT_MODELS below).
+                   A model that is overloaded (503/429), retired (404) or too slow is skipped for the next one.
 Use a paid-tier key for real students: free-tier inputs may be used by Google to improve its products.
 """
 from __future__ import annotations
@@ -18,6 +19,7 @@ import base64
 import json
 import logging
 import os
+import time
 
 import httpx
 
@@ -26,7 +28,11 @@ from .. import kb
 log = logging.getLogger("disha.gemini")
 
 API = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-TIMEOUT = 25.0
+TIMEOUT = 15.0  # per model; the next model in the list is tried after this
+# Fast "lite" models first: in Nov 2026 gemini-3.5-flash took 38-90 s per call on the free tier (or 503),
+# so every answer fell back to keyword rules. The lite models answer in 3-8 s.
+DEFAULT_MODELS = "gemini-3.1-flash-lite,gemini-flash-lite-latest,gemini-3.5-flash"
+RETRY_STATUS = {404, 408, 429, 500, 502, 503, 504}
 
 
 class GeminiUnavailable(Exception):
@@ -49,6 +55,43 @@ def unavailable(e: Exception, model: str) -> GeminiUnavailable:
         detail = f"HTTP {e.response.status_code}: {e.response.text[:300]}"
     log.warning("Gemini call failed (model %s), using the fallback: %s", model, detail)
     return GeminiUnavailable(detail)
+
+
+def models(env: str = "GEMINI_MODEL") -> list[str]:
+    raw = os.getenv(env) or os.getenv("GEMINI_MODEL") or DEFAULT_MODELS
+    return [m.strip() for m in raw.split(",") if m.strip()]
+
+
+def generate(body: dict, timeout: float = TIMEOUT, env: str = "GEMINI_MODEL") -> tuple[dict, str]:
+    """One structured JSON call, trying each configured model in turn. Returns (json, model used)."""
+    key = api_key()
+    if not key:
+        raise GeminiUnavailable("GEMINI_API_KEY not set")
+    last: GeminiUnavailable | None = None
+    slow: set[str] = set()
+    # Two passes: free-tier "high demand" 503/429s often clear within a second. A model that timed out is not retried.
+    for attempt in range(2):
+        if attempt:
+            time.sleep(1.0)
+        for model in models(env):
+            if model in slow:
+                continue
+            try:
+                r = httpx.post(API.format(model=model), json=body, headers={"x-goog-api-key": key}, timeout=timeout)
+                r.raise_for_status()
+                return json.loads(r.json()["candidates"][0]["content"]["parts"][0]["text"]), model
+            except httpx.HTTPStatusError as e:
+                last = unavailable(e, model)
+                if e.response.status_code not in RETRY_STATUS:
+                    raise last from e
+                if e.response.status_code == 404:
+                    slow.add(model)
+            except httpx.TimeoutException as e:
+                last = unavailable(e, model)
+                slow.add(model)
+            except (httpx.HTTPError, KeyError, IndexError, json.JSONDecodeError) as e:
+                last = unavailable(e, model)
+    raise last or GeminiUnavailable("no model configured")
 
 
 def _prompt(question: str) -> str:
@@ -108,9 +151,6 @@ def clean_experiences(raw: object, valid: dict) -> list[dict]:
 
 def extract(question: str, text: str | None = None, audio: bytes | None = None,
             mime_type: str = "audio/webm") -> dict:
-    key = api_key()
-    if not key:
-        raise GeminiUnavailable("GEMINI_API_KEY not set")
     parts: list[dict] = [{"text": _prompt(question)}]
     if audio:
         parts.append({"inline_data": {"mime_type": mime_type, "data": base64.b64encode(audio).decode()}})
@@ -120,14 +160,7 @@ def extract(question: str, text: str | None = None, audio: bytes | None = None,
         "contents": [{"role": "user", "parts": parts}],
         "generationConfig": {"responseMimeType": "application/json", "responseSchema": SCHEMA, "temperature": 0.1},
     }
-    model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
-    try:
-        r = httpx.post(API.format(model=model), json=body, headers={"x-goog-api-key": key}, timeout=TIMEOUT)
-        r.raise_for_status()
-        raw = r.json()["candidates"][0]["content"]["parts"][0]["text"]
-        data = json.loads(raw)
-    except (httpx.HTTPError, KeyError, IndexError, json.JSONDecodeError) as e:
-        raise unavailable(e, model) from e
+    data, model = generate(body)
 
     valid = kb.skills()
     skills, seen = [], set()
@@ -137,5 +170,5 @@ def extract(question: str, text: str | None = None, audio: bytes | None = None,
             seen.add(sid)
             conf = min(1.0, max(0.0, float(s.get("confidence", 0.5))))
             skills.append({"id": sid, "confidence": round(conf, 2), "evidence": str(s["evidence"])[:200]})
-    return {"transcript": str(data.get("transcript", ""))[:2000], "skills": skills,
+    return {"transcript": str(data.get("transcript", ""))[:2000], "skills": skills, "model": model,
             "experiences": clean_experiences(data.get("experiences"), valid)}
