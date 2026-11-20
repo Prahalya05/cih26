@@ -14,13 +14,13 @@ export function FactQuestionView({ q, value, onChange }: { q: FactQuestion; valu
       {q.number ? (
         <div className="flex items-center gap-3">
           <button
-            className="size-14 rounded-2xl border-2 border-line bg-white text-2xl font-bold"
+            className="size-14 rounded-xl border border-line bg-surface text-2xl font-extrabold"
             onClick={() => onChange(Math.max(q.number!.min, (Number(value) || 16) - 1))}
             aria-label="−"
           >−</button>
           <span className="min-w-16 text-center text-3xl font-bold">{value === undefined ? "–" : String(value)}</span>
           <button
-            className="size-14 rounded-2xl border-2 border-line bg-white text-2xl font-bold"
+            className="size-14 rounded-xl border border-line bg-surface text-2xl font-extrabold"
             onClick={() => onChange(Math.min(q.number!.max, (Number(value) || 15) + 1))}
             aria-label="+"
           >+</button>
@@ -32,8 +32,8 @@ export function FactQuestionView({ q, value, onChange }: { q: FactQuestion; valu
               key={String(o.value)}
               onClick={() => onChange(value === o.value ? undefined : o.value)}
               aria-pressed={value === o.value}
-              className={`min-h-12 rounded-2xl border-2 px-4 text-base font-medium ${
-                value === o.value ? "border-brand bg-brand-soft text-brand-dark" : "border-line bg-white"
+              className={`min-h-12 rounded-xl border px-4 text-base font-medium ${
+                value === o.value ? "border-brand bg-brand-soft ring-1 ring-brand text-brand-dark" : "border-line bg-surface"
               }`}
             >
               {o.emoji && <span className="mr-1.5">{o.emoji}</span>}

@@ -1,0 +1,210 @@
+[
+  {
+    "id": "trk_doctor", "emoji": "🩺", "sector": "health", "riasec": "ISR", "goals": ["mbbs"], "bar": 1.0, "quota_7_5": true,
+    "name": {"en": "Doctor", "ta": "மருத்துவர்"},
+    "roles": [
+      {"en": "MBBS doctor in a government hospital or health centre", "ta": "அரசு மருத்துவமனை அல்லது சுகாதார நிலையத்தில் MBBS மருத்துவர்"},
+      {"en": "Specialist (surgeon, children's doctor…) after MD / MS, about 3 more years", "ta": "MD / MS க்குப் பின் சிறப்பு மருத்துவர் (அறுவை, குழந்தைகள்…), மேலும் ஏறக்குறைய 3 ஆண்டுகள்"},
+      {"en": "Public health officer or medical researcher", "ta": "பொதுச் சுகாதார அலுவலர் அல்லது மருத்துவ ஆய்வாளர்"}
+    ],
+    "subjects": {"biology": 4, "chemistry": 3, "physics": 3, "english": 1},
+    "skills": ["sk_caring_people", "sk_science"],
+    "schemes": ["sch_post_matric_sc", "sch_pudhumai_penn", "sch_tamil_pudhalvan", "sch_saksham"],
+    "help": [{"en": "Government medical college fees are low; private and management seats cost much more. Aim for a government seat.", "ta": "அரசு மருத்துவக் கல்லூரிக் கட்டணம் குறைவு; தனியார், நிர்வாக இடங்கள் மிக அதிகம். அரசு இடத்தை இலக்காக்குங்கள்."}],
+    "source_url": "https://neet.nta.nic.in", "needs_verification": true
+  },
+  {
+    "id": "trk_engineer", "emoji": "⚙️", "sector": "stem", "riasec": "RIC", "goals": ["btech"], "bar": 0.4, "quota_7_5": true,
+    "name": {"en": "Engineer (IIT, NIT, Anna University)", "ta": "பொறியாளர் (IIT, NIT, அண்ணா பல்கலைக்கழகம்)"},
+    "roles": [
+      {"en": "Software, civil, mechanical or electrical engineer", "ta": "மென்பொருள், கட்டுமான, இயந்திர அல்லது மின் பொறியாளர்"},
+      {"en": "Government engineer through TNPSC, or in public companies through GATE", "ta": "TNPSC மூலம் அரசுப் பொறியாளர், அல்லது GATE மூலம் பொதுத்துறை நிறுவனங்களில்"},
+      {"en": "Start your own tech company", "ta": "சொந்தத் தொழில்நுட்ப நிறுவனம் தொடங்குதல்"}
+    ],
+    "subjects": {"maths": 4, "physics": 3, "chemistry": 2},
+    "skills": ["sk_basic_math", "sk_coding", "sk_machine_repair", "sk_electrical_basic"],
+    "schemes": ["sch_pragati", "sch_saksham", "sch_post_matric_sc", "sch_pudhumai_penn", "sch_tamil_pudhalvan"],
+    "help": [
+      {"en": "TNEA admits by Class 12 marks: no coaching needed for Anna University and Tamil Nadu colleges.", "ta": "TNEA 12ஆம் வகுப்பு மதிப்பெண்ணில் சேர்க்கிறது: அண்ணா பல்கலைக்கழகம், தமிழ்நாட்டுக் கல்லூரிகளுக்குப் பயிற்சி வகுப்பு தேவையில்லை."},
+      {"en": "At the IITs, tuition is waived in full for SC, ST and disabled students and for family income under ₹1 lakh, and mostly waived for ₹1–5 lakh.", "ta": "IIT களில் SC, ST, மாற்றுத்திறனாளிகள், ₹1 லட்சத்திற்குக் கீழ் வருமானம் உள்ள குடும்பங்களுக்குக் கல்விக் கட்டணம் முழுதும் தள்ளுபடி; ₹1–5 லட்சத்திற்குப் பெரும்பகுதி தள்ளுபடி."}
+    ],
+    "source_url": "https://www.tneaonline.org", "needs_verification": true
+  },
+  {
+    "id": "trk_ca", "emoji": "📊", "sector": "services", "riasec": "CEI", "goals": ["ca"], "bar": 0.3, "quota_7_5": false,
+    "name": {"en": "Chartered Accountant (CA)", "ta": "பட்டயக் கணக்காளர் (CA)"},
+    "roles": [
+      {"en": "Auditor and tax expert for companies", "ta": "நிறுவனங்களுக்குத் தணிக்கையாளர், வரி நிபுணர்"},
+      {"en": "Finance manager or CFO", "ta": "நிதி மேலாளர் அல்லது தலைமை நிதி அலுவலர்"},
+      {"en": "Your own CA practice in your town", "ta": "உங்கள் ஊரிலேயே சொந்த CA அலுவலகம்"}
+    ],
+    "subjects": {"maths": 3, "reasoning": 2, "english": 2, "civics": 1},
+    "skills": ["sk_money_handling", "sk_basic_math", "sk_organising"],
+    "schemes": ["sch_post_matric_sc", "sch_pudhumai_penn", "sch_tamil_pudhalvan"],
+    "help": [
+      {"en": "No college seat needed: you study with ICAI, and the 2-year articleship pays a monthly stipend.", "ta": "கல்லூரி இடம் தேவையில்லை: ICAI மூலம் படிக்கலாம்; 2 ஆண்டு பயிற்சியில் மாத உதவித்தொகை உண்டு."},
+      {"en": "ICAI offers fee help and scholarships for students who need them. Any Class 12 group can start.", "ta": "தேவைப்படும் மாணவர்களுக்கு ICAI கட்டண உதவி, உதவித்தொகை தருகிறது. எந்த 12ஆம் வகுப்புப் பிரிவும் தொடங்கலாம்."}
+    ],
+    "source_url": "https://www.icai.org", "needs_verification": true
+  },
+  {
+    "id": "trk_lawyer", "emoji": "⚖️", "sector": "services", "riasec": "ESI", "goals": ["ballb", "llb"], "bar": 0.3, "quota_7_5": true,
+    "name": {"en": "Lawyer / Judge", "ta": "வழக்கறிஞர் / நீதிபதி"},
+    "roles": [
+      {"en": "Advocate in district courts and the High Court", "ta": "மாவட்ட நீதிமன்றம், உயர் நீதிமன்றத்தில் வழக்கறிஞர்"},
+      {"en": "Civil judge through the judicial service exam", "ta": "நீதித்துறைப் பணித் தேர்வு மூலம் சிவில் நீதிபதி"},
+      {"en": "Legal advisor for companies, banks or NGOs", "ta": "நிறுவனங்கள், வங்கிகள், தொண்டு நிறுவனங்களுக்குச் சட்ட ஆலோசகர்"}
+    ],
+    "subjects": {"english": 4, "reasoning": 3, "civics": 3},
+    "skills": ["sk_communication", "sk_reading_writing", "sk_leadership"],
+    "schemes": ["sch_post_matric_sc", "sch_pudhumai_penn", "sch_tamil_pudhalvan"],
+    "help": [{"en": "Government law colleges under TNDALU admit by marks and cost much less than private ones.", "ta": "TNDALU கீழ் உள்ள அரசுச் சட்டக் கல்லூரிகள் மதிப்பெண்ணில் சேர்க்கின்றன; தனியாரை விடக் கட்டணம் மிகக் குறைவு."}],
+    "source_url": "https://www.tndalu.ac.in", "needs_verification": true
+  },
+  {
+    "id": "trk_civil", "emoji": "🏛️", "sector": "govt", "riasec": "SEC", "goals": ["civil"], "bar": 0.8, "quota_7_5": false,
+    "name": {"en": "IAS / IPS / TNPSC officer", "ta": "IAS / IPS / TNPSC அலுவலர்"},
+    "roles": [
+      {"en": "District Collector (IAS) or police officer (IPS)", "ta": "மாவட்ட ஆட்சியர் (IAS) அல்லது காவல் அலுவலர் (IPS)"},
+      {"en": "Deputy Collector or DSP through TNPSC Group 1", "ta": "TNPSC குரூப் 1 மூலம் துணை ஆட்சியர் அல்லது DSP"},
+      {"en": "Diplomat (IFS) or tax officer (IRS)", "ta": "தூதரக அலுவலர் (IFS) அல்லது வரி அலுவலர் (IRS)"}
+    ],
+    "subjects": {"civics": 4, "english": 2, "reasoning": 2, "maths": 1},
+    "skills": ["sk_leadership", "sk_communication", "sk_reading_writing"],
+    "schemes": ["sch_post_matric_sc", "sch_pudhumai_penn", "sch_tamil_pudhalvan"],
+    "help": [
+      {"en": "Free coaching with stay at the Tamil Nadu government's All India Civil Services Coaching Centre, Chennai (entrance test).", "ta": "சென்னையில் உள்ள தமிழ்நாடு அரசின் அகில இந்தியக் குடிமைப் பணிப் பயிற்சி மையத்தில் இலவசப் பயிற்சி, தங்குமிடம் (நுழைவுத் தேர்வு உண்டு)."},
+      {"en": "Any degree counts, in Tamil medium too: you can write the UPSC main exam in Tamil.", "ta": "எந்தப் பட்டமும் போதும், தமிழ் வழியும் கூட: UPSC முதன்மைத் தேர்வைத் தமிழில் எழுதலாம்."}
+    ],
+    "source_url": "https://upsc.gov.in", "needs_verification": true
+  },
+  {
+    "id": "trk_scientist", "emoji": "🔭", "sector": "stem", "riasec": "IRA", "goals": ["bsms", "msc"], "bar": 0.8, "quota_7_5": false,
+    "name": {"en": "Scientist / Researcher (ISRO, IISER)", "ta": "விஞ்ஞானி / ஆய்வாளர் (ISRO, IISER)"},
+    "roles": [
+      {"en": "Research scientist at ISRO, DRDO or CSIR labs", "ta": "ISRO, DRDO, CSIR ஆய்வகங்களில் ஆய்வு விஞ்ஞானி"},
+      {"en": "Professor after a PhD", "ta": "முனைவர் பட்டத்திற்குப் பின் பேராசிரியர்"},
+      {"en": "Research and development in industry", "ta": "தொழில்துறையில் ஆய்வு, மேம்பாடு"}
+    ],
+    "subjects": {"maths": 2, "physics": 2, "chemistry": 2, "biology": 2, "reasoning": 1},
+    "skills": ["sk_science", "sk_basic_math"],
+    "schemes": ["sch_post_matric_sc", "sch_pudhumai_penn", "sch_tamil_pudhalvan"],
+    "help": [{"en": "The DST INSPIRE scholarship supports top Class 12 students who study natural sciences.", "ta": "இயற்கை அறிவியல் படிக்கும் 12ஆம் வகுப்பு முன்னணி மாணவர்களுக்கு DST INSPIRE உதவித்தொகை உண்டு."}],
+    "source_url": "https://www.iiseradmission.in", "needs_verification": true
+  },
+  {
+    "id": "trk_data", "emoji": "💻", "sector": "stem", "riasec": "ICR", "goals": ["iitm_bs"], "bar": 0.2, "quota_7_5": false,
+    "name": {"en": "Data scientist / Programmer (IIT Madras online)", "ta": "தரவு அறிவியலாளர் / நிரலாளர் (IIT மெட்ராஸ் இணைய வழி)"},
+    "roles": [
+      {"en": "Data analyst or software developer", "ta": "தரவுப் பகுப்பாய்வாளர் அல்லது மென்பொருள் உருவாக்குநர்"},
+      {"en": "AI and machine-learning engineer", "ta": "செயற்கை நுண்ணறிவு, இயந்திரக் கற்றல் பொறியாளர்"},
+      {"en": "Work from your own town for companies anywhere", "ta": "சொந்த ஊரிலிருந்தே எங்குமுள்ள நிறுவனங்களுக்குப் பணி"}
+    ],
+    "subjects": {"maths": 4, "reasoning": 3, "english": 1},
+    "skills": ["sk_coding", "sk_computer_basic", "sk_basic_math"],
+    "schemes": ["sch_post_matric_sc"],
+    "help": [
+      {"en": "Study from home: no hostel or city costs. Any Class 12 group can apply, and you can join while doing another degree.", "ta": "வீட்டிலிருந்தே படிக்கலாம்: விடுதி, நகரச் செலவு இல்லை. எந்த 12ஆம் வகுப்புப் பிரிவும்; வேறு பட்டம் படிக்கும்போதே சேரலாம்."},
+      {"en": "Large fee waivers for low family income, SC/ST students and students with a disability.", "ta": "குறைந்த குடும்ப வருமானம், SC/ST, மாற்றுத்திறனாளி மாணவர்களுக்குப் பெரிய கட்டணத் தள்ளுபடி."}
+    ],
+    "source_url": "https://study.iitm.ac.in", "needs_verification": true
+  },
+  {
+    "id": "trk_defence", "emoji": "🎖️", "sector": "govt", "riasec": "RSE", "goals": ["nda"], "bar": 0.4, "quota_7_5": false,
+    "name": {"en": "Army / Navy / Air Force officer (NDA)", "ta": "தரை / கடல் / விமானப்படை அலுவலர் (NDA)"},
+    "roles": [
+      {"en": "Commissioned officer in the Army, Navy or Air Force", "ta": "தரை, கடல் அல்லது விமானப்படையில் அலுவலர்"},
+      {"en": "Fighter or transport pilot (Air Force wing)", "ta": "போர் அல்லது சரக்கு விமானி (விமானப்படை)"},
+      {"en": "A degree from NDA while you train", "ta": "பயிற்சியின்போதே NDA யிலிருந்து பட்டம்"}
+    ],
+    "subjects": {"maths": 3, "english": 2, "physics": 2, "civics": 1},
+    "skills": ["sk_physical_fitness", "sk_leadership"],
+    "schemes": [],
+    "help": [{"en": "Training, food and stay at the academy are paid for by the government. Fitness and an interview (SSB) are part of selection.", "ta": "அகாடமியில் பயிற்சி, உணவு, தங்குமிடம் அரசுச் செலவில். உடல் தகுதி, நேர்காணல் (SSB) தேர்வின் ஒரு பகுதி."}],
+    "source_url": "https://upsc.gov.in", "needs_verification": true
+  },
+  {
+    "id": "trk_nurse", "emoji": "💉", "sector": "health", "riasec": "SIR", "goals": ["nursing"], "bar": 0.0, "quota_7_5": false,
+    "name": {"en": "Nurse", "ta": "செவிலியர்"},
+    "roles": [
+      {"en": "Staff nurse in a government or private hospital", "ta": "அரசு அல்லது தனியார் மருத்துவமனையில் செவிலியர்"},
+      {"en": "Community health nurse in your area", "ta": "உங்கள் பகுதியில் சமூகச் சுகாதாரச் செவிலியர்"},
+      {"en": "Nursing tutor after M.Sc. Nursing; nursing jobs abroad", "ta": "M.Sc. செவிலியர் படிப்புக்குப் பின் பயிற்றுநர்; வெளிநாட்டுப் பணிகள்"}
+    ],
+    "subjects": {"biology": 3, "chemistry": 2, "english": 2, "physics": 1},
+    "skills": ["sk_caring_people", "sk_science", "sk_communication"],
+    "schemes": ["sch_post_matric_sc", "sch_pudhumai_penn", "sch_tamil_pudhalvan", "sch_saksham"],
+    "help": [{"en": "Strong demand for nurses in Tamil Nadu and abroad. Check each year whether an entrance exam applies.", "ta": "தமிழ்நாட்டிலும் வெளிநாடுகளிலும் செவிலியர்களுக்கு அதிகத் தேவை. நுழைவுத் தேர்வு உண்டா என்று ஒவ்வோர் ஆண்டும் சரிபாருங்கள்."}],
+    "source_url": "https://tnmedicalselection.net", "needs_verification": true
+  },
+  {
+    "id": "trk_pharmacist", "emoji": "💊", "sector": "health", "riasec": "ICR", "goals": ["bpharm"], "bar": 0.1, "quota_7_5": false,
+    "name": {"en": "Pharmacist", "ta": "மருந்தாளுநர்"},
+    "roles": [
+      {"en": "Pharmacist in a hospital, or run your own medical shop", "ta": "மருத்துவமனையில் மருந்தாளுநர், அல்லது சொந்த மருந்தகம்"},
+      {"en": "Quality checker in a medicine company", "ta": "மருந்து நிறுவனத்தில் தரச் சோதனையாளர்"},
+      {"en": "Drug inspector through a government exam", "ta": "அரசுத் தேர்வு மூலம் மருந்து ஆய்வாளர்"}
+    ],
+    "subjects": {"chemistry": 4, "biology": 2, "maths": 1, "physics": 1},
+    "skills": ["sk_science", "sk_organising"],
+    "schemes": ["sch_post_matric_sc", "sch_pudhumai_penn", "sch_tamil_pudhalvan", "sch_pragati"],
+    "help": [{"en": "Open to the Biology and the Maths groups. A 2-year D.Pharm is a shorter start.", "ta": "உயிரியல், கணிதம் இரு பிரிவினருக்கும் உண்டு. 2 ஆண்டு D.Pharm குறுகிய தொடக்கம்."}],
+    "source_url": "https://tnmedicalselection.net", "needs_verification": true
+  },
+  {
+    "id": "trk_vet", "emoji": "🐄", "sector": "agri", "riasec": "IRS", "goals": ["bvsc"], "bar": 0.7, "quota_7_5": true,
+    "name": {"en": "Veterinary doctor", "ta": "கால்நடை மருத்துவர்"},
+    "roles": [
+      {"en": "Government veterinary doctor in a block hospital", "ta": "ஒன்றியக் கால்நடை மருத்துவமனையில் அரசு மருத்துவர்"},
+      {"en": "Advisor to dairy and poultry farms", "ta": "பால், கோழிப் பண்ணைகளுக்கு ஆலோசகர்"},
+      {"en": "Animal research and wildlife health", "ta": "விலங்கு ஆய்வு, வனவிலங்கு நலம்"}
+    ],
+    "subjects": {"biology": 4, "chemistry": 3, "physics": 2},
+    "skills": ["sk_animal_care", "sk_science"],
+    "schemes": ["sch_post_matric_sc", "sch_pudhumai_penn", "sch_tamil_pudhalvan"],
+    "help": [{"en": "Most Tamil Nadu seats go by Class 12 marks, not NEET.", "ta": "தமிழ்நாட்டின் பெரும்பாலான இடங்கள் NEET அல்ல, 12ஆம் வகுப்பு மதிப்பெண்ணில்."}],
+    "source_url": "https://tanuvas.ac.in", "needs_verification": true
+  },
+  {
+    "id": "trk_agri", "emoji": "🌾", "sector": "agri", "riasec": "RIE", "goals": ["agri"], "bar": 0.2, "quota_7_5": true,
+    "name": {"en": "Agricultural officer / scientist", "ta": "வேளாண் அலுவலர் / விஞ்ஞானி"},
+    "roles": [
+      {"en": "Agricultural officer through TNPSC", "ta": "TNPSC மூலம் வேளாண் அலுவலர்"},
+      {"en": "Agri field officer in a bank", "ta": "வங்கியில் வேளாண் கள அலுவலர்"},
+      {"en": "Run a modern farm or agri start-up", "ta": "நவீனப் பண்ணை அல்லது வேளாண் தொழில் தொடக்கம்"}
+    ],
+    "subjects": {"biology": 3, "chemistry": 2, "maths": 1, "civics": 1},
+    "skills": ["sk_crop_farming", "sk_science"],
+    "schemes": ["sch_post_matric_sc", "sch_pudhumai_penn", "sch_tamil_pudhalvan"],
+    "help": [{"en": "TNAU admits by Class 12 marks. Farming experience at home is a real head start.", "ta": "TNAU 12ஆம் வகுப்பு மதிப்பெண்ணில் சேர்க்கிறது. வீட்டில் விவசாய அனுபவம் நல்ல முன்னேற்றம்."}],
+    "source_url": "https://tnau.ac.in", "needs_verification": true
+  },
+  {
+    "id": "trk_architect", "emoji": "🏗️", "sector": "creative", "riasec": "AIR", "goals": ["barch"], "bar": 0.3, "quota_7_5": false,
+    "name": {"en": "Architect", "ta": "கட்டடக் கலைஞர்"},
+    "roles": [
+      {"en": "Design homes, schools and public buildings", "ta": "வீடுகள், பள்ளிகள், பொதுக் கட்டடங்களை வடிவமைத்தல்"},
+      {"en": "Town planner with the government", "ta": "அரசில் நகரத் திட்டமிடுபவர்"},
+      {"en": "Interior and landscape designer", "ta": "உள் அலங்கார, நிலத்தோற்ற வடிவமைப்பாளர்"}
+    ],
+    "subjects": {"maths": 3, "reasoning": 2, "physics": 1},
+    "skills": ["sk_drawing", "sk_colour_design", "sk_basic_math"],
+    "schemes": ["sch_pragati", "sch_saksham", "sch_post_matric_sc", "sch_pudhumai_penn", "sch_tamil_pudhalvan"],
+    "help": [{"en": "NATA tests drawing too: your drawing practice counts.", "ta": "NATA ஓவியத்தையும் சோதிக்கிறது: உங்கள் வரைதல் பயிற்சி பயன்படும்."}],
+    "source_url": "https://www.nata.in", "needs_verification": true
+  },
+  {
+    "id": "trk_designer", "emoji": "🎨", "sector": "creative", "riasec": "AER", "goals": ["bdes"], "bar": 0.0, "quota_7_5": false,
+    "name": {"en": "Designer (NID, NIFT, IIT)", "ta": "வடிவமைப்பாளர் (NID, NIFT, IIT)"},
+    "roles": [
+      {"en": "Product, textile or fashion designer", "ta": "பொருள், நெசவு அல்லது ஆடை வடிவமைப்பாளர்"},
+      {"en": "App and website designer (UI/UX)", "ta": "செயலி, இணையதள வடிவமைப்பாளர் (UI/UX)"},
+      {"en": "Help local crafts reach bigger markets", "ta": "உள்ளூர்க் கைவினைகளைப் பெரிய சந்தைக்குக் கொண்டுசெல்லுதல்"}
+    ],
+    "subjects": {"reasoning": 3, "english": 2, "maths": 1},
+    "skills": ["sk_drawing", "sk_colour_design", "sk_stitching"],
+    "schemes": ["sch_post_matric_sc", "sch_pudhumai_penn", "sch_tamil_pudhalvan"],
+    "help": [{"en": "Any Class 12 group can apply. Keep a sketchbook: the exams test drawing and ideas.", "ta": "எந்த 12ஆம் வகுப்புப் பிரிவும் விண்ணப்பிக்கலாம். வரைபுப் புத்தகம் வைத்திருங்கள்: தேர்வுகள் ஓவியம், யோசனைகளைச் சோதிக்கின்றன."}],
+    "source_url": "https://admissions.nid.edu", "needs_verification": true
+  }
+]

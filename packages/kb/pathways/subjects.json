@@ -1,0 +1,55 @@
+[
+  {"id": "maths", "emoji": "➗", "name": {"en": "Maths", "ta": "கணிதம்"}, "topics": [
+    {"id": "m_arith", "name": {"en": "Percent, ratio and profit", "ta": "சதவீதம், விகிதம், லாபம்"}, "hours": 10, "b": -0.8, "after": []},
+    {"id": "m_algebra", "name": {"en": "Linear equations", "ta": "நேரியல் சமன்பாடுகள்"}, "hours": 14, "b": -0.2, "after": ["m_arith"]},
+    {"id": "m_geometry", "name": {"en": "Geometry and area", "ta": "வடிவியல், பரப்பளவு"}, "hours": 14, "b": 0.0, "after": []},
+    {"id": "m_stats", "name": {"en": "Statistics and probability", "ta": "புள்ளியியல், நிகழ்தகவு"}, "hours": 10, "b": 0.3, "after": ["m_arith"]},
+    {"id": "m_quad", "name": {"en": "Quadratics and sequences", "ta": "இருபடிச் சமன்பாடுகள், தொடர்கள்"}, "hours": 12, "b": 0.6, "after": ["m_algebra"]},
+    {"id": "m_trig", "name": {"en": "Trigonometry", "ta": "முக்கோணவியல்"}, "hours": 14, "b": 0.8, "after": ["m_algebra", "m_geometry"]},
+    {"id": "m_calc", "name": {"en": "Calculus basics", "ta": "நுண்கணித அடிப்படை"}, "hours": 24, "b": 1.5, "after": ["m_quad", "m_trig"]}
+  ]},
+  {"id": "physics", "emoji": "🧲", "name": {"en": "Physics", "ta": "இயற்பியல்"}, "topics": [
+    {"id": "p_motion", "name": {"en": "Motion and speed", "ta": "இயக்கம், வேகம்"}, "hours": 12, "b": -0.3, "after": []},
+    {"id": "p_force", "name": {"en": "Force and laws of motion", "ta": "விசை, இயக்க விதிகள்"}, "hours": 12, "b": 0.2, "after": ["p_motion"]},
+    {"id": "p_light", "name": {"en": "Light and mirrors", "ta": "ஒளி, ஆடிகள்"}, "hours": 10, "b": 0.2, "after": []},
+    {"id": "p_elec", "name": {"en": "Electricity", "ta": "மின்னோட்டவியல்"}, "hours": 12, "b": 0.4, "after": []},
+    {"id": "p_energy", "name": {"en": "Work and energy", "ta": "வேலை, ஆற்றல்"}, "hours": 10, "b": 0.4, "after": ["p_force"]},
+    {"id": "p_modern", "name": {"en": "Atoms and modern physics", "ta": "அணு, நவீன இயற்பியல்"}, "hours": 16, "b": 1.3, "after": ["p_elec", "p_energy"]}
+  ]},
+  {"id": "chemistry", "emoji": "⚗️", "name": {"en": "Chemistry", "ta": "வேதியியல்"}, "topics": [
+    {"id": "c_atoms", "name": {"en": "Atoms, elements and formulas", "ta": "அணுக்கள், தனிமங்கள், வாய்பாடுகள்"}, "hours": 10, "b": -0.4, "after": []},
+    {"id": "c_reactions", "name": {"en": "Chemical reactions and equations", "ta": "வேதி வினைகள், சமன்பாடுகள்"}, "hours": 12, "b": 0.1, "after": ["c_atoms"]},
+    {"id": "c_acids", "name": {"en": "Acids, bases and salts", "ta": "அமிலங்கள், காரங்கள், உப்புகள்"}, "hours": 8, "b": 0.0, "after": ["c_reactions"]},
+    {"id": "c_bonding", "name": {"en": "Periodic table and bonding", "ta": "தனிம வரிசை அட்டவணை, பிணைப்பு"}, "hours": 12, "b": 0.3, "after": ["c_atoms"]},
+    {"id": "c_carbon", "name": {"en": "Carbon compounds", "ta": "கார்பன் சேர்மங்கள்"}, "hours": 14, "b": 0.8, "after": ["c_bonding"]},
+    {"id": "c_mole", "name": {"en": "Mole concept", "ta": "மோல் கருத்து"}, "hours": 12, "b": 0.9, "after": ["c_reactions"]}
+  ]},
+  {"id": "biology", "emoji": "🧬", "name": {"en": "Biology", "ta": "உயிரியல்"}, "topics": [
+    {"id": "b_cell", "name": {"en": "The cell", "ta": "செல்"}, "hours": 10, "b": -0.5, "after": []},
+    {"id": "b_ecology", "name": {"en": "Food chains and environment", "ta": "உணவுச் சங்கிலி, சூழல்"}, "hours": 8, "b": -0.2, "after": []},
+    {"id": "b_life", "name": {"en": "Life processes", "ta": "வாழ்க்கைச் செயல்முறைகள்"}, "hours": 14, "b": 0.0, "after": ["b_cell"]},
+    {"id": "b_plants", "name": {"en": "Plant structure and transport", "ta": "தாவர அமைப்பு, கடத்தல்"}, "hours": 10, "b": 0.1, "after": ["b_cell"]},
+    {"id": "b_body", "name": {"en": "Human body and health", "ta": "மனித உடல், நலம்"}, "hours": 14, "b": 0.2, "after": ["b_life"]},
+    {"id": "b_genetics", "name": {"en": "Heredity and genetics", "ta": "மரபியல்"}, "hours": 14, "b": 0.9, "after": ["b_cell"]}
+  ]},
+  {"id": "reasoning", "emoji": "🧩", "name": {"en": "Reasoning", "ta": "காரணத் திறன்"}, "topics": [
+    {"id": "r_series", "name": {"en": "Number and letter series", "ta": "எண், எழுத்துத் தொடர்கள்"}, "hours": 6, "b": -0.5, "after": []},
+    {"id": "r_coding", "name": {"en": "Coding and decoding", "ta": "குறியீடு, குறிவிலக்கம்"}, "hours": 6, "b": 0.0, "after": []},
+    {"id": "r_spatial", "name": {"en": "Directions and shapes", "ta": "திசைகள், வடிவங்கள்"}, "hours": 6, "b": 0.3, "after": []},
+    {"id": "r_data", "name": {"en": "Data and averages", "ta": "தரவு, சராசரி"}, "hours": 8, "b": 0.4, "after": ["r_series"]},
+    {"id": "r_logic", "name": {"en": "Logic and relations", "ta": "தர்க்கம், உறவுமுறைகள்"}, "hours": 8, "b": 0.5, "after": []}
+  ]},
+  {"id": "english", "emoji": "📖", "name": {"en": "English", "ta": "ஆங்கிலம்"}, "topics": [
+    {"id": "e_vocab", "name": {"en": "Vocabulary", "ta": "சொல்வளம்"}, "hours": 10, "b": -0.5, "after": []},
+    {"id": "e_grammar", "name": {"en": "Grammar", "ta": "இலக்கணம்"}, "hours": 10, "b": 0.0, "after": []},
+    {"id": "e_reading", "name": {"en": "Reading comprehension", "ta": "படித்துப் புரிதல்"}, "hours": 14, "b": 0.4, "after": ["e_vocab"]},
+    {"id": "e_writing", "name": {"en": "Formal writing", "ta": "முறையான எழுத்து"}, "hours": 12, "b": 0.6, "after": ["e_grammar"]}
+  ]},
+  {"id": "civics", "emoji": "🏛️", "name": {"en": "Civics and current India", "ta": "குடிமையியல், இந்தியா"}, "topics": [
+    {"id": "v_constitution", "name": {"en": "The Constitution", "ta": "அரசியலமைப்பு"}, "hours": 8, "b": 0.0, "after": []},
+    {"id": "v_geo_hist", "name": {"en": "India's geography and history", "ta": "இந்தியப் புவியியல், வரலாறு"}, "hours": 14, "b": 0.0, "after": []},
+    {"id": "v_rights", "name": {"en": "Rights and duties", "ta": "உரிமைகள், கடமைகள்"}, "hours": 6, "b": 0.2, "after": ["v_constitution"]},
+    {"id": "v_govt", "name": {"en": "How government works", "ta": "அரசு எவ்வாறு செயல்படுகிறது"}, "hours": 8, "b": 0.4, "after": ["v_constitution"]},
+    {"id": "v_economy", "name": {"en": "Economy basics", "ta": "பொருளாதார அடிப்படை"}, "hours": 10, "b": 0.6, "after": []}
+  ]}
+]

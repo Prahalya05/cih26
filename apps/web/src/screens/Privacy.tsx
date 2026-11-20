@@ -7,6 +7,7 @@ import { db, hasScope, patchStudent, scopesOf, type Scope } from "../lib/db";
 import { useT } from "../lib/i18n";
 import { eraseStudent, syncNow } from "../lib/sync";
 import { OPTIONAL_SCOPES } from "./Consent";
+import { Icon } from "../components/Icon";
 
 export default function Privacy({ go, id }: { go: Go; id: string }) {
   const { t } = useT();
@@ -38,30 +39,30 @@ export default function Privacy({ go, id }: { go: Go; id: string }) {
       <p className="text-muted">{t("privacyHint")}</p>
 
       {active ? (
-        <section className="flex flex-col gap-2 rounded-3xl bg-white p-4 shadow-sm">
-          <label className="flex items-start gap-3 rounded-2xl bg-brand-soft p-3">
+        <section className="flex flex-col gap-2 rounded-2xl bg-surface p-4 border border-line">
+          <label className="flex items-start gap-3 rounded-xl bg-brand-soft p-3">
             <input type="checkbox" checked disabled className="mt-1 size-6" />
             <span>{t("consentAssess")}</span>
           </label>
           {OPTIONAL_SCOPES.map((o) => (
-            <label key={o.scope} className="flex items-start gap-3 rounded-2xl border-2 border-line p-3">
+            <label key={o.scope} className="flex items-start gap-3 rounded-xl border border-line p-3">
               <input type="checkbox" checked={hasScope(student, o.scope)} className="mt-1 size-6"
                 onChange={(e) => void setScope(o.scope, e.target.checked)} />
               <span>{t(o.key)}</span>
             </label>
           ))}
-          <Button kind="ghost" className="text-base" onClick={withdraw}>✋ {t("withdraw")}</Button>
+          <Button kind="ghost" className="text-base" onClick={withdraw}><Icon name="ban" className="size-5" />{t("withdraw")}</Button>
         </section>
       ) : (
-        <p className="rounded-2xl bg-sun-soft p-3 text-warn">{t("withdrawn")}</p>
+        <p className="rounded-xl bg-sun-soft p-3 text-warn">{t("withdrawn")}</p>
       )}
 
-      <section className="mt-auto flex flex-col gap-2 rounded-3xl bg-white p-4 shadow-sm">
+      <section className="mt-auto flex flex-col gap-2 rounded-2xl bg-surface p-4 border border-line">
         <label className="flex items-start gap-3">
           <input type="checkbox" checked={sure} onChange={(e) => setSure(e.target.checked)} className="mt-1 size-6" />
           <span>{t("deleteConfirm")}</span>
         </label>
-        <Button kind="ghost" className="text-base text-red-700" disabled={!sure} onClick={erase}>🗑 {t("deleteNow")}</Button>
+        <Button kind="ghost" className="text-base text-bad" disabled={!sure} onClick={erase}><Icon name="trash" className="size-5" />{t("deleteNow")}</Button>
       </section>
     </Screen>
   );

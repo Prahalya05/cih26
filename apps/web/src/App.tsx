@@ -24,6 +24,9 @@ import { scorePending } from "./lib/samples";
 const WorkSample = lazy(() => import("./screens/WorkSample"));
 const Proof = lazy(() => import("./screens/Proof"));
 const Funder = lazy(() => import("./screens/Funder"));
+// Aim High screens (higher-study routes, readiness checks, practice).
+const AimTrack = lazy(() => import("./screens/AimTrack"));
+const AimQuiz = lazy(() => import("./screens/AimQuiz"));
 
 export type Route =
   | { name: "home" }
@@ -32,7 +35,7 @@ export type Route =
   | { name: "cards"; id: string }
   | { name: "questions"; id: string }
   | { name: "facts"; id: string }
-  | { name: "results"; id: string; tab?: "strengths" | "careers" | "schemes" }
+  | { name: "results"; id: string; tab?: "strengths" | "careers" | "schemes" | "aim" }
   | { name: "career"; id: string; occ: string }
   | { name: "teacher" }
   | { name: "assess"; id: string; subskill: string }
@@ -42,7 +45,9 @@ export type Route =
   | { name: "rate"; id: string; mode: "taster" | "term" }
   | { name: "privacy"; id: string }
   | { name: "proof"; id: string }
-  | { name: "funder" };
+  | { name: "funder" }
+  | { name: "aimTrack"; id: string; track: string }
+  | { name: "aimQuiz"; id: string; subject: string; mode: "check" | "practice"; track?: string };
 
 export type Go = (r: Route) => void;
 
@@ -96,6 +101,8 @@ export default function App() {
         {route.name === "sample" && <WorkSample go={go} id={route.id} rubric={route.rubric} />}
         {route.name === "proof" && <Proof go={go} id={route.id} />}
         {route.name === "funder" && <Funder go={go} />}
+        {route.name === "aimTrack" && <AimTrack go={go} id={route.id} track={route.track} />}
+        {route.name === "aimQuiz" && <AimQuiz key={`${route.subject}|${route.mode}`} go={go} id={route.id} subject={route.subject} mode={route.mode} track={route.track} />}
       </Suspense>
       {route.name === "order" && <Order go={go} id={route.id} />}
       {route.name === "rate" && <Rate go={go} id={route.id} mode={route.mode} />}

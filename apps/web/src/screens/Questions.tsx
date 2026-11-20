@@ -9,6 +9,7 @@ import { extractKeywords } from "../lib/keywords";
 import { kb } from "../lib/kb";
 import { Recorder, speak } from "../lib/speech";
 import { extractRemote } from "../lib/sync";
+import { Icon } from "../components/Icon";
 
 type VoiceState = "idle" | "recording" | "thinking";
 
@@ -121,14 +122,14 @@ export default function Questions({ go, id }: { go: Go; id: string }) {
           <button
             onClick={voice === "recording" ? stopVoice : startVoice}
             disabled={voice === "thinking"}
-            className={`flex min-h-14 flex-1 items-center justify-center gap-2 rounded-2xl text-lg font-semibold ${
+            className={`flex min-h-14 flex-1 items-center justify-center gap-2 rounded-xl text-lg font-semibold ${
               voice === "recording" ? "animate-pulse bg-red-600 text-white" : "bg-sun-soft text-warn"
             }`}
           >
-            {voice === "recording" ? `⏹ ${t("stop")}` : `🎤 ${t("speak")}`}
+            {voice === "recording" ? <><Icon name="stop" className="size-5" />{t("stop")}</> : <><Icon name="mic" className="size-5" />{t("speak")}</>}
           </button>
         )}
-        <button onClick={() => setTyping(!typing)} className="flex min-h-14 flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-line bg-white text-lg font-semibold">
+        <button onClick={() => setTyping(!typing)} className="flex min-h-14 flex-1 items-center justify-center gap-2 rounded-xl border border-line bg-surface text-lg font-semibold">
           ⌨️ {t("type")}
         </button>
       </div>
@@ -141,9 +142,9 @@ export default function Questions({ go, id }: { go: Go; id: string }) {
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && submitText()}
             placeholder={t("typeHere")}
-            className="min-h-14 flex-1 rounded-2xl border-2 border-line bg-white px-4 text-lg"
+            className="min-h-14 flex-1 rounded-xl border border-line bg-surface px-4 text-lg"
           />
-          <Button onClick={submitText} disabled={!text.trim() || voice === "thinking"}>✓</Button>
+          <Button onClick={submitText} disabled={!text.trim() || voice === "thinking"}><Icon name="check" className="size-5" /></Button>
         </div>
       )}
 
@@ -152,7 +153,7 @@ export default function Questions({ go, id }: { go: Go; id: string }) {
       {note && <p className="rounded-xl bg-sun-soft px-3 py-2 text-sm text-warn">{note}</p>}
 
       {(answer.transcript || answer.text || (answer.extracted?.length ?? 0) > 0) && (
-        <div className="rounded-2xl bg-white p-4 shadow-sm">
+        <div className="rounded-xl bg-surface p-4 border border-line">
           <p className="text-sm font-semibold text-muted">{t("weHeard")}</p>
           {(answer.transcript || answer.text) && <p className="mt-1 text-lg">“{answer.transcript || answer.text}”</p>}
           <div className="mt-2 flex flex-wrap gap-1.5">

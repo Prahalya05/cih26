@@ -60,7 +60,7 @@ export function ItemView({ item, seed, onAnswer }: { item: QuestionItem; seed: s
         <h2 className="flex-1 text-xl leading-snug font-bold">{pick(item.prompt)}</h2>
         <SpeakButton text={pick(item.prompt)} audioKey={`item_${item.id}`} />
       </div>
-      {item.format === "choice" && item.figure && <div className="rounded-2xl bg-white p-3"><Figure spec={item.figure} /></div>}
+      {item.format === "choice" && item.figure && <div className="rounded-xl bg-surface p-3"><Figure spec={item.figure} /></div>}
       {item.format === "choice" && <Choice item={item} seed={seed} onPick={(id) => answer(id === item.answer, id)} />}
       {item.format === "estimate" && <Estimate item={item} onDone={(v) => answer(Math.abs(v - item.answer) <= (item.tolerance ?? 0), v)} />}
       {item.format === "order_steps" && <Order item={item} seed={seed} onDone={(ids) => answer(ids.join() === item.answer.join(), ids)} />}
@@ -75,7 +75,7 @@ function Choice({ item, seed, onPick }: { item: ChoiceItem; seed: string; onPick
     <div className="flex flex-col gap-2.5">
       {options.map((o) => (
         <button key={o.id} onClick={() => onPick(o.id)}
-          className="flex min-h-14 items-center gap-3 rounded-2xl border-2 border-line bg-white px-4 py-3 text-left text-lg font-medium active:border-brand active:bg-brand-soft">
+          className="flex min-h-14 items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-left text-lg font-medium active:border-brand active:bg-brand-soft">
           {o.emoji && <span className="text-3xl">{o.emoji}</span>}
           {o.image && <img src={o.image} alt="" className="size-16 rounded-xl object-cover" />}
           {o.cells && <ShapeGrid cells={o.cells} />}
@@ -97,7 +97,7 @@ function Estimate({ item, onDone }: { item: EstimateItem; onDone: (v: number) =>
         <input inputMode="decimal" autoFocus value={text} onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && ok && onDone(value)}
           placeholder={t("estimateHint")} aria-label={t("estimateHint")}
-          className="min-h-14 flex-1 rounded-2xl border-2 border-line bg-white px-4 text-2xl font-semibold" />
+          className="min-h-14 flex-1 rounded-xl border border-line bg-surface px-4 text-2xl font-semibold" />
         {item.unit && <span className="text-lg text-muted">{pick(item.unit)}</span>}
       </div>
       <Button onClick={() => onDone(value)} disabled={!ok}>{t("check")}</Button>
@@ -123,9 +123,9 @@ function Order({ item, seed, onDone }: { item: OrderItem; seed: string; onDone: 
       <p className="text-muted">{t("orderHint")}</p>
       {steps.map((s, i) => (
         <button key={s.id} onClick={() => tap(i)} aria-pressed={picked === i}
-          className={`flex min-h-14 items-center gap-3 rounded-2xl border-2 px-4 py-2 text-left text-lg ${
-            picked === i ? "border-brand bg-brand-soft" : "border-line bg-white"}`}>
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-stone-100 font-bold">{i + 1}</span>
+          className={`flex min-h-14 items-center gap-3 rounded-xl border px-4 py-2 text-left text-lg ${
+            picked === i ? "border-brand bg-brand-soft ring-1 ring-brand" : "border-line bg-surface"}`}>
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-paper font-bold">{i + 1}</span>
           <span>{pick(s)}</span>
         </button>
       ))}

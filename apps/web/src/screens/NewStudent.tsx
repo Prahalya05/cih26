@@ -3,6 +3,7 @@ import type { Go } from "../App";
 import { Button, Screen, SpeakButton } from "../components/ui";
 import { newId, saveStudent } from "../lib/db";
 import { useT } from "../lib/i18n";
+import { Icon } from "../components/Icon";
 
 const AVATARS = ["🦚", "🐘", "🐅", "🌻", "🌙", "⭐", "🐟", "🦋", "🌳", "🪔", "🥭", "🐓"];
 
@@ -40,7 +41,7 @@ export default function NewStudent({ go }: { go: Go }) {
             key={a}
             onClick={() => setAvatar(a)}
             aria-pressed={avatar === a}
-            className={`aspect-square rounded-2xl border-2 text-4xl ${avatar === a ? "border-brand bg-brand-soft" : "border-line bg-white"}`}
+            className={`aspect-square rounded-xl border text-4xl ${avatar === a ? "border-brand bg-brand-soft ring-1 ring-brand" : "border-line bg-surface"}`}
           >
             {a}
           </button>
@@ -52,7 +53,7 @@ export default function NewStudent({ go }: { go: Go }) {
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="min-h-14 rounded-2xl border-2 border-line bg-white px-4 text-lg"
+          className="min-h-14 rounded-xl border border-line bg-surface px-4 text-lg"
           autoComplete="off"
         />
       </label>
@@ -64,7 +65,7 @@ export default function NewStudent({ go }: { go: Go }) {
           onChange={(e) => setBirthYear(e.target.value.replace(/\D/g, "").slice(0, 4))}
           inputMode="numeric"
           placeholder="2010"
-          className="min-h-14 rounded-2xl border-2 border-line bg-white px-4 text-lg"
+          className="min-h-14 rounded-xl border border-line bg-surface px-4 text-lg"
           autoComplete="off"
         />
       </label>
@@ -75,12 +76,12 @@ export default function NewStudent({ go }: { go: Go }) {
           value={code}
           onChange={(e) => setCode(e.target.value)}
           placeholder="PSG01"
-          className="min-h-14 rounded-2xl border-2 border-line bg-white px-4 text-lg uppercase"
+          className="min-h-14 rounded-xl border border-line bg-surface px-4 text-lg uppercase"
           autoComplete="off"
         />
       </label>
 
-      <Button className="mt-auto" disabled={!avatar} onClick={create}>{t("next")} →</Button>
+      <Button className="mt-auto" disabled={!avatar} onClick={create}>{t("next")} <Icon name="next" className="size-5" /></Button>
     </Screen>
   );
 }

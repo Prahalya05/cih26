@@ -10,6 +10,7 @@ import { useT } from "../lib/i18n";
 import { kb } from "../lib/kb";
 import { isOnline, syncEvents } from "../lib/sync";
 import { apiFetch } from "../lib/api";
+import { Icon } from "../components/Icon";
 
 
 async function makeLink(orderId: string): Promise<string | null> {
@@ -58,7 +59,7 @@ export default function Order({ go, id }: { go: Go; id: string }) {
   return (
     <Screen title={t("paidJob")} onBack={back}>
       <p className="text-muted">{t("paidJobHint")}</p>
-      <section className="flex flex-col gap-3 rounded-3xl bg-white p-4 shadow-sm">
+      <section className="flex flex-col gap-3 rounded-2xl bg-surface p-4 border border-line">
         <p className="font-semibold">{t("whichSkill")}</p>
         <div className="grid grid-cols-2 gap-2">
           {choices.map((s) => (
@@ -66,25 +67,25 @@ export default function Order({ go, id }: { go: Go; id: string }) {
           ))}
         </div>
         <input value={what} onChange={(e) => setWhat(e.target.value)} placeholder={t("whatDidYouMake")}
-          className="min-h-14 rounded-2xl border-2 border-line px-4 text-lg" />
+          className="min-h-14 rounded-xl border border-line px-4 text-lg" />
         <input inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={t("amountPaid")}
-          className="min-h-14 rounded-2xl border-2 border-line px-4 text-lg" />
+          className="min-h-14 rounded-xl border border-line px-4 text-lg" />
         <Button disabled={!skill || !amount} onClick={() => void save()}>{t("saveJob")}</Button>
       </section>
 
       {orders.map((o) => {
         const url = links[o.id];
         return (
-          <article key={o.id} className="flex flex-col gap-2 rounded-3xl bg-white p-4 shadow-sm">
+          <article key={o.id} className="flex flex-col gap-2 rounded-2xl bg-surface p-4 border border-line">
             <div className="flex items-center gap-2">
               <p className="flex-1 font-semibold">{pick(kb.skills[o.skill_id!]?.name ?? { en: o.skill_id! })} · ₹{String(o.payload.amount_inr)}</p>
-              {confirmed.has(o.id) ? <Pill tone="good">✔ {t("buyerConfirmed")}</Pill> : <Pill tone="sun">{t("waitingBuyer")}</Pill>}
+              {confirmed.has(o.id) ? <Pill tone="good"><Icon name="check" className="size-3.5" />{t("buyerConfirmed")}</Pill> : <Pill tone="sun">{t("waitingBuyer")}</Pill>}
             </div>
             {o.payload.what ? <p className="text-muted">{String(o.payload.what)}</p> : null}
             {!confirmed.has(o.id) && (url
-              ? <Button kind="soft" onClick={() => void share(url)}>📤 {t("sendToBuyer")}</Button>
+              ? <Button kind="soft" onClick={() => void share(url)}><Icon name="share" className="size-5" />{t("sendToBuyer")}</Button>
               : <Button kind="ghost" className="text-base" onClick={async () => setLinks({ ...links, [o.id]: await makeLink(o.id) })}>
-                  🔗 {isOnline() ? t("makeLink") : t("linkWhenOnline")}
+                  <Icon name="link" className="size-5" />{isOnline() ? t("makeLink") : t("linkWhenOnline")}
                 </Button>)}
           </article>
         );

@@ -13,8 +13,10 @@ import { ITEMS, RUBRICS, profileOf } from "../lib/skills";
 import { STORY_KEY } from "../lib/stories";
 import { GAMES } from "./Game";
 import { nextToTest, personaFromProfile, rplOpportunities, safeRubric, type PersonaV2, type UnitState } from "@disha/engine";
+import { Icon, type IconName } from "../components/Icon";
+import { AimHigh } from "./AimHigh";
 
-type Tab = "strengths" | "careers" | "schemes";
+type Tab = "strengths" | "careers" | "schemes" | "aim";
 
 export default function Results({ go, id, tab }: { go: Go; id: string; tab: Tab }) {
   const { t, lang } = useT();
@@ -24,43 +26,45 @@ export default function Results({ go, id, tab }: { go: Go; id: string; tab: Tab 
   const analysis = useMemo(() => (student && profile ? analyse(student, actions, lang, profile) : null), [student, actions, lang, profile]);
   if (!student || !analysis) return null;
 
-  const tabs: { key: Tab; emoji: string }[] = [
-    { key: "strengths", emoji: "💪" },
-    { key: "careers", emoji: "🧭" },
-    { key: "schemes", emoji: "🎓" },
+  const tabs: { key: Tab; icon: IconName }[] = [
+    { key: "strengths", icon: "award" },
+    { key: "careers", icon: "target" },
+    { key: "schemes", icon: "cap" },
+    { key: "aim", icon: "spark" },
   ];
 
   return (
-    <Screen title={`${student.avatar} ${student.name}`} onBack={() => go({ name: "home" })}>
-      <nav className="sticky top-[61px] z-10 -mx-4 grid grid-cols-3 gap-1 bg-paper px-4 pb-2">
+    <Screen title={<span className="flex items-center gap-2"><span className="text-xl">{student.avatar}</span>{student.name}</span>} onBack={() => go({ name: "home" })}>
+      <nav className="sticky top-[60px] z-10 -mx-4 -mt-5 grid grid-cols-4 border-b border-line bg-surface px-2">
         {tabs.map((x) => (
           <button
             key={x.key}
             onClick={() => go({ name: "results", id, tab: x.key })}
-            className={`flex min-h-14 flex-col items-center justify-center rounded-2xl text-sm font-semibold ${
-              tab === x.key ? "bg-brand text-white" : "bg-white text-muted"
+            className={`-mb-px flex min-h-14 flex-col items-center justify-center gap-1 border-b-[3px] text-xs font-bold ${
+              tab === x.key ? "border-accent text-brand" : "border-transparent text-muted"
             }`}
           >
-            <span className="text-xl">{x.emoji}</span>
+            <Icon name={x.icon} className="size-5" />
             {t(x.key)}
           </button>
         ))}
       </nav>
 
       {tab === "strengths" && <><Games id={id} go={go} />
-        <Button kind="soft" onClick={() => go({ name: "order", id })}>💼 {t("paidJob")}</Button>
-        <Button kind="soft" onClick={() => go({ name: "proof", id })}>🔐 {t("proofPays")}</Button>
+        <Button kind="soft" onClick={() => go({ name: "order", id })}><Icon name="briefcase" className="size-5" />{t("paidJob")}</Button>
+        <Button kind="soft" onClick={() => go({ name: "proof", id })}><Icon name="lock" className="size-5" />{t("proofPays")}</Button>
         <SkillLevels id={id} go={go} claimed={analysis.skills.map((s) => s.id)}
         persona={personaFromProfile(profile!, { education: analysis.persona.education, riasec: analysis.persona.riasec })} />
         <Strengths a={analysis} /></>}
       {tab === "careers" && <Careers a={analysis} go={go} id={id} />}
       {tab === "schemes" && <Schemes a={analysis} student={student} />}
+      {tab === "aim" && <AimHigh a={analysis} go={go} id={id} student={student} />}
 
       <Feedback studentId={id} tab={tab} actions={actions} />
 
       <div className="mt-4 flex gap-2">
-        <Button kind="ghost" className="flex-1 text-base" onClick={() => go({ name: "cards", id })}>↺ {t("restart")}</Button>
-        <Button kind="ghost" className="flex-1 text-base" onClick={() => go({ name: "privacy", id })}>🔒 {t("privacy")}</Button>
+        <Button kind="ghost" className="flex-1 text-base" onClick={() => go({ name: "cards", id })}><Icon name="refresh" className="size-4" />{t("restart")}</Button>
+        <Button kind="ghost" className="flex-1 text-base" onClick={() => go({ name: "privacy", id })}><Icon name="lock" className="size-4" />{t("privacy")}</Button>
       </div>
     </Screen>
   );
@@ -72,15 +76,15 @@ function Games({ id, go }: { id: string; go: Go }) {
   const profile = useLive(() => profileOf(id), [id], null);
   if (!profile) return null;
   return (
-    <section className="rounded-3xl bg-white p-4 shadow-sm">
-      <h2 className="text-xl font-bold">{t("gamesTitle")}</h2>
+    <section className="rounded-2xl bg-surface p-4 border border-line">
+      <h2 className="text-xl font-extrabold">{t("gamesTitle")}</h2>
       <p className="text-sm text-muted">{t("gamesHint")}</p>
       <div className="mt-3 grid grid-cols-3 gap-2">
         {GAMES.map((g) => {
           const played = (profile.aptitude[g.domain]?.n ?? 0) > 0;
           return (
             <button key={g.domain} onClick={() => go({ name: "game", id, domain: g.domain })}
-              className={`flex min-h-20 flex-col items-center justify-center gap-1 rounded-2xl border-2 p-2 text-sm font-semibold ${
+              className={`flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl border p-2 text-sm font-semibold ${
                 played ? "border-good bg-good-soft text-good" : "border-line bg-paper"}`}>
               <span className="text-3xl">{g.emoji}</span>
               <span className="text-center leading-tight">{pick(kb.graph!.aptitudes[g.domain].name)}</span>
@@ -113,8 +117,8 @@ function SkillLevels({ id, go, claimed, persona }: { id: string; go: Go; claimed
       <StoryBanner id={id} />
       {rpl.map((r) => (
         <button key={r.occupation} onClick={() => go({ name: "career", id, occ: r.occupation })}
-          className="flex items-start gap-3 rounded-3xl bg-good-soft p-4 text-left shadow-sm">
-          <span className="text-3xl">🎓</span>
+          className="flex items-start gap-3 rounded-2xl bg-good-soft p-4 text-left border border-line">
+          <span className="flex size-10 items-center justify-center rounded-xl bg-surface text-good"><Icon name="cap" className="size-6" /></span>
           <span className="flex-1">
             <span className="block text-lg font-semibold">{r.rpl.qp_name}{r.rpl.nsqf_level ? ` · ${t("rplLevel", { n: r.rpl.nsqf_level })}` : ""}</span>
             <span className="block">{t(r.status === "eligible" ? "rplEligible" : "rplAt18")}</span>
@@ -122,26 +126,26 @@ function SkillLevels({ id, go, claimed, persona }: { id: string; go: Go; claimed
           </span>
         </button>
       ))}
-      {skills.length > 0 && <h2 className="text-2xl font-bold">{t("skillLevels")}</h2>}
+      {skills.length > 0 && <h2 className="text-2xl font-extrabold">{t("skillLevels")}</h2>}
       {skills.length > 0 && <p className="text-muted">{t("skillLevelsHint")}</p>}
       {best && best.value > 0 && (
         <button onClick={() => go({ name: "assess", id, subskill: best.id })}
-          className="flex items-center gap-3 rounded-3xl bg-brand p-4 text-left text-white shadow-sm active:bg-brand-dark">
-          <span className="text-3xl">🎯</span>
+          className="flex items-center gap-3 rounded-2xl bg-brand p-4 text-left text-white active:bg-brand-dark">
+          <span className="flex size-10 items-center justify-center rounded-xl bg-white/10 text-accent"><Icon name="target" className="size-6" /></span>
           <span className="flex-1">
             <span className="block text-sm opacity-90">{t("nextTest")}</span>
             <span className="block text-lg font-semibold">{pick(g.subskills[best.id].name)}</span>
           </span>
-          <span className="text-2xl">›</span>
+          <Icon name="chevron" className="size-6" />
         </button>
       )}
       {skills.map((sk) => (
-        <article key={sk} className="rounded-3xl bg-white p-4 shadow-sm">
+        <article key={sk} className="rounded-2xl bg-surface p-4 border border-line">
           <div className="flex items-center gap-2">
             <h3 className="flex-1 text-lg font-semibold">{pick(kb.skills[sk].name)}</h3>
             {Object.values(RUBRICS).filter((r) => r.skill === sk && safeRubric(g, r, minor)).map((r) => (
               <button key={r.id} onClick={() => go({ name: "sample", id, rubric: r.id })}
-                className="rounded-xl bg-sun-soft px-3 py-2 text-sm font-semibold text-warn">📷 {t("showWork")}</button>
+                className="inline-flex items-center gap-1.5 rounded-lg bg-sun-soft px-3 py-2 text-sm font-bold text-warn"><Icon name="camera" className="size-4" />{t("showWork")}</button>
             ))}
           </div>
           <ul className="mt-2 flex flex-col gap-3">
@@ -163,7 +167,7 @@ function StoryBanner({ id }: { id: string }) {
   const v = row?.value as { student: string; step: number; of: number; label: { en: string; ta: string } } | undefined;
   if (!v || v.student !== id) return null;
   return (
-    <div className="sticky top-2 z-10 rounded-3xl bg-brand p-4 text-white shadow-lg" role="status" aria-live="polite">
+    <div className="sticky top-2 z-10 rounded-2xl bg-brand p-4 text-white shadow-lg" role="status" aria-live="polite">
       <p className="text-sm opacity-90">▶ {t("storyStep", { n: v.step + 1, of: v.of })}</p>
       <p className="text-lg font-semibold">{pick(v.label)}</p>
     </div>
@@ -180,7 +184,7 @@ function SubskillRow({ unitId, unit, canTest, onTest }: { unitId: string; unit?:
     <li className="flex flex-col gap-1.5">
       <div className="flex items-center gap-2">
         <p className="flex-1 font-medium">{pick(sub.name)}</p>
-        {unit?.strong && <Pill tone="good">💪 {t("strong")}</Pill>}
+        {unit?.strong && <Pill tone="good"><Icon name="award" className="size-3.5" />{t("strong")}</Pill>}
       </div>
       {direct ? (
         <>
@@ -198,8 +202,8 @@ function SubskillRow({ unitId, unit, canTest, onTest }: { unitId: string; unit?:
         <p className="text-sm text-muted">{t("notTestedYet")}</p>
       )}
       {canTest && (
-        <button onClick={onTest} className="self-start rounded-xl bg-brand-soft px-3 py-2 text-sm font-semibold text-brand-dark">
-          📝 {tested ? t("testAgain") : t("testMe")}
+        <button onClick={onTest} className="inline-flex items-center gap-1.5 self-start rounded-lg bg-brand-soft px-3 py-2 text-sm font-bold text-brand">
+          <Icon name="pencil" className="size-4" />{tested ? t("testAgain") : t("testMe")}
         </button>
       )}
     </li>
@@ -213,14 +217,14 @@ function Strengths({ a }: { a: Analysis }) {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-start gap-3">
-        <h2 className="flex-1 text-2xl font-bold">{t("strengths")}</h2>
+        <h2 className="flex-1 text-2xl font-extrabold">{t("strengths")}</h2>
         <SpeakButton text={`${t("strengths")}: ${summary}`} />
       </div>
       {a.skills.map((s) => (
-        <article key={s.id} className="rounded-3xl bg-white p-4 shadow-sm">
+        <article key={s.id} className="rounded-2xl bg-surface p-4 border border-line">
           <div className="flex items-center gap-2">
             <h3 className="flex-1 text-lg font-semibold">{pick(kb.skills[s.id].name)}</h3>
-            {s.endorsed && <Pill tone="good">✔ {t("endorsedBy")}</Pill>}
+            {s.endorsed && <Pill tone="good"><Icon name="check" className="size-3.5" />{t("endorsedBy")}</Pill>}
           </div>
           <div className="mt-2 h-2 rounded-full bg-line">
             <div className="h-2 rounded-full bg-sun" style={{ width: `${Math.round(s.confidence * 100)}%` }} />
@@ -228,7 +232,7 @@ function Strengths({ a }: { a: Analysis }) {
           <ul className="mt-2 flex flex-col gap-1 text-muted">
             {s.evidence.map((e) => (
               <li key={e.text}>
-                {e.source === "tap" ? `${t("tapped")}: ${e.text}` : <>“{e.text}” <span className="text-xs">{e.source === "voice" ? "🎤" : "⌨️"}</span></>}
+                {e.source === "tap" ? `${t("tapped")}: ${e.text}` : <>“{e.text}” <Icon name={e.source === "voice" ? "mic" : "keyboard"} className="inline size-3.5 align-[-2px]" /></>}
               </li>
             ))}
           </ul>
@@ -245,11 +249,11 @@ function Careers({ a, go, id }: { a: Analysis; go: Go; id: string }) {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-start gap-3">
-        <h2 className="flex-1 text-2xl font-bold">{t("careers")}</h2>
+        <h2 className="flex-1 text-2xl font-extrabold">{t("careers")}</h2>
         <SpeakButton text={a.careers.careers.map((c) => careerName(c.occupation_id)).join(", ")} />
       </div>
       <div className="flex flex-wrap gap-1.5">
-        {[...sectors].map((s) => <Pill key={s} tone="brand">{SECTOR[s]?.emoji} {pick(SECTOR[s] ?? { en: s })}</Pill>)}
+        {[...sectors].map((s) => <Pill key={s} tone="brand">{pick(SECTOR[s] ?? { en: s })}</Pill>)}
       </div>
       {a.careers.careers.map((c, i) => {
         const occ = kb.occupations[c.occupation_id];
@@ -258,23 +262,23 @@ function Careers({ a, go, id }: { a: Analysis; go: Go; id: string }) {
           <button
             key={c.occupation_id}
             onClick={() => go({ name: "career", id, occ: c.occupation_id })}
-            className="flex flex-col gap-2 rounded-3xl bg-white p-4 text-left shadow-sm active:bg-stone-50"
+            className="flex flex-col gap-2 rounded-2xl bg-surface p-4 text-left border border-line active:bg-paper"
           >
             <div className="flex items-center gap-3">
-              <span className="text-3xl">{SECTOR[c.sector]?.emoji ?? "⭐"}</span>
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-paper text-2xl">{SECTOR[c.sector]?.emoji ?? "⭐"}</span>
               <div className="flex-1">
-                <h3 className="text-lg leading-tight font-semibold">{i + 1}. {pick(occ.name)}</h3>
+                <h3 className="text-lg leading-tight font-bold"><span className="mr-1.5 font-mono text-sm text-accent-dark">{String(i + 1).padStart(2, "0")}</span>{pick(occ.name)}</h3>
                 <p className="text-sm text-muted">{pick(SECTOR[c.sector] ?? { en: c.sector })}</p>
               </div>
-              <span className="text-xl text-muted">›</span>
+              <Icon name="chevron" className="size-5 text-faint" />
             </div>
-            {recommended && <Pill tone="good">⭐ {t("recommended")}</Pill>}
+            {recommended && <Pill tone="good"><Icon name="star" className="size-3.5" />{t("recommended")}</Pill>}
             <div className="grid grid-cols-3 gap-2 text-xs">
               <Bar label={t("skillMatch")} value={c.parts.fit} />
               <Bar label={t("reachable")} value={c.parts.reach} />
               <Bar label={t("interestFit")} value={c.parts.worth} />
             </div>
-            {c.could_learn && <Pill tone="sun">🚀 {t("couldLearn")}</Pill>}
+            {c.could_learn && <Pill tone="sun"><Icon name="spark" className="size-3.5" />{t("couldLearn")}</Pill>}
             {c.matched_skills.length > 0 && (
               <p className="text-sm text-muted">{t("whyFits")}: {c.matched_skills.map((s) => pick(kb.skills[s].name)).join(", ")}</p>
             )}
@@ -283,8 +287,8 @@ function Careers({ a, go, id }: { a: Analysis; go: Go; id: string }) {
       })}
 
       {a.careers.what_if.length > 0 && (
-        <div className="rounded-3xl bg-sun-soft p-4">
-          <h3 className="text-lg font-bold">💡 {t("whatIf")}</h3>
+        <div className="rounded-2xl bg-sun-soft p-4">
+          <h3 className="flex items-center gap-2 text-lg font-bold"><Icon name="bulb" className="size-5" />{t("whatIf")}</h3>
           <ul className="mt-2 flex flex-col gap-2">
             {a.careers.what_if.map((w) => {
               const [kind, value] = w.lever.split(":");
@@ -331,12 +335,12 @@ function Schemes({ a, student }: { a: Analysis; student: Student }) {
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-2xl font-bold">✅ {t("eligibleNow")}</h2>
+      <h2 className="flex items-center gap-2 text-2xl font-extrabold"><Icon name="check" className="size-6 text-good" />{t("eligibleNow")}</h2>
       {now.length ? now.map((s) => <SchemeCard key={s.scheme_id} s={s} recommended={recommendedIds.has(s.scheme_id)} />) : <p className="text-muted">{t("noneNow")}</p>}
 
       {nextFacts.length > 0 && (
-        <div className="flex flex-col gap-4 rounded-3xl border-2 border-dashed border-sun bg-white p-4">
-          <h2 className="text-lg font-bold">❓ {t("needInfo")}</h2>
+        <div className="flex flex-col gap-4 rounded-2xl border border-dashed border-sun bg-surface p-4">
+          <h2 className="flex items-center gap-2 text-lg font-bold"><Icon name="question" className="size-5 text-warn" />{t("needInfo")}</h2>
           {nextFacts.map((f) => (
             <FactQuestionView key={f} q={FACT_QUESTIONS[f]} value={student.factAnswers[f]} onChange={(v) => setFact(f, v)} />
           ))}
@@ -345,7 +349,7 @@ function Schemes({ a, student }: { a: Analysis; student: Student }) {
 
       {later.length > 0 && (
         <>
-          <h2 className="mt-2 text-2xl font-bold">⏳ {t("eligibleLater")}</h2>
+          <h2 className="mt-2 flex items-center gap-2 text-2xl font-extrabold"><Icon name="hourglass" className="size-6 text-muted" />{t("eligibleLater")}</h2>
           {later.map((s) => <SchemeCard key={s.scheme_id} s={s} later recommended={recommendedIds.has(s.scheme_id)} />)}
         </>
       )}
@@ -358,15 +362,15 @@ function SchemeCard({ s, later, recommended }: { s: SchemeResult; later?: boolea
   const [open, setOpen] = useState(false);
   const scheme = kb.schemes[s.scheme_id];
   return (
-    <article className={`rounded-3xl p-4 shadow-sm ${later ? "bg-white/70" : "bg-white"}`}>
+    <article className={`rounded-2xl p-4 border border-line ${later ? "bg-surface/70" : "bg-surface"}`}>
       <button className="flex w-full items-start gap-3 text-left" onClick={() => setOpen(!open)} aria-expanded={open}>
-        <span className="text-3xl">{SCHEME_TYPE[s.type] ?? "📄"}</span>
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-paper text-2xl">{SCHEME_TYPE[s.type] ?? "📄"}</span>
         <div className="flex-1">
           <h3 className="text-lg leading-tight font-semibold">{pick(s.name)}</h3>
           {later && s.eligible_if && <p className="text-sm font-medium text-warn">{t("afterJoining", { stage: t(`stage_${s.eligible_if.stage}` as Parameters<typeof t>[0]) })}</p>}
-          {recommended && <Pill tone="good">⭐ {t("recommended")}</Pill>}
+          {recommended && <Pill tone="good"><Icon name="star" className="size-3.5" />{t("recommended")}</Pill>}
         </div>
-        <span className="text-xl text-muted">{open ? "▾" : "›"}</span>
+        <Icon name={open ? "chevronDown" : "chevron"} className="size-5 text-faint" />
       </button>
       <p className="mt-2">{s.benefit_en}</p>
       {open && (
@@ -390,13 +394,13 @@ function SchemeCard({ s, later, recommended }: { s: SchemeResult; later?: boolea
 function Feedback({ studentId, tab, actions }: { studentId: string; tab: Tab; actions: Action[] }) {
   const { t } = useT();
   const given = actions.some((a) => a.kind === "feedback" && a.payload.tab === tab);
-  if (given) return <p className="text-center text-good">🙏 {t("thanks")}</p>;
+  if (given) return <p className="flex items-center justify-center gap-2 text-center font-medium text-good"><Icon name="check" className="size-4" />{t("thanks")}</p>;
   const send = (helpful: boolean) => addAction({ student_id: studentId, kind: "feedback", payload: { tab, helpful }, by: "student" });
   return (
-    <div className="flex items-center justify-center gap-3 rounded-2xl bg-white p-3">
+    <div className="flex items-center justify-center gap-3 rounded-xl bg-surface p-3">
       <span className="font-medium">{t("wasHelpful")}</span>
-      <button onClick={() => send(true)} className="size-12 rounded-full bg-good-soft text-2xl" aria-label="Yes">👍</button>
-      <button onClick={() => send(false)} className="size-12 rounded-full bg-stone-100 text-2xl" aria-label="No">👎</button>
+      <button onClick={() => send(true)} className="flex size-11 items-center justify-center rounded-full border border-line text-good hover:bg-good-soft" aria-label="Yes"><Icon name="up" className="size-5" /></button>
+      <button onClick={() => send(false)} className="flex size-11 items-center justify-center rounded-full border border-line text-muted hover:bg-paper" aria-label="No"><Icon name="down" className="size-5" /></button>
     </div>
   );
 }

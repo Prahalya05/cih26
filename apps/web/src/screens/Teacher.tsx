@@ -15,6 +15,8 @@ import { pullCohort, syncNow } from "../lib/sync";
 import { deviceRole, register, type Role } from "../lib/api";
 import { rubricFor, samplesToConfirm } from "../lib/samples";
 import type { StoredEvent } from "../lib/db";
+import { Icon } from "../components/Icon";
+import { integrityOf, SERIOUS, type Flag, type IntegritySummary } from "../lib/integrity";
 
 const savedCode = () => { try { return localStorage.getItem("disha.code") ?? ""; } catch { return ""; } };
 
@@ -65,7 +67,7 @@ export default function Teacher({ go }: { go: Go }) {
         <label className="flex flex-col gap-1">
           <span className="font-semibold">{t("facilitatorCode")}</span>
           <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="PSG01"
-            className="min-h-14 rounded-2xl border-2 border-line bg-white px-4 text-lg uppercase" />
+            className="min-h-14 rounded-xl border border-line bg-surface px-4 text-lg uppercase" />
         </label>
         <p className="text-muted">{t("teacherCodeHint")}</p>
         <Button disabled={!draft.trim() || joining} onClick={async () => {
@@ -78,7 +80,7 @@ export default function Teacher({ go }: { go: Go }) {
           const c = reg?.class_code ?? typed;
           try { localStorage.setItem("disha.code", c); } catch { /* ignore */ }
           setCode(c);
-        }}>{t("next")} →</Button>
+        }}>{t("next")} <Icon name="next" className="size-5" /></Button>
       </Screen>
     );
   }
@@ -94,10 +96,10 @@ export default function Teacher({ go }: { go: Go }) {
       <div className="grid grid-cols-3 gap-2 text-center">
         <Stat value={rows.length} label={t("students")} />
         <Stat value={strongCount} label={t("strongMatch")} />
-        <Stat value={pending} label={online ? "⇅" : "📴"} />
+        <Stat value={pending} label={online ? "Sync" : "Offline"} />
       </div>
-      {pending > 0 && online && <Button kind="soft" onClick={() => void syncNow()}>⇅ Sync ({pending})</Button>}
-      {role === "student" && <p className="rounded-2xl bg-brand-soft p-3 text-sm">{t("notTeacherPhone")}</p>}
+      {pending > 0 && online && <Button kind="soft" onClick={() => void syncNow()}><Icon name="sync" className="size-5" />Sync ({pending})</Button>}
+      {role === "student" && <p className="rounded-xl bg-brand-soft p-3 text-sm">{t("notTeacherPhone")}</p>}
 
       <WorkQueue students={students} />
 
@@ -109,8 +111,8 @@ export default function Teacher({ go }: { go: Go }) {
 
       <div className="mt-4 flex flex-col gap-2">
         {!rows.some((r) => r.s.simulated)
-          ? <Button kind="ghost" className="text-base" onClick={() => loadDemoClass(code)}>🧪 {t("loadDemo")}</Button>
-          : <Button kind="ghost" className="text-base" onClick={() => clearDemoClass()}>🧹 {t("simulated")} ✕</Button>}
+          ? <Button kind="ghost" className="text-base" onClick={() => loadDemoClass(code)}><Icon name="flask" className="size-5" />{t("loadDemo")}</Button>
+          : <Button kind="ghost" className="text-base" onClick={() => clearDemoClass()}><Icon name="x" className="size-5" />{t("simulated")}</Button>}
       </div>
     </Screen>
   );
@@ -123,7 +125,7 @@ function WorkQueue({ students }: { students: Student[] }) {
   if (!queue.length) return null;
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-xl font-bold">📷 {t("workToCheck")} ({queue.length})</h2>
+      <h2 className="flex items-center gap-2 text-xl font-extrabold"><Icon name="camera" className="size-5 text-accent-dark" />{t("workToCheck")} <span className="font-mono text-base text-muted">{queue.length}</span></h2>
       {queue.map((e) => <SampleCard key={e.id} sample={e} student={students.find((s) => s.id === e.student_id)} />)}
     </section>
   );
@@ -151,13 +153,13 @@ function SampleCard({ sample, student }: { sample: StoredEvent; student?: Studen
       payload: { scores } });
   };
   return (
-    <article className="rounded-3xl bg-white p-4 shadow-sm">
+    <article className="rounded-2xl bg-surface p-4 border border-line">
       <p className="font-semibold">{student?.avatar} {student?.name} · {pick(rubric.name)}</p>
       {url && media?.blob.type.startsWith("video/")
-        ? <video ref={player} src={url} controls playsInline className="mt-2 max-h-56 w-full rounded-2xl bg-black" />
-        : url ? <img src={url} alt="" className="mt-2 max-h-56 w-full rounded-2xl object-contain" />
+        ? <video ref={player} src={url} controls playsInline className="mt-2 max-h-56 w-full rounded-xl bg-black" />
+        : url ? <img src={url} alt="" className="mt-2 max-h-56 w-full rounded-xl object-contain" />
         : <p className="mt-1 text-sm text-muted">{t("noPhotoHere")}</p>}
-      {safetyNotes.map((n, i) => <p key={i} className="mt-1 text-sm text-warn">⚠ {n.time} — {n.note}</p>)}
+      {safetyNotes.map((n, i) => <p key={i} className="mt-1 flex gap-1.5 text-sm text-warn"><Icon name="alert" className="mt-0.5 size-4" /><span><span className="font-mono">{n.time}</span> {n.note}</span></p>)}
       <ul className="mt-3 flex flex-col gap-2">
         {rubric.criteria.map((c) => (
           <li key={c.id}>
@@ -165,26 +167,26 @@ function SampleCard({ sample, student }: { sample: StoredEvent; student?: Studen
               <span className="flex-1 text-sm font-medium">{pick(c.name)}</span>
               {[0, 1, 2].map((v) => (
                 <button key={v} onClick={() => setScores({ ...scores, [c.id]: v })} aria-pressed={scores[c.id] === v}
-                  className={`size-10 rounded-xl border-2 font-bold ${scores[c.id] === v ? "border-brand bg-brand text-white" : "border-line"}`}>
+                  className={`size-10 rounded-xl border font-bold ${scores[c.id] === v ? "border-brand bg-brand text-white" : "border-line"}`}>
                   {v}
                 </button>
               ))}
             </div>
-            {reasons[c.id] && <p className="text-xs text-muted">🤖 {times[c.id] && (
+            {reasons[c.id] && <p className="mt-1 text-xs text-muted"><Icon name="bot" className="mr-1 inline size-3.5 align-[-2px]" />{times[c.id] && (
               <button className="mr-1 rounded bg-brand-soft px-1 font-mono text-brand" onClick={() => jump(times[c.id])}>▶ {times[c.id]}</button>
             )}{reasons[c.id]}</p>}
           </li>
         ))}
       </ul>
-      <Button className="mt-3 w-full" disabled={!complete} onClick={() => void confirm()}>✔ {t("confirmScores")}</Button>
+      <Button className="mt-3 w-full" disabled={!complete} onClick={() => void confirm()}><Icon name="check" className="size-5" />{t("confirmScores")}</Button>
     </article>
   );
 }
 
 function Stat({ value, label }: { value: number; label: string }) {
   return (
-    <div className="rounded-2xl bg-white p-3 shadow-sm">
-      <p className="text-2xl font-bold">{value}</p>
+    <div className="rounded-xl bg-surface p-3 border border-line">
+      <p className="text-2xl font-extrabold">{value}</p>
       <p className="text-xs text-muted">{label}</p>
     </div>
   );
@@ -193,35 +195,39 @@ function Stat({ value, label }: { value: number; label: string }) {
 function StudentRow({ s, a, strong, open, onToggle, go }: { s: Student; a: Analysis; strong: boolean; open: boolean; onToggle: () => void; go: Go }) {
   const { t, pick } = useT();
   const top = a.careers.careers[0];
+  const fair = useLive(async () => integrityOf(await db.events.where("student_id").equals(s.id).toArray()), [s.id], [] as IntegritySummary[]);
+  const needsLook = fair.some((f) => f.serious);
   const eligible = a.schemes.filter((x) => x.status === "eligible");
   const recommendedSchemes = new Set(a.recommendations.map((r) => r.payload.scheme_id));
   const recommendedCareers = new Set(a.recommendations.map((r) => r.payload.occupation_id));
 
   return (
-    <article className={`rounded-3xl bg-white shadow-sm ${strong ? "ring-2 ring-sun" : ""}`}>
+    <article className={`rounded-2xl bg-surface border border-line ${strong ? "ring-2 ring-sun" : ""}`}>
       <button onClick={onToggle} className="flex w-full items-center gap-3 p-4 text-left" aria-expanded={open}>
-        <span className="text-4xl">{s.avatar}</span>
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-paper text-3xl">{s.avatar}</span>
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold">{s.name}</p>
-          {top && <p className="truncate text-sm text-muted">{SECTOR[top.sector]?.emoji} {pick(kb.occupations[top.occupation_id].name)}</p>}
+          {top && <p className="truncate text-sm text-muted">{pick(kb.occupations[top.occupation_id].name)}</p>}
           <div className="mt-1 flex flex-wrap gap-1">
-            {strong && <Pill tone="sun">⭐ {t("strongMatch")}</Pill>}
+            {strong && <Pill tone="sun"><Icon name="star" className="size-3.5" />{t("strongMatch")}</Pill>}
             <Pill tone="good">{t("eligibleCount", { n: eligible.length })}</Pill>
-            {s.simulated && <Pill>🧪 {t("simulated")}</Pill>}
+            {needsLook && <Pill tone="bad"><Icon name="alert" className="size-3.5" />{t("integrityNeedsLook")}</Pill>}
+            {s.simulated && <Pill><Icon name="flask" className="size-3.5" />{t("simulated")}</Pill>}
           </div>
         </div>
-        <span className="text-xl text-muted">{open ? "▾" : "›"}</span>
+        <Icon name={open ? "chevronDown" : "chevron"} className="size-5 text-faint" />
       </button>
 
       {open && (
         <div className="flex flex-col gap-4 border-t border-line p-4">
+          {fair.length > 0 && <FairCheck rows={fair} />}
           {storyOf(s.id) && (
             <button onClick={() => { go({ name: "results", id: s.id, tab: "strengths" }); void playStory(s.id, storyOf(s.id)!); }}
-              className="min-h-12 rounded-xl bg-brand px-3 text-base font-semibold text-white">▶ {t("playStory")}</button>
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand px-3 text-base font-bold text-white"><Icon name="play" className="size-4" />{t("playStory")}</button>
           )}
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => go({ name: "rate", id: s.id, mode: "term" })} className="min-h-12 rounded-xl bg-brand-soft px-3 text-sm font-semibold text-brand-dark">📋 {t("rateTerm")}</button>
-            <button onClick={() => go({ name: "rate", id: s.id, mode: "taster" })} className="min-h-12 rounded-xl bg-sun-soft px-3 text-sm font-semibold text-warn">🧑‍🔧 {t("rateTaster")}</button>
+            <button onClick={() => go({ name: "rate", id: s.id, mode: "term" })} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-soft px-3 text-sm font-bold text-brand"><Icon name="clipboard" className="size-4" />{t("rateTerm")}</button>
+            <button onClick={() => go({ name: "rate", id: s.id, mode: "taster" })} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-sun-soft px-3 text-sm font-bold text-warn"><Icon name="wrench" className="size-4" />{t("rateTaster")}</button>
           </div>
           <div>
             <p className="mb-2 text-sm font-semibold text-muted">{t("strengths")}</p>
@@ -233,9 +239,9 @@ function StudentRow({ s, a, strong, open, onToggle, go }: { s: Student; a: Analy
                     <p className="truncate text-xs text-muted">{sk.evidence.map((e) => e.text).join(" · ")}</p>
                   </div>
                   {sk.endorsed
-                    ? <Pill tone="good">✔ {t("endorsedBy")}</Pill>
+                    ? <Pill tone="good"><Icon name="check" className="size-3.5" />{t("endorsedBy")}</Pill>
                     : <button onClick={() => void endorse(s.id, sk.id)}
-                        className="rounded-xl bg-good-soft px-3 py-2 text-sm font-semibold text-good">✔ {t("endorse")}</button>}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-good-soft px-3 py-2 text-sm font-bold text-good"><Icon name="check" className="size-4" />{t("endorse")}</button>}
                 </li>
               ))}
             </ul>
@@ -246,11 +252,11 @@ function StudentRow({ s, a, strong, open, onToggle, go }: { s: Student; a: Analy
             <ul className="flex flex-col gap-2">
               {a.careers.careers.slice(0, 3).map((c) => (
                 <li key={c.occupation_id} className="flex items-center gap-2">
-                  <span className="flex-1">{SECTOR[c.sector]?.emoji} {pick(kb.occupations[c.occupation_id].name)} <span className="text-xs text-muted">{Math.round(c.score * 100)}%</span></span>
+                  <span className="flex-1">{pick(kb.occupations[c.occupation_id].name)} <span className="text-xs text-muted">{Math.round(c.score * 100)}%</span></span>
                   {recommendedCareers.has(c.occupation_id)
-                    ? <Pill tone="good">⭐</Pill>
+                    ? <Pill tone="good"><Icon name="star" className="size-3.5" /></Pill>
                     : <button onClick={() => addAction({ student_id: s.id, kind: "recommend", payload: { occupation_id: c.occupation_id }, by: "teacher" })}
-                        className="rounded-xl bg-sun-soft px-3 py-2 text-sm font-semibold text-warn">⭐ {t("recommend")}</button>}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-sun-soft px-3 py-2 text-sm font-bold text-warn"><Icon name="star" className="size-4" />{t("recommend")}</button>}
                 </li>
               ))}
             </ul>
@@ -264,9 +270,9 @@ function StudentRow({ s, a, strong, open, onToggle, go }: { s: Student; a: Analy
                 <li key={x.scheme_id} className="flex items-center gap-2">
                   <span className="flex-1">{pick(x.name)}</span>
                   {recommendedSchemes.has(x.scheme_id)
-                    ? <Pill tone="good">⭐</Pill>
+                    ? <Pill tone="good"><Icon name="star" className="size-3.5" /></Pill>
                     : <button onClick={() => addAction({ student_id: s.id, kind: "recommend", payload: { scheme_id: x.scheme_id }, by: "teacher" })}
-                        className="rounded-xl bg-sun-soft px-3 py-2 text-sm font-semibold text-warn">⭐ {t("recommend")}</button>}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-sun-soft px-3 py-2 text-sm font-bold text-warn"><Icon name="star" className="size-4" />{t("recommend")}</button>}
                 </li>
               ))}
             </ul>
@@ -274,5 +280,36 @@ function StudentRow({ s, a, strong, open, onToggle, go }: { s: Student; a: Analy
         </div>
       )}
     </article>
+  );
+}
+
+/** Fair-test check per sub-skill: how many answers carried a warning, and which warnings. */
+function FairCheck({ rows }: { rows: IntegritySummary[] }) {
+  const { t, pick } = useT();
+  return (
+    <div>
+      <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-muted"><Icon name="scan" className="size-4" />{t("integrityTitle")}</p>
+      <ul className="flex flex-col gap-2">
+        {rows.map((r) => (
+          <li key={r.subskill} className={`rounded-xl border p-3 ${r.serious ? "border-bad/30 bg-bad-soft" : r.flagged ? "border-sun/40 bg-sun-soft" : "border-line"}`}>
+            <div className="flex items-center gap-2">
+              <span className="flex-1 font-medium">{pick(kb.graph!.subskills[r.subskill]?.name ?? { en: r.subskill })}</span>
+              {r.mode !== "camera" && <Pill><Icon name="eyeOff" className="size-3.5" />{t("integrityOff")}</Pill>}
+            </div>
+            <p className={`text-sm ${r.serious ? "text-bad" : r.flagged ? "text-warn" : "text-muted"}`}>
+              {r.flagged ? t("integrityFlagged", { flagged: r.flagged, total: r.answers }) : t("integrityClean", { total: r.answers })}
+            </p>
+            {r.flagged > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {(Object.entries(r.counts) as [Flag, number][]).sort((x, y) => y[1] - x[1]).map(([f, n]) => (
+                  <Pill key={f} tone={SERIOUS.has(f) ? "bad" : "sun"}>{t(`flag_${f}` as "flag_phone")} · {n}</Pill>
+                ))}
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+      {rows.some((r) => r.flagged) && <p className="mt-2 text-xs text-muted">{t("integrityHint")}</p>}
+    </div>
   );
 }

@@ -7,6 +7,7 @@ import type { Go } from "../App";
 import { Pill, Screen } from "../components/ui";
 import { useT } from "../lib/i18n";
 import { payConfig, type PayConfig } from "../lib/proof";
+import { Icon } from "../components/Icon";
 
 const PAID = parseAbiItem("event Paid(uint256 indexed milestoneId, uint256 indexed nullifier, address indexed payout, uint256 amount, uint256 day)");
 
@@ -58,21 +59,21 @@ export default function Funder({ go }: { go: Go }) {
   const total = payouts.reduce((s, p) => s + p.amount, 0);
 
   return (
-    <Screen title={`📊 ${t("funderView")}`} onBack={() => go({ name: "home" })}>
+    <Screen title={t("funderView")} onBack={() => go({ name: "home" })}>
       <p className="text-muted">{t("funderHint")}</p>
-      {cfg === null && <p className="rounded-2xl bg-sun-soft p-3 text-warn">{t("needInternet")}</p>}
-      {cfg && !cfg.enabled && <p className="rounded-2xl bg-sun-soft p-3 text-warn">{t("payNotSetUp")}</p>}
+      {cfg === null && <p className="rounded-xl bg-sun-soft p-3 text-warn">{t("needInternet")}</p>}
+      {cfg && !cfg.enabled && <p className="rounded-xl bg-sun-soft p-3 text-warn">{t("payNotSetUp")}</p>}
 
       {cfg?.enabled && (
         <>
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-white p-3 shadow-sm"><p className="text-2xl font-bold">{payouts.length}</p><p className="text-sm text-muted">{t("studentsPaid")}</p></div>
-            <div className="rounded-2xl bg-white p-3 shadow-sm"><p className="text-2xl font-bold">₹{total.toLocaleString("en-IN")}</p><p className="text-sm text-muted">{t("demoRupeesPaid")}</p></div>
+            <div className="rounded-xl bg-surface p-3 border border-line"><p className="text-2xl font-extrabold">{payouts.length}</p><p className="text-sm text-muted">{t("studentsPaid")}</p></div>
+            <div className="rounded-xl bg-surface p-3 border border-line"><p className="text-2xl font-extrabold">₹{total.toLocaleString("en-IN")}</p><p className="text-sm text-muted">{t("demoRupeesPaid")}</p></div>
           </div>
           <p className="text-sm">{live ? <Pill tone="good">● {t("liveFromChain")}</Pill> : <Pill>{t("connecting")}</Pill>} <span className="text-muted">chain {cfg.chain_id}</span></p>
 
           {cfg.milestones.map((m) => (
-            <section key={m.id} className="rounded-3xl bg-white p-4 shadow-sm">
+            <section key={m.id} className="rounded-2xl bg-surface p-4 border border-line">
               <div className="flex items-start gap-2">
                 <h3 className="flex-1 font-bold">{m.name}</h3>
                 <Pill tone={m.open ? "good" : "neutral"}>{m.open ? t("open") : t("closed")}</Pill>
@@ -85,10 +86,10 @@ export default function Funder({ go }: { go: Go }) {
           ))}
 
           <section className="flex flex-col gap-2">
-            <h2 className="text-lg font-bold">💸 {t("payouts")}</h2>
+            <h2 className="flex items-center gap-2 text-lg font-extrabold"><Icon name="wallet" className="size-5 text-accent-dark" />{t("payouts")}</h2>
             {payouts.length === 0 && <p className="text-muted">{t("noPayoutsYet")}</p>}
             {payouts.map((p) => (
-              <article key={p.tx + p.nullifier} className="rounded-2xl bg-white p-3 text-sm shadow-sm">
+              <article key={p.tx + p.nullifier} className="rounded-xl bg-surface p-3 text-sm border border-line">
                 <p className="font-semibold">₹{p.amount} · {name(p.milestone)}</p>
                 <p className="text-muted">{t("anonymousStudent")} <code>{p.nullifier.slice(0, 10)}…</code> → <code>{p.payout.slice(0, 10)}…</code></p>
                 {explorer(p.tx)

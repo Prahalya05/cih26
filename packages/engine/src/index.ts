@@ -9,6 +9,8 @@ export * from "./tracing.ts";
 export * from "./fitreach.ts";
 export * from "./safety.ts";
 export * from "./rpl.ts";
+// Aim High (higher-study routes, readiness, study plans). Phone-only for now: no Python twin.
+export * from "./pathways.ts";
 export { buildKb, EDUCATION_ORDER, SECTORS } from "./kb.ts";
 export { apply as applyRule, Evaluation, UNKNOWN } from "./jsonlogic.ts";
 export { check, evaluateAll, joined, NEXT_STAGES } from "./eligibility.ts";

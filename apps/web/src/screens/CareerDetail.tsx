@@ -3,6 +3,7 @@ import { Pill, Screen, SpeakButton } from "../components/ui";
 import { useT } from "../lib/i18n";
 import { kb } from "../lib/kb";
 import { SECTOR } from "../lib/labels";
+import { Icon } from "../components/Icon";
 
 export default function CareerDetail({ go, id, occ }: { go: Go; id: string; occ: string }) {
   const { t, pick } = useT();
@@ -11,16 +12,16 @@ export default function CareerDetail({ go, id, occ }: { go: Go; id: string; occ:
   const steps = o.pathway ?? [];
   return (
     <Screen title={pick(o.name)} onBack={() => go({ name: "results", id, tab: "careers" })}>
-      <div className="flex flex-col items-center gap-2 rounded-3xl bg-white p-6 text-center shadow-sm">
-        <span className="text-6xl">{SECTOR[o.sector]?.emoji ?? "⭐"}</span>
-        <h2 className="text-2xl font-bold">{pick(o.name)}</h2>
+      <div className="flex flex-col items-center gap-2 rounded-2xl bg-surface p-6 text-center border border-line">
+        <span className="flex size-20 items-center justify-center rounded-xl bg-brand-soft text-5xl">{SECTOR[o.sector]?.emoji ?? "⭐"}</span>
+        <h2 className="text-2xl font-extrabold">{pick(o.name)}</h2>
         <Pill tone="brand">{pick(SECTOR[o.sector] ?? { en: o.sector })}</Pill>
         {o.description_en && <p className="mt-2 text-muted">{o.description_en}</p>}
       </div>
 
-      <section className="rounded-3xl bg-white p-5 shadow-sm">
+      <section className="rounded-2xl bg-surface p-5 border border-line">
         <div className="flex items-center gap-2">
-          <h3 className="flex-1 text-xl font-bold">🪜 {t("steps")}</h3>
+          <h3 className="flex flex-1 items-center gap-2 text-xl font-extrabold"><Icon name="steps" className="size-5 text-accent-dark" />{t("steps")}</h3>
           <SpeakButton text={steps.join(". ")} />
         </div>
         <ol className="mt-3 flex flex-col gap-3">
@@ -34,15 +35,15 @@ export default function CareerDetail({ go, id, occ }: { go: Go; id: string; occ:
       </section>
 
       {(o.exams?.length ?? 0) > 0 && (
-        <section className="rounded-3xl bg-white p-5 shadow-sm">
-          <h3 className="text-xl font-bold">📝 {t("exams")}</h3>
+        <section className="rounded-2xl bg-surface p-5 border border-line">
+          <h3 className="flex items-center gap-2 text-xl font-extrabold"><Icon name="pencil" className="size-5 text-accent-dark" />{t("exams")}</h3>
           <div className="mt-2 flex flex-wrap gap-2">{o.exams!.map((e) => <Pill key={e}>{e}</Pill>)}</div>
         </section>
       )}
 
       {o.rpl && (
-        <section className="rounded-3xl bg-white p-5 shadow-sm">
-          <h3 className="text-xl font-bold">🎓 {t("rplTitle")}</h3>
+        <section className="rounded-2xl bg-surface p-5 border border-line">
+          <h3 className="flex items-center gap-2 text-xl font-extrabold"><Icon name="cap" className="size-5 text-accent-dark" />{t("rplTitle")}</h3>
           <p className="mt-2 font-semibold">{o.rpl.qp_name} ({o.rpl.qp_code}){o.rpl.nsqf_level ? ` · ${t("rplLevel", { n: o.rpl.nsqf_level })}` : ""}</p>
           <p className="text-sm text-muted">{o.rpl.ssc}</p>
           {o.rpl.note_en && <p className="mt-1 text-sm text-warn">{o.rpl.note_en}</p>}

@@ -154,7 +154,133 @@ def validate(kb_dir: Path = KB) -> tuple[list[str], list[str]]:
 
     check_items(errors, warnings, sub_ids)
     check_rubrics(errors, skill_ids, sub_ids)
+    check_pathways(errors, warnings, skill_ids, {s["id"] for s in load("schemes.json")})
     return errors, warnings
+
+
+PATH_SECTORS = {"stem", "vocational", "agri", "creative", "services", "govt", "health", "entrepreneurship"}
+RIASEC = set("RIASEC")
+
+
+def check_pathways(errors: list[str], warnings: list[str], skill_ids: set[str], scheme_ids: set[str]) -> None:
+    """Aim High: the route graph, exams, tracks, subjects and the subject question bank."""
+    folder = KB / "pathways"
+    if not folder.is_dir():
+        return
+    graph = load("pathways/graph.json")
+    exams = load("pathways/exams.json")
+    tracks = load("pathways/tracks.json")
+    subjects = load("pathways/subjects.json")
+    items = load("pathways/items.json")
+    both = lambda o: bool((o or {}).get("en")) and bool((o or {}).get("ta"))  # noqa: E731
+
+    node_ids = {n["id"] for n in graph["nodes"]}
+    if len(node_ids) != len(graph["nodes"]):
+        errors.append("pathways/graph.json: duplicate node id")
+    for n in graph["nodes"]:
+        if not both(n.get("name")):
+            errors.append(f"pathways node {n['id']}: needs an English and a Tamil name")
+    exam_ids = {x["id"] for x in exams}
+    for x in exams:
+        if not both(x.get("when")):
+            errors.append(f"pathways exam {x['id']}: 'when' needs English and Tamil")
+        if x.get("url") is None:
+            warnings.append(f"pathways exam {x['id']}: no official link yet")
+    out: dict[str, set[str]] = defaultdict(set)
+    for e in graph["edges"]:
+        where = f"pathways edge {e.get('from')}->{e.get('to')}"
+        if e.get("from") not in node_ids or e.get("to") not in node_ids:
+            errors.append(f"{where}: unknown node")
+        if not isinstance(e.get("years"), (int, float)) or e["years"] <= 0:
+            errors.append(f"{where}: years must be a positive number")
+        for x in e.get("exams", []):
+            if x not in exam_ids:
+                errors.append(f"{where}: unknown exam {x}")
+        if "note" in e and not both(e["note"]):
+            errors.append(f"{where}: note needs English and Tamil")
+        out[e.get("from")].add(e.get("to"))
+
+    def reach(start: str) -> set[str]:
+        seen, todo = {start}, [start]
+        while todo:
+            for nxt in out[todo.pop()]:
+                if nxt not in seen:
+                    seen.add(nxt)
+                    todo.append(nxt)
+        return seen
+
+    from_c10 = reach("c10")
+    subject_ids = {s["id"] for s in subjects}
+    for t in tracks:
+        where = f"pathways track {t['id']}"
+        if not both(t.get("name")) or not all(both(r) for r in t.get("roles", [])) or not all(both(h) for h in t.get("help", [])):
+            errors.append(f"{where}: name, roles and help need English and Tamil")
+        if t.get("sector") not in PATH_SECTORS:
+            errors.append(f"{where}: unknown sector {t.get('sector')}")
+        if not t.get("riasec") or not set(t["riasec"]) <= RIASEC:
+            errors.append(f"{where}: riasec must use the letters RIASEC")
+        for g in t.get("goals", []):
+            if g not in node_ids:
+                errors.append(f"{where}: unknown goal node {g}")
+        if not any(g in from_c10 for g in t.get("goals", [])):
+            errors.append(f"{where}: no route from Class 10 to any goal")
+        for s, w in t.get("subjects", {}).items():
+            if s not in subject_ids or not isinstance(w, (int, float)) or w <= 0:
+                errors.append(f"{where}: bad subject weight {s}={w}")
+        for s in t.get("skills", []):
+            if s not in skill_ids:
+                errors.append(f"{where}: unknown skill {s}")
+        for s in t.get("schemes", []):
+            if s not in scheme_ids:
+                errors.append(f"{where}: unknown scheme {s}")
+
+    topic_subject: dict[str, str] = {}
+    for s in subjects:
+        ids = {t["id"] for t in s["topics"]}
+        for t in s["topics"]:
+            topic_subject[t["id"]] = s["id"]
+            if not both(t.get("name")) or t.get("hours", 0) <= 0:
+                errors.append(f"pathways topic {t['id']}: needs a bilingual name and positive hours")
+            for a in t.get("after", []):
+                if a not in ids:
+                    errors.append(f"pathways topic {t['id']}: prerequisite {a} is not in {s['id']}")
+        # Prerequisites must not loop, or the study plan would leave topics out.
+        indeg = {t["id"]: len(t.get("after", [])) for t in s["topics"]}
+        ready = [k for k, d in indeg.items() if d == 0]
+        placed = 0
+        while ready:
+            cur = ready.pop()
+            placed += 1
+            for t in s["topics"]:
+                if cur in t.get("after", []):
+                    indeg[t["id"]] -= 1
+                    if indeg[t["id"]] == 0:
+                        ready.append(t["id"])
+        if placed != len(s["topics"]):
+            errors.append(f"pathways subject {s['id']}: topic prerequisites form a loop")
+
+    seen: set[str] = set()
+    per_subject: dict[str, int] = defaultdict(int)
+    for it in items:
+        where = f"pathways/items.json: {it.get('id')}"
+        if it.get("id") in seen:
+            errors.append(f"{where}: duplicate id")
+        seen.add(it.get("id"))
+        if topic_subject.get(it.get("topic")) != it.get("subject"):
+            errors.append(f"{where}: topic {it.get('topic')} is not in subject {it.get('subject')}")
+        if it.get("format") != "choice":
+            errors.append(f"{where}: subject questions are multiple choice")
+        ids = [o.get("id") for o in it.get("options", [])]
+        if len(ids) < 2 or it.get("answer") not in ids or not all(both(o) for o in it.get("options", [])):
+            errors.append(f"{where}: needs 2+ bilingual options and an answer among them")
+        if not both(it.get("prompt")) or not both(it.get("why")):
+            errors.append(f"{where}: prompt and why need English and Tamil")
+        if not isinstance(it.get("b"), (int, float)) or not -4 <= it["b"] <= 4 or not 0.2 <= it.get("a", 1) <= 3:
+            errors.append(f"{where}: a must be 0.2-3 and b -4 to 4")
+        per_subject[it.get("subject")] += 1
+    for s in subject_ids:
+        if per_subject[s] < 5:
+            errors.append(f"pathways subject {s}: needs at least 5 questions (has {per_subject[s]})")
 
 
 APTITUDES = {"apt_spatial", "apt_numeric", "apt_mechanical"}

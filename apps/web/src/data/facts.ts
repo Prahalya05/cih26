@@ -102,6 +102,26 @@ export const FACT_QUESTIONS: Record<string, FactQuestion> = {
       { value: 60, en: "Over 55%", ta: "55%க்கு மேல்" },
     ],
   },
+  // Aim High: the Class 11–12 group or the degree decides which higher-study doors are still open.
+  stream: {
+    key: "stream", en: "Which group are you in (Class 11–12)?", ta: "11–12இல் எந்தப் பிரிவு?",
+    options: [
+      { value: "pcmb", en: "Biology + Maths", ta: "உயிரியல் + கணிதம்", emoji: "🧬" },
+      { value: "pcm", en: "Maths + Computer Science", ta: "கணிதம் + கணினி அறிவியல்", emoji: "➗" },
+      { value: "pcb", en: "Pure Science (Biology, no Maths)", ta: "தூய அறிவியல் (உயிரியல்)", emoji: "🌿" },
+      { value: "commerce", en: "Commerce", ta: "வணிகவியல்", emoji: "📊" },
+      { value: "humanities", en: "Arts / Humanities", ta: "கலைப் பிரிவு", emoji: "📚" },
+    ],
+  },
+  degree: {
+    key: "degree", en: "Which degree are you doing?", ta: "எந்தப் பட்டம் படிக்கிறீர்கள்?",
+    options: [
+      { value: "ug_science", en: "B.Sc.", ta: "B.Sc.", emoji: "🔬" },
+      { value: "ug_commerce", en: "B.Com.", ta: "B.Com.", emoji: "📊" },
+      { value: "ug_arts", en: "B.A.", ta: "B.A.", emoji: "📚" },
+      { value: "btech", en: "B.E. / B.Tech", ta: "B.E. / B.Tech", emoji: "⚙️" },
+    ],
+  },
   school_type: {
     key: "school_type", en: "What kind of school are you in now?", ta: "இப்போது எந்த வகைப் பள்ளியில் படிக்கிறீர்கள்?",
     options: [

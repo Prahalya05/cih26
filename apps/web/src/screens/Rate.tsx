@@ -10,6 +10,7 @@ import { db } from "../lib/db";
 import { raterId, recordEvent } from "../lib/events";
 import { useT } from "../lib/i18n";
 import { kb } from "../lib/kb";
+import { Icon } from "../components/Icon";
 
 export const TERM_SKILLS = ["sk_communication", "sk_leadership", "sk_basic_math", "sk_computer_basic", "sk_organising"];
 
@@ -45,7 +46,7 @@ export default function Rate({ go, id, mode }: { go: Go; id: string; mode: "tast
 
   return (
     <Screen title={`${student.avatar} ${student.name}`} onBack={back}>
-      <h2 className="text-xl font-bold">{mode === "taster" ? t("rateTaster") : t("rateTerm")}</h2>
+      <h2 className="text-xl font-extrabold">{mode === "taster" ? t("rateTaster") : t("rateTerm")}</h2>
       <p className="text-muted">{mode === "taster" ? t("rateTasterHint") : t("rateTermHint")}</p>
       {mode === "taster" && !occ && (
         <div className="grid grid-cols-1 gap-2">
@@ -55,12 +56,12 @@ export default function Rate({ go, id, mode }: { go: Go; id: string; mode: "tast
         </div>
       )}
       {units.map((u) => (
-        <div key={u} className="rounded-3xl bg-white p-4 shadow-sm">
+        <div key={u} className="rounded-2xl bg-surface p-4 border border-line">
           <p className="font-semibold">{name(u)}</p>
           <div className="mt-2 flex flex-col gap-1.5">
             {[1, 2, 3, 4].map((L) => (
               <button key={L} onClick={() => setLevels({ ...levels, [u]: L })} aria-pressed={levels[u] === L}
-                className={`flex items-start gap-2 rounded-xl border-2 px-3 py-2 text-left text-sm ${levels[u] === L ? "border-brand bg-brand-soft" : "border-line"}`}>
+                className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-left text-sm ${levels[u] === L ? "border-brand bg-brand-soft ring-1 ring-brand" : "border-line"}`}>
                 <span className="font-bold">{L}</span><span>{describe(u, L)}</span>
               </button>
             ))}
@@ -68,9 +69,9 @@ export default function Rate({ go, id, mode }: { go: Go; id: string; mode: "tast
         </div>
       ))}
       {units.length > 0 && !saved && (
-        <Button disabled={Object.keys(levels).length === 0} onClick={() => void save()}>✔ {t("saveRatings")}</Button>
+        <Button disabled={Object.keys(levels).length === 0} onClick={() => void save()}><Icon name="check" className="size-5" />{t("saveRatings")}</Button>
       )}
-      {saved && <p className="rounded-2xl bg-good-soft p-4 text-center font-semibold text-good">✔ {t("ratingsSaved")}</p>}
+      {saved && <p className="rounded-xl bg-good-soft p-4 text-center font-semibold text-good">{t("ratingsSaved")}</p>}
       {saved && <Button onClick={back}>{t("done")}</Button>}
     </Screen>
   );

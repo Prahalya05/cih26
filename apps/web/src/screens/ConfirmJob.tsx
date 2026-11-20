@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button, Screen } from "../components/ui";
 import { useT } from "../lib/i18n";
+import { Icon } from "../components/Icon";
 
 const API = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 type Info = { student: string; skill: { en: string; ta?: string }; what: string; amount_inr: number };
@@ -31,20 +32,20 @@ export default function ConfirmJob({ token, onClose }: { token: string; onClose:
 
   return (
     <Screen title={t("confirmJobTitle")} onBack={onClose}>
-      {error && <p className="rounded-2xl bg-sun-soft p-4 text-warn">{error}</p>}
-      {done && <p className="rounded-3xl bg-good-soft p-6 text-center text-xl font-semibold text-good">🙏 {t("thanksBuyer")}</p>}
+      {error && <p className="rounded-xl bg-sun-soft p-4 text-warn">{error}</p>}
+      {done && <p className="rounded-2xl bg-good-soft p-6 text-center text-xl font-semibold text-good">{t("thanksBuyer")}</p>}
       {info && !done && (
         <>
           <p className="text-lg">{t("confirmJobIntro", { name: info.student, skill: pick(info.skill), amount: info.amount_inr })}</p>
           {info.what && <p className="text-muted">“{info.what}”</p>}
           {QUESTIONS.map((q) => (
-            <div key={q} className="rounded-3xl bg-white p-4 shadow-sm">
+            <div key={q} className="rounded-2xl bg-surface p-4 border border-line">
               <p className="font-semibold">{t(`buyer_${q}`)}</p>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {[true, false].map((v) => (
                   <button key={String(v)} onClick={() => setAnswers({ ...answers, [q]: v })} aria-pressed={answers[q] === v}
-                    className={`min-h-14 rounded-2xl border-2 text-lg font-semibold ${answers[q] === v ? "border-brand bg-brand text-white" : "border-line"}`}>
-                    {v ? `👍 ${t("yes")}` : `👎 ${t("no")}`}
+                    className={`inline-flex min-h-14 items-center justify-center gap-2 rounded-xl border text-lg font-semibold ${answers[q] === v ? "border-brand bg-brand text-white" : "border-line"}`}>
+                    {v ? <><Icon name="up" className="size-5" />{t("yes")}</> : <><Icon name="down" className="size-5" />{t("no")}</>}
                   </button>
                 ))}
               </div>

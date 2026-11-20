@@ -6,6 +6,7 @@ import { db, patchStudent } from "../lib/db";
 import { recordEvent } from "../lib/events";
 import { useT } from "../lib/i18n";
 import { speak } from "../lib/speech";
+import { Icon } from "../components/Icon";
 
 export default function Cards({ go, id }: { go: Go; id: string }) {
   const { t, pick, lang } = useT();
@@ -41,17 +42,17 @@ export default function Cards({ go, id }: { go: Go; id: string }) {
     <Screen title={t("cardsTitle")} onBack={() => (index > 0 ? setIndex(index - 1) : go({ name: "home" }))}>
       <Progress step={index} total={CARDS.length} />
       <p className="text-center text-muted">{t("cardsHint")}</p>
-      <div key={card.id} className="pop flex flex-1 flex-col items-center justify-center gap-4 rounded-[2rem] bg-white p-6 shadow-sm">
+      <div key={card.id} className="pop flex flex-1 flex-col items-center justify-center gap-4 rounded-3xl bg-surface p-6 border border-line">
         <span className="text-[7rem] leading-none">{card.emoji}</span>
         <p className="text-center text-2xl font-semibold">{pick(card)}</p>
         <SpeakButton text={pick(card)} audioKey={`card_${card.id}`} />
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <button onClick={() => answer(false)} className="flex min-h-20 flex-col items-center justify-center rounded-3xl border-2 border-line bg-white text-lg font-semibold active:bg-stone-100">
-          <span className="text-4xl">👎</span>{t("dislike")}
+        <button onClick={() => answer(false)} className="flex min-h-20 flex-col items-center justify-center rounded-2xl border border-line bg-surface text-lg font-semibold active:bg-paper">
+          <Icon name="down" className="size-8" />{t("dislike")}
         </button>
-        <button onClick={() => answer(true)} className="flex min-h-20 flex-col items-center justify-center rounded-3xl bg-brand text-lg font-semibold text-white active:bg-brand-dark">
-          <span className="text-4xl">👍</span>{t("like")}
+        <button onClick={() => answer(true)} className="flex min-h-20 flex-col items-center justify-center rounded-2xl bg-brand text-lg font-semibold text-white active:bg-brand-dark">
+          <Icon name="up" className="size-8" />{t("like")}
         </button>
       </div>
     </Screen>

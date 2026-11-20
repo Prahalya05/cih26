@@ -80,9 +80,9 @@ export default function Game({ go, id, domain }: { go: Go; id: string; domain: s
     const msg = theta > 0.8 ? t("gameStrong") : theta > -0.3 ? t("gameGood") : t("gameThanks");
     return (
       <Screen title={pick(apt.name)} onBack={back}>
-        <div className="rounded-3xl bg-white p-6 text-center shadow-sm">
+        <div className="rounded-2xl bg-surface p-6 text-center border border-line">
           <p className="text-5xl">{theta > 0.8 ? "🌟" : "🎉"}</p>
-          <h2 className="mt-3 text-2xl font-bold">{msg}</h2>
+          <h2 className="mt-3 text-2xl font-extrabold">{msg}</h2>
           <p className="mt-2 text-muted">{t("gameAnswered", { n: session.seen.size })}</p>
         </div>
         <Button onClick={back}>{t("done")}</Button>
