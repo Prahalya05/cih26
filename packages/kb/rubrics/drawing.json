@@ -1,0 +1,51 @@
+{
+  "id": "rb_drawing",
+  "skill": "sk_drawing",
+  "name": {
+    "en": "Drawing work sample",
+    "ta": "வரைதல் வேலை மாதிரி"
+  },
+  "media": "photo",
+  "capture": {
+    "en": "Photo of one drawing you made, in good light, the whole page visible.",
+    "ta": "நீங்கள் வரைந்த ஒரு படத்தின் புகைப்படம், நல்ல வெளிச்சத்தில், முழுப் பக்கமும் தெரியும்படி."
+  },
+  "criteria": [
+    {
+      "id": "proportion",
+      "subskill": "ss_draw_proportion",
+      "name": {
+        "en": "Shapes and sizes look right"
+      },
+      "scores": {
+        "0": "Shapes clearly off",
+        "1": "Mostly right, small errors",
+        "2": "Sizes and shapes match well"
+      }
+    },
+    {
+      "id": "shading",
+      "subskill": "ss_draw_shading",
+      "name": {
+        "en": "Shading and detail"
+      },
+      "scores": {
+        "0": "Flat, no detail",
+        "1": "Some shading",
+        "2": "Light and shadow show form"
+      }
+    },
+    {
+      "id": "colour",
+      "subskill": "ss_draw_colour",
+      "name": {
+        "en": "Colours work together"
+      },
+      "scores": {
+        "0": "Clashing or none",
+        "1": "Some good choices",
+        "2": "Colours chosen with care"
+      }
+    }
+  ]
+}

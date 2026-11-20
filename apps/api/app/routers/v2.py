@@ -245,7 +245,7 @@ def _row_to_event(r: dict) -> dict:
 
 
 @router.post("/sync", summary="Send events recorded offline; receive events from other devices")
-def sync(req: SyncIn, dev: Device = Depends(auth.device)):
+def sync(req: SyncIn, dev: Device = Depends(auth.school_member)):
     if req.device_id != dev.id:
         raise HTTPException(403, "device_id does not match this phone's token")
     foreign = _claim_students(dev, {s.id for s in req.students} | set(req.student_ids)
@@ -322,10 +322,13 @@ class ConfirmIn(BaseModel):
     on_time: bool
     quality: bool
     rehire: bool
+    # Customer privacy (guard.buyer_privacy): we keep the customer's name only if they say yes. Nothing else about them.
+    share_name: bool = False
+    buyer_name: str | None = Field(None, max_length=60)
 
 
 @router.post("/orders/{event_id}/link", summary="Make a one-time link the buyer opens to confirm a paid job")
-def order_link(event_id: str, dev: Device = Depends(auth.device)):
+def order_link(event_id: str, dev: Device = Depends(auth.school_member)):
     with db.connect(dev.schools) as con:
         ev = con.execute("select id, student_id, kind from evidence_event where id = %s", (event_id,)).fetchone()
         if not ev or ev["kind"] != "order":
@@ -360,7 +363,9 @@ def confirm_info(token: str):
     first = (name["name"] if name and name["name"] else "").split(" ")[0]
     skill = kb.skills().get(row["skill_id"], {}).get("name", {"en": row["skill_id"]})
     p = row["payload"] or {}
-    return {"student": first, "skill": skill, "what": p.get("what", ""), "amount_inr": p.get("amount_inr")}
+    return {"student": first, "skill": skill, "what": p.get("what", ""), "amount_inr": p.get("amount_inr"),
+            "privacy": {"kept": ["your three answers"], "optional": ["your name, shown to the student as a thank-you"],
+                        "never": ["your phone number", "your address", "your location"], "delete_after_days": 365}}
 
 
 @router.post("/confirm/{token}", summary="The buyer's three answers; recorded as a rating of the job. Works once.")
@@ -373,7 +378,10 @@ def confirm(token: str, body: ConfirmIn):
         con.execute(
             "insert into evidence_event(id, student_id, device_id, kind, skill_id, payload, rater_id, refers_to, created_at) "
             "values (%s, %s, 'buyer_link', 'rating', %s, %s, %s, %s, %s)",
-            (new_ulid(), row["student_id"], row["skill_id"], Jsonb(body.model_dump()), rater, row["event_id"], now))
+            (new_ulid(), row["student_id"], row["skill_id"],
+             Jsonb({"on_time": body.on_time, "quality": body.quality, "rehire": body.rehire,
+                    **({"buyer_name": body.buyer_name.strip()[:60]} if body.share_name and body.buyer_name and body.buyer_name.strip() else {})}),
+             rater, row["event_id"], now))
         con.execute("update confirm_token set used_at = %s where token = %s", (now, token))
         refresh_state(con, {row["student_id"]})
     return {"ok": True}
@@ -386,7 +394,7 @@ class DeleteIn(BaseModel):
 
 
 @router.delete("/student/{student_id}", summary="Erase a student and everything about her. Keeps only a count.")
-def delete_student(student_id: str, body: DeleteIn, dev: Device = Depends(auth.device)):
+def delete_student(student_id: str, body: DeleteIn, dev: Device = Depends(auth.school_member)):
     if body.confirmed_by not in ("guardian", "student"):
         raise HTTPException(400, "A guardian (or the student, if 18 or over) must confirm")
     with db.connect() as con:  # trusted look-up, so another school's student is refused rather than skipped

@@ -4,6 +4,7 @@ import { Button, Screen, SpeakButton } from "../components/ui";
 import { newId, saveStudent } from "../lib/db";
 import { useT } from "../lib/i18n";
 import { Icon } from "../components/Icon";
+import { call, currentAccount, saveAccount, useAccount } from "../lib/auth";
 
 const AVATARS = ["🦚", "🐘", "🐅", "🌻", "🌙", "⭐", "🐟", "🦋", "🌳", "🪔", "🥭", "🐓"];
 
@@ -11,7 +12,11 @@ const lastCode = () => { try { return localStorage.getItem("disha.code") ?? ""; 
 
 export default function NewStudent({ go }: { go: Go }) {
   const { t } = useT();
-  const [name, setName] = useState("");
+  const account = useAccount();
+  // A signed-in student making her own profile: her name and class come from her account.
+  const own = account?.role === "student" && !account.student_id;
+  const [name, setName] = useState(() => "");
+  if (own && !name && account?.name) setName(account.name);
   const [avatar, setAvatar] = useState("");
   const [code, setCode] = useState(lastCode);
   const [birthYear, setBirthYear] = useState("");
@@ -26,6 +31,12 @@ export default function NewStudent({ go }: { go: Go }) {
       id, name: name.trim() || avatar, avatar, facilitator_code, birth_year: validYear ? year : undefined,
       cards: {}, answers: {}, factAnswers: {}, updated_at: Date.now(),
     });
+    // Her account remembers this profile, so it opens straight away next time (and on another phone after sync).
+    const acc = await currentAccount();
+    if (acc?.role === "student" && !acc.student_id) {
+      await saveAccount({ ...acc, student_id: id });
+      void call("/v2/auth/me/student", { method: "POST", body: JSON.stringify({ student_id: id }) });
+    }
     go({ name: "situation", id });
   };
 

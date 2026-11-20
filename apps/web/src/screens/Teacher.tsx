@@ -13,7 +13,9 @@ import { SECTOR } from "../lib/labels";
 import { analyse, isStrongMatch, type Analysis } from "../lib/profile";
 import { pullCohort, syncNow } from "../lib/sync";
 import { deviceRole, register, type Role } from "../lib/api";
-import { rubricFor, samplesToConfirm } from "../lib/samples";
+import { useAccount } from "../lib/auth";
+import { autoConfirmed, rubricFor, samplesToConfirm } from "../lib/samples";
+import { DocsPanel, OverridePanel, SuggestPanel } from "../components/TeacherTools";
 import type { StoredEvent } from "../lib/db";
 import { Icon } from "../components/Icon";
 import { integrityOf, SERIOUS, type Flag, type IntegritySummary } from "../lib/integrity";
@@ -34,6 +36,10 @@ export default function Teacher({ go }: { go: Go }) {
   const [open, setOpen] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
   const role = useLive(() => deviceRole(), [code, joining], null as Role | null);
+  // A signed-in teacher's class comes from her account; the tab bar replaces the back arrow.
+  const account = useAccount();
+  const back = account ? undefined : () => go({ name: "home" });
+  useEffect(() => { if (account?.class_code && !code) setCode(account.class_code); }, [account?.class_code]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const students = useLive(
     () => (code ? db.students.where("facilitator_code").equals(code).toArray() : Promise.resolve([] as Student[])),
@@ -63,7 +69,7 @@ export default function Teacher({ go }: { go: Go }) {
 
   if (!code) {
     return (
-      <Screen title={t("teacherTitle")} onBack={() => go({ name: "home" })}>
+      <Screen title={t("teacherTitle")} onBack={back}>
         <label className="flex flex-col gap-1">
           <span className="font-semibold">{t("facilitatorCode")}</span>
           <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="PSG01"
@@ -90,8 +96,8 @@ export default function Teacher({ go }: { go: Go }) {
   return (
     <Screen
       title={t("teacherTitle")}
-      onBack={() => go({ name: "home" })}
-      right={<button onClick={() => setCode("")} className="rounded-full bg-brand-soft px-3 py-1 text-sm font-semibold text-brand-dark">{code}</button>}
+      onBack={back}
+      right={<button onClick={() => !account && setCode("")} className="rounded-full bg-brand-soft px-3 py-1 text-sm font-semibold text-brand-dark">{code}</button>}
     >
       <div className="grid grid-cols-3 gap-2 text-center">
         <Stat value={rows.length} label={t("students")} />
@@ -106,7 +112,7 @@ export default function Teacher({ go }: { go: Go }) {
       {rows.length === 0 && <p className="text-muted">{t("noStudents")}</p>}
 
       {rows.map(({ s, a, strong }) => (
-        <StudentRow key={s.id} s={s} a={a} strong={strong} open={open === s.id} onToggle={() => setOpen(open === s.id ? null : s.id)} go={go} />
+        <StudentRow key={s.id} s={s} a={a} profile={profiles[s.id]} strong={strong} open={open === s.id} onToggle={() => setOpen(open === s.id ? null : s.id)} go={go} />
       ))}
 
       <div className="mt-4 flex flex-col gap-2">
@@ -122,9 +128,17 @@ export default function Teacher({ go }: { go: Go }) {
 function WorkQueue({ students }: { students: Student[] }) {
   const { t } = useT();
   const queue = useLive(() => samplesToConfirm(students.map((s) => s.id)), [students], [] as StoredEvent[]);
-  if (!queue.length) return null;
+  const auto = useLive(() => autoConfirmed(students.map((s) => s.id)), [students], [] as StoredEvent[]);
+  if (!queue.length && !auto.length) return null;
   return (
     <section className="flex flex-col gap-3">
+      {auto.length > 0 && (
+        <details className="rounded-2xl border border-good/40 bg-good-soft p-3">
+          <summary className="cursor-pointer font-bold text-good"><Icon name="check" className="mr-1 inline size-4" />{t("autoConfirmedN", { n: auto.length })}</summary>
+          <p className="mt-1 text-xs text-muted">{t("autoConfirmedHint")}</p>
+          <div className="mt-2 flex flex-col gap-2">{auto.map((e) => <SampleCard key={e.id} sample={e} student={students.find((s) => s.id === e.student_id)} />)}</div>
+        </details>
+      )}
       <h2 className="flex items-center gap-2 text-xl font-extrabold"><Icon name="camera" className="size-5 text-accent-dark" />{t("workToCheck")} <span className="font-mono text-base text-muted">{queue.length}</span></h2>
       {queue.map((e) => <SampleCard key={e.id} sample={e} student={students.find((s) => s.id === e.student_id)} />)}
     </section>
@@ -159,6 +173,7 @@ function SampleCard({ sample, student }: { sample: StoredEvent; student?: Studen
         ? <video ref={player} src={url} controls playsInline className="mt-2 max-h-56 w-full rounded-xl bg-black" />
         : url ? <img src={url} alt="" className="mt-2 max-h-56 w-full rounded-xl object-contain" />
         : <p className="mt-1 text-sm text-muted">{t("noPhotoHere")}</p>}
+      <SystemChecks sample={sample} />
       {safetyNotes.map((n, i) => <p key={i} className="mt-1 flex gap-1.5 text-sm text-warn"><Icon name="alert" className="mt-0.5 size-4" /><span><span className="font-mono">{n.time}</span> {n.note}</span></p>)}
       <ul className="mt-3 flex flex-col gap-2">
         {rubric.criteria.map((c) => (
@@ -183,6 +198,23 @@ function SampleCard({ sample, student }: { sample: StoredEvent; student?: Studen
   );
 }
 
+/** What the rules said about this video: is it really her (rule.identity), and why the system did or did not confirm it. */
+function SystemChecks({ sample }: { sample: StoredEvent }) {
+  const { t } = useT();
+  const id = sample.payload.identity as { status: string; why: string[] } | undefined;
+  const auto = sample.payload.autoconfirm as { decision: string; why: string[] } | undefined;
+  if (!id && !auto) return null;
+  return (
+    <details className="mt-2 rounded-lg bg-paper p-2 text-xs">
+      <summary className="flex cursor-pointer flex-wrap items-center gap-1">
+        {id && <Pill tone={id.status === "verified" ? "good" : id.status === "mismatch" ? "bad" : "sun"}><Icon name="scan" className="size-3.5" />{t(`identity_${id.status}` as "identity_verified")}</Pill>}
+        {auto && <Pill tone={auto.decision === "auto_confirm" ? "good" : "neutral"}>{auto.decision === "auto_confirm" ? t("systemConfirmed") : t("needsTeacher")}</Pill>}
+      </summary>
+      <ul className="mt-1 font-mono">{[...(id?.why ?? []), ...(auto?.why ?? [])].map((w, i) => <li key={i}>{w}</li>)}</ul>
+    </details>
+  );
+}
+
 function Stat({ value, label }: { value: number; label: string }) {
   return (
     <div className="rounded-xl bg-surface p-3 border border-line">
@@ -192,7 +224,7 @@ function Stat({ value, label }: { value: number; label: string }) {
   );
 }
 
-function StudentRow({ s, a, strong, open, onToggle, go }: { s: Student; a: Analysis; strong: boolean; open: boolean; onToggle: () => void; go: Go }) {
+function StudentRow({ s, a, profile, strong, open, onToggle, go }: { s: Student; a: Analysis; profile?: Profile; strong: boolean; open: boolean; onToggle: () => void; go: Go }) {
   const { t, pick } = useT();
   const top = a.careers.careers[0];
   const fair = useLive(async () => integrityOf(await db.events.where("student_id").equals(s.id).toArray()), [s.id], [] as IntegritySummary[]);
@@ -225,6 +257,8 @@ function StudentRow({ s, a, strong, open, onToggle, go }: { s: Student; a: Analy
             <button onClick={() => { go({ name: "results", id: s.id, tab: "strengths" }); void playStory(s.id, storyOf(s.id)!); }}
               className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand px-3 text-base font-bold text-white"><Icon name="play" className="size-4" />{t("playStory")}</button>
           )}
+          <button onClick={() => go({ name: "studentProfile", id: s.id })}
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-bold"><Icon name="users" className="size-4" />{t("openProfile")}</button>
           <button onClick={() => go({ name: "graph", id: s.id, from: { name: "teacher" } })}
             className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-accent bg-surface px-3 text-sm font-bold text-accent-dark"><Icon name="chain" className="size-4" />{t("viewMap")}</button>
           {a.applications.length > 0 && (
@@ -251,6 +285,9 @@ function StudentRow({ s, a, strong, open, onToggle, go }: { s: Student; a: Analy
               </ul>
             </div>
           )}
+          <SuggestPanel s={s} a={a} />
+          <OverridePanel s={s} profile={profile} />
+          <DocsPanel s={s} />
           <div className="grid grid-cols-2 gap-2">
             <button onClick={() => go({ name: "rate", id: s.id, mode: "term" })} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-soft px-3 text-sm font-bold text-brand"><Icon name="clipboard" className="size-4" />{t("rateTerm")}</button>
             <button onClick={() => go({ name: "rate", id: s.id, mode: "taster" })} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-sun-soft px-3 text-sm font-bold text-warn"><Icon name="wrench" className="size-4" />{t("rateTaster")}</button>

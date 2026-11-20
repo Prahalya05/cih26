@@ -8,9 +8,12 @@ import { db, hasScope, patchStudent, scopesOf } from "../lib/db";
 import { useT } from "../lib/i18n";
 import { compressImage, rubricFor, saveSample, saveVideoSample, scoreSample, type ScoreResult } from "../lib/samples";
 import { MAX_SECONDS, startFilming, type Filming, type Process } from "../lib/video";
+import type { IdentityInput } from "@disha/engine";
+import { IdentityGate } from "../components/IdentityGate";
+import { emit } from "../lib/xray";
 import { Icon } from "../components/Icon";
 
-type Stage = "ready" | "camera" | "filming" | "saving" | "scoring" | "scored" | "waiting";
+type Stage = "ready" | "identity" | "camera" | "filming" | "saving" | "scoring" | "scored" | "waiting";
 
 export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: string; rubric: string }) {
   const { t, pick } = useT();
@@ -26,6 +29,7 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
   const canvas = useRef<HTMLCanvasElement>(null);
   const player = useRef<HTMLVideoElement>(null);
   const filming = useRef<Filming | null>(null);
+  const identity = useRef<IdentityInput | null>(null);
 
   useEffect(() => () => filming.current?.close(), []);
   if (!student || !rubric) return null;
@@ -37,6 +41,8 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
     setStage("scoring");
     const out = await scoreSample(pending);
     setResult(out);
+    if (out?.identity) emit({ step: "skills", source: "RULE", ref: "rule.identity", title: `Is it her? ${out.identity.status}`, subject: `sample:${pending.id}`, output: out.identity.status, why: out.identity.why });
+    if (out?.autoconfirm) emit({ step: "skills", source: "RULE", ref: "rule.autoconfirm", title: out.autoconfirm.decision === "auto_confirm" ? "System confirmed the AI's score" : "Sent to the teacher", subject: `sample:${pending.id}`, output: out.autoconfirm.decision, why: [...out.autoconfirm.why, ...(out.autoconfirm.kappa_basis ? [`κ basis: ${out.autoconfirm.kappa_basis}`] : [])] });
     setStage(out ? "scored" : "waiting");
   };
 
@@ -48,8 +54,10 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
     await score(await saveSample(id, rubric, photo));
   };
 
-  const openCamera = async () => {
-    setCameraError(false);
+  // First a quick "is it you?" check on the front camera (rule.identity), then the back camera films the task.
+  const openCamera = () => { setCameraError(false); setStage("identity"); };
+  const openTaskCamera = async (id_: IdentityInput | null) => {
+    identity.current = id_;
     setStage("camera");
     try {
       // wait a frame so the canvas is on the page
@@ -73,7 +81,7 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
       setProcess(clip.process);
       setVideoUrl(URL.createObjectURL(clip.blob));
       setStage("saving");
-      await score(await saveVideoSample(id, rubric, clip.blob, clip.process));
+      await score(await saveVideoSample(id, rubric, clip.blob, clip.process, identity.current));
     } catch {
       setCameraError(true);
       setStage("ready");
@@ -119,6 +127,13 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
         </div>
       )}
 
+      {stage === "identity" && <IdentityGate studentId={id} onDone={(x) => void openTaskCamera(x)} />}
+      {result?.autoconfirm && (
+        <div className={`rounded-2xl p-3 text-sm ${result.autoconfirm.decision === "auto_confirm" ? "bg-good-soft text-good" : "bg-paper text-muted"}`}>
+          <p className="font-bold">{result.autoconfirm.decision === "auto_confirm" ? t("systemConfirmed") : t("needsTeacher")}</p>
+          {result.identity && <p>{t(`identity_${result.identity.status}` as "identity_verified")}</p>}
+        </div>
+      )}
       {showCamera && (
         <div className="relative overflow-hidden rounded-2xl bg-black">
           <canvas ref={canvas} className="w-full" />
@@ -148,11 +163,22 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
 
       {stage === "ready" && (
         <div className="flex flex-col gap-3">
-          <label className="flex min-h-13 cursor-pointer items-center justify-center gap-2 rounded-xl bg-brand px-5 text-base font-bold text-white">
-            <Icon name="camera" className="size-5" />{t("takePhoto")}
-            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => void onPhoto(e.target.files?.[0])} />
-          </label>
-          <Button kind="soft" disabled={!photosAllowed} onClick={() => void openCamera()}><Icon name="video" className="size-5" />{t("filmTask")}</Button>
+          {/* The checklist says what proof fits the skill: a photo of the result, a video of the process, or either. */}
+          {(rubric as { media?: string }).media !== "video" && (
+            <>
+              <label className={`flex min-h-13 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-base font-bold text-white ${photosAllowed ? "cursor-pointer" : "pointer-events-none opacity-40"}`}>
+                <Icon name="camera" className="size-5" />{t("takePhoto")}
+                <input type="file" accept="image/*" capture="environment" className="hidden" disabled={!photosAllowed} onChange={(e) => void onPhoto(e.target.files?.[0])} />
+              </label>
+              <label className={`flex min-h-12 items-center justify-center gap-2 rounded-xl border border-line px-5 text-sm font-bold ${photosAllowed ? "cursor-pointer" : "pointer-events-none opacity-40"}`}>
+                <Icon name="layers" className="size-4" />{t("choosePhoto")}
+                <input type="file" accept="image/*" className="hidden" disabled={!photosAllowed} onChange={(e) => void onPhoto(e.target.files?.[0])} />
+              </label>
+            </>
+          )}
+          {(rubric as { media?: string }).media !== "photo" && (
+            <Button kind={(rubric as { media?: string }).media === "video" ? "primary" : "soft"} disabled={!photosAllowed} onClick={() => void openCamera()}><Icon name="video" className="size-5" />{t("filmTask")}</Button>
+          )}
           {cameraError && <p className="rounded-xl bg-sun-soft p-3 text-warn">{t("cameraUnavailable")}</p>}
         </div>
       )}

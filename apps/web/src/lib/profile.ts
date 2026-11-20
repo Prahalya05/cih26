@@ -11,6 +11,7 @@ import { QUESTIONS } from "../data/questions";
 import type { Action, Student } from "./db";
 import { kb, OPPORTUNITIES } from "./kb";
 import { emit } from "./xray";
+import { POSTED } from "./postings";
 
 export interface Evidence {
   text: string;
@@ -110,7 +111,7 @@ export function analyse(student: Student, actions: Action[], lang: string, profi
   const personaV2: PersonaV2 = personaFromProfile(profile, { education: persona.education, riasec: persona.riasec });
   const careers = recommendV2(kb, personaV2);
   const schemes = evaluateAll(kb, facts);
-  const opportunities = rankOpportunities(kb, OPPORTUNITIES, { levels: personaV2.levels, facts, age: ageOf(student), education: persona.education });
+  const opportunities = rankOpportunities(kb, [...POSTED, ...OPPORTUNITIES], { levels: personaV2.levels, facts, age: ageOf(student), education: persona.education });
   const recommendations = actions.filter((a) => a.kind === "recommend" && a.student_id === student.id);
   const applications = actions.filter((a) => a.kind === "apply" && a.student_id === student.id);
   return { skills, persona, personaV2, facts, careers, schemes, opportunities, recommendations, applications };

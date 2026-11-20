@@ -1,6 +1,6 @@
 // A student's skill levels on the phone: rebuilt from her events with the engine, cached in skillState.
 
-import { foldEvents, type ItemParams, type Profile, type Rubric } from "@disha/engine";
+import { applyOverrides, foldEvents, type ItemParams, type Profile, type Rubric } from "@disha/engine";
 import { db } from "./db";
 import { kb } from "./kb";
 
@@ -16,7 +16,8 @@ export const RUBRICS: Record<string, Rubric> = Object.fromEntries(
 
 export async function profileOf(studentId: string, now = Date.now()): Promise<Profile> {
   const events = await db.events.where("student_id").equals(studentId).toArray();
-  return foldEvents(events, kb.graph!, { now, items: ITEMS, rubrics: RUBRICS });
+  // A teacher's override (rule.override) sits on top of the computed levels; the computed level stays beside it.
+  return applyOverrides(foldEvents(events, kb.graph!, { now, items: ITEMS, rubrics: RUBRICS }), events);
 }
 
 /** Recomputes and stores the cached levels for one student. */

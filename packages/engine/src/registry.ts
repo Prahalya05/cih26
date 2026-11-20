@@ -9,6 +9,8 @@ import { GROWTH_PER_MONTH, LEITNER_DAYS, MASTERED } from "./pathways.ts";
 import { RPL_LEVEL, RPL_MIN_AGE } from "./rpl.ts";
 import { EVIDENCE_WEIGHTS, MAX_CONFIRMED_ORDERS, PRIOR, STRONG_CONFIDENCE } from "./tracing.ts";
 import { UIMODE_RULE } from "./uimode.ts";
+import { COURSE_RULE } from "./courses.ts";
+import { APPLY_DOCS, AUTOCONFIRM_RULE, IDENTITY_RULE, OVERRIDE_RULE, PAYCHECK_RULE } from "./trust.ts";
 import type { KB } from "./types.ts";
 
 export type RegistryKind = "rule" | "formula" | "ai" | "guardrail";
@@ -17,7 +19,7 @@ export interface RegistryEntry {
   id: string;
   kind: RegistryKind;
   /** pipeline step it belongs to */
-  step: "onboarding" | "interests" | "skills" | "careers" | "schemes" | "opportunities" | "aim_high" | "safety" | "payouts";
+  step: "onboarding" | "interests" | "skills" | "careers" | "schemes" | "opportunities" | "aim_high" | "safety" | "payouts" | "access";
   title: string;
   /** what it decides, in plain words */
   decides: string;
@@ -39,6 +41,8 @@ export const PIPELINE = [
   { step: "opportunities", en: "Which internships, apprenticeships, jobs, mentors? Hard checks + skill share" },
   { step: "aim_high", en: "Which higher-study route and exam? Route graph + readiness + study plan" },
   { step: "safety", en: "Child safety, consent and privacy guardrails around everything" },
+  { step: "payouts", en: "Who confirms a skill, and when a donor's money may go to her" },
+  { step: "access", en: "Who may sign in and what each role may see" },
 ] as const;
 
 export const REGISTRY: RegistryEntry[] = [
@@ -148,6 +152,53 @@ export const REGISTRY: RegistryEntry[] = [
   { id: "guard.face_blur", kind: "guardrail", step: "safety", title: "Face blur on the phone",
     decides: "Faces are pixelated on the phone before any video leaves it; filming is refused if the face model fails.",
     file: "apps/web/src/lib/video.ts" },
+  { id: "rule.override", kind: "rule", step: "skills", title: "Teacher override of a skill level",
+    decides: "A teacher may set a different level with a written reason. Lowering always applies. Raising is shown to her but never counts as proof for payouts, and 'Strong' still needs her own work.",
+    formula: `latest override per sub-skill wins; reason ≥ ${OVERRIDE_RULE.minReasonChars} characters; computed level kept beside it`,
+    constants: { ...OVERRIDE_RULE }, file: "packages/engine/src/trust.ts (applyOverrides)" },
+  { id: "rule.identity", kind: "rule", step: "skills", title: "Is it really her in the video?",
+    decides: "A liveness challenge (show N fingers, checked by hand tracking) and a face match against the face she enrolled, computed on the phone. Only the numbers leave the phone.",
+    formula: `verified = liveness passed AND share of frames with face distance ≤ ${IDENTITY_RULE.maxFaceDistance} ≥ ${IDENTITY_RULE.minMatchedShare}`,
+    constants: { ...IDENTITY_RULE }, file: "packages/engine/src/trust.ts (identityCheck), apps/web/src/lib/identity.ts" },
+  { id: "rule.autoconfirm", kind: "rule", step: "skills", title: "System confirms, or the teacher looks",
+    decides: "An AI-scored task video is confirmed by the system only when every check passes; otherwise, and for a random spot-check share, it goes to the teacher.",
+    formula: `identity verified ∧ no integrity flags ∧ no safety notes ∧ cannot-see ≤ ${AUTOCONFIRM_RULE.maxCannotSee * 100}% ∧ AI κ ≥ ${AUTOCONFIRM_RULE.minKappa} ∧ not hazardous for a minor; then ${AUTOCONFIRM_RULE.auditShare * 100}% still go to a teacher`,
+    constants: { ...AUTOCONFIRM_RULE }, file: "packages/engine/src/trust.ts (autoConfirm)" },
+  { id: "rule.paycheck", kind: "rule", step: "payouts", title: "May a donor pay her?",
+    decides: "Before money moves: the skill is shown by her own work (not an override), need is verified by a teacher-seen document, her family agreed to share, the video was really her, and she was not paid for it before.",
+    formula: `skill ∧ need (income ≤ ₹${PAYCHECK_RULE.maxIncomeInr.toLocaleString("en-IN")} ∧ teacher saw one of ${PAYCHECK_RULE.needDocs.join("/")}) ∧ consent ∧ identity ∧ once`,
+    constants: { ...PAYCHECK_RULE }, file: "packages/engine/src/trust.ts (payCheck), apps/api/app/routers/trust.py" },
+  { id: "rule.apply_docs", kind: "rule", step: "opportunities", title: "May she send the application?",
+    decides: "Every document the listing needs is verified (by a teacher, or a Disha-made resume from her verified record) and she is not 'Later' on readiness.",
+    formula: Object.entries(APPLY_DOCS).map(([k, v]) => `${k}: ${v.join(", ")}`).join("; "),
+    constants: { ...APPLY_DOCS }, file: "packages/engine/src/trust.ts (applyCheck)" },
+  { id: "ai.resume_read", kind: "ai", step: "opportunities", title: "AI: reading an uploaded resume",
+    decides: "Reads a resume photo or PDF and proposes skills, education and experience with quotes.",
+    checked_by: "guard.skill_ids", file: "apps/api/app/routers/trust.py (resume_read)" },
+  { id: "ai.doc_check", kind: "ai", step: "opportunities", title: "AI: first look at a document",
+    decides: "Says what kind of document a photo shows and whether the name on it matches. It never verifies: a teacher does.",
+    checked_by: "rule.apply_docs", file: "apps/api/app/routers/trust.py (doc_check)" },
+  { id: "rule.otp", kind: "guardrail", step: "access", title: "Sign-in with a one-time code",
+    decides: "Phone or email + a 6-digit code (10 minutes, 5 tries, one use, only its hash stored). The number or email is stored only as an HMAC. Role comes from the school's code, never from the phone.",
+    file: "apps/api/app/routers/accounts.py" },
+  { id: "guard.role_scope", kind: "guardrail", step: "access", title: "What each role sees",
+    decides: "Students and teachers see only their school (row-level security). Donors see anonymous pay checks and payouts only. Employers see applications students chose to send, nothing else.",
+    file: "apps/api/app/auth.py, migrations/0003_security.sql, 0011_accounts.sql" },
+  { id: "guard.buyer_privacy", kind: "guardrail", step: "safety", title: "Customer privacy",
+    decides: "A customer confirming a job is asked first whether Disha may keep their name; without a yes, only the three answers are kept.",
+    file: "apps/api/app/routers/v2.py (confirm)" },
+  { id: "rule.course_access", kind: "rule", step: "skills", title: "Which course lessons are open",
+    decides: "Free course: all lessons. Any course: the first lesson is a free preview. Pay per lesson: a lesson opens after its payment. Subscription: all lessons while it is valid. Locked lessons send only their title; quiz answers never leave the server.",
+    formula: `open = own course ∨ plan = free ∨ position < ${COURSE_RULE.previewLessons} ∨ paid(lesson) ∨ paid subscription with valid_until > now; quiz pass ≥ ${COURSE_RULE.quizPass * 100}% → a "task" evidence event`,
+    constants: { ...COURSE_RULE }, file: "apps/api/app/routers/courses.py (module_open)" },
+  { id: "rule.course_recommend", kind: "rule", step: "skills", title: "Which teacher courses to suggest",
+    decides: "A course is suggested when the skill it trains is below what one of her top careers needs, or is a gap for an internship/job she is 'Almost' ready for.",
+    formula: `skill level < level needed by one of her top ${COURSE_RULE.topCareers} careers ∨ skill ∈ gaps of an 'Almost' opportunity`,
+    file: "packages/engine/src/courses.ts (recommendCourses)" },
+  { id: "guard.payment_signature", kind: "guardrail", step: "payouts", title: "Course payments",
+    decides: "The server sets the price and creates the Razorpay order; a lesson unlocks only after the server checks HMAC-SHA256(order_id|payment_id) against Razorpay's signature. No card or UPI data touches Disha. Without keys, a labelled demo payment where no money moves.",
+    formula: `teacher earns ${(1 - COURSE_RULE.platformFee) * 100}%, Disha keeps ${COURSE_RULE.platformFee * 100}%`,
+    file: "apps/api/app/adapters/razorpay.py" },
   { id: "rule.proof_pays", kind: "rule", step: "payouts", title: "Proof Pays",
     decides: "A funder's money is released only when a zero-knowledge proof shows the skill milestone was met.",
     file: "contracts/src/ProofPays.sol, packages/zk" },

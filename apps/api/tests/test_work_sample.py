@@ -56,4 +56,8 @@ def test_unknown_rubric(client):
 
 
 def test_rubrics_load():
-    assert set(kb.rubrics()) == {"rb_stitching", "rb_electrical"}
+    rubrics = kb.rubrics()
+    assert {"rb_stitching", "rb_electrical", "rb_cooking", "rb_drawing"} <= set(rubrics)
+    for r in rubrics.values():  # every checklist names a real skill and has 3-6 items scored 0-2
+        assert r["skill"] in kb.skills() and 3 <= len(r["criteria"]) <= 6
+        assert all(set(c["scores"]) == {"0", "1", "2"} for c in r["criteria"])

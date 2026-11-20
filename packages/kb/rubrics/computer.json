@@ -1,0 +1,51 @@
+{
+  "id": "rb_computer",
+  "skill": "sk_computer_basic",
+  "name": {
+    "en": "Phone / computer skills sample",
+    "ta": "கைபேசி / கணினி திறன் மாதிரி"
+  },
+  "media": "video",
+  "capture": {
+    "en": "Screen recording or video of you filling a simple online form (use made-up details) and checking a UPI payment request.",
+    "ta": "எளிய இணையப் படிவத்தை நிரப்புவதை (போலி விவரங்களுடன்) வீடியோ எடுங்கள்."
+  },
+  "criteria": [
+    {
+      "id": "apps",
+      "subskill": "ss_digital_apps",
+      "name": {
+        "en": "Moves around the app with ease"
+      },
+      "scores": {
+        "0": "Gets lost",
+        "1": "Needs a few tries",
+        "2": "Smooth and quick"
+      }
+    },
+    {
+      "id": "forms",
+      "subskill": "ss_digital_info",
+      "name": {
+        "en": "Fills the form correctly"
+      },
+      "scores": {
+        "0": "Many mistakes",
+        "1": "Small mistakes",
+        "2": "All fields right"
+      }
+    },
+    {
+      "id": "safety",
+      "subskill": "ss_digital_safety",
+      "name": {
+        "en": "Spots the unsafe request"
+      },
+      "scores": {
+        "0": "Accepts it",
+        "1": "Unsure",
+        "2": "Rejects it and says why"
+      }
+    }
+  ]
+}

@@ -28,3 +28,13 @@ ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")
 DB_POOL_MAX = int(os.getenv("DB_POOL_MAX", "20"))  # database connections per server process
 # Seconds a request waits for a free database connection before failing with an error (instead of hanging).
 DB_POOL_TIMEOUT = float(os.getenv("DB_POOL_TIMEOUT", "10"))
+
+# Sign-in (app/routers/accounts.py). AUTH_SECRET keys the HMAC that hides phone numbers and emails; set a long random
+# value in production. Without SMTP settings, codes are shown on screen (demo mode) instead of being emailed.
+AUTH_SECRET = os.getenv("AUTH_SECRET", "dev-only-auth-secret-change-me")
+OTP_DEMO = os.getenv("OTP_DEMO", "1") == "1"
+SMTP_HOST = os.getenv("SMTP_HOST", "")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER)

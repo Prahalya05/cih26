@@ -4,6 +4,7 @@ import { Screen, SpeakButton, useLive } from "../components/ui";
 import { CARDS } from "../data/cards";
 import { db, hasScope, type Student } from "../lib/db";
 import { useT } from "../lib/i18n";
+import { useAccount } from "../lib/auth";
 
 /** Interests are done when every card is answered, or she told us in her own words, or chose "don't know yet". */
 export const interestsDone = (s: Student) => Object.keys(s.cards).length >= CARDS.length || !!s.interests;
@@ -21,6 +22,7 @@ export function nextStep(s: Student): Parameters<Go>[0] {
 
 export default function Home({ go }: { go: Go }) {
   const { t } = useT();
+  const account = useAccount();
   const students = useLive(
     () => db.students.orderBy("updated_at").reverse().filter((s) => !s.simulated).toArray(),
     [],
@@ -66,11 +68,13 @@ export default function Home({ go }: { go: Go }) {
         </button>
       </div>
 
-      <nav className="mt-auto flex flex-col divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
-        <HomeLink icon="teacher" label={t("teacher")} onClick={() => go({ name: "teacher" })} />
-        <HomeLink icon="chart" label={t("funderView")} onClick={() => go({ name: "funder" })} />
-        <HomeLink icon="scan" label={t("howDecides")} onClick={() => go({ name: "how" })} />
-      </nav>
+      {/* Teacher, donor and employer screens are reached by signing in with that role, not from a student's home. */}
+      {account?.role === "student" && account.student_id && (
+        <nav className="mt-auto flex flex-col divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
+          <HomeLink icon="idcard" label={t("myResume")} onClick={() => go({ name: "resume", id: account.student_id! })} />
+          <HomeLink icon="clipboard" label={t("myDocs")} onClick={() => go({ name: "docs", id: account.student_id! })} />
+        </nav>
+      )}
     </Screen>
   );
 }

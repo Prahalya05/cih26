@@ -27,3 +27,5 @@ export * from "./interests.ts";
 export * from "./readiness.ts";
 export * from "./persongraph.ts";
 export * from "./aichecks.ts";
+export * from "./trust.ts";
+export * from "./courses.ts";

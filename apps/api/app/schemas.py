@@ -112,6 +112,8 @@ def validate_event(e: dict, now_ms: float | None = None) -> list[str]:
                 errs.append("needs skill_id or subskill_id")
             if not _level(p.get("level")) and p.get("endorse") is not True:
                 errs.append("payload.level must be 1-4 (or endorse: true)")
+            if p.get("override") is True and (not _level(p.get("level")) or len(str(p.get("reason") or "").strip()) < 8):
+                errs.append("an override needs a level 1-4 and a reason of at least 8 characters")
     elif kind == "order":
         if not e.get("skill_id"):
             errs.append("needs skill_id")

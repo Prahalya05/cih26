@@ -22,8 +22,9 @@ from . import db
 @dataclass(frozen=True)
 class Device:
     id: str
-    school_id: str
-    role: str  # student | teacher
+    school_id: str | None
+    role: str  # student | teacher | funder | employer
+    account_id: str | None = None
 
     @property
     def is_teacher(self) -> bool:
@@ -31,7 +32,8 @@ class Device:
 
     @property
     def schools(self) -> list[str]:
-        return [self.school_id]
+        # Donors and employers have no school, so row-level security shows them no student rows.
+        return [self.school_id] if self.school_id else []
 
 
 def new_token() -> str:
@@ -52,11 +54,18 @@ def device(authorization: str | None = Header(None, description="Bearer <device 
     if scheme.lower() != "bearer" or not token.strip():
         raise _unauthorised("This phone is not registered; enter the class code first")
     with db.connect() as con:
-        row = con.execute("select id, school_id, role from device where token_hash = %s and revoked_at is null",
+        row = con.execute("select id, school_id, role, account_id from device where token_hash = %s and revoked_at is null",
                           (hash_token(token.strip()),)).fetchone()
     if not row:
         raise _unauthorised("This phone's registration is not valid; enter the class code again")
     return Device(**row)
+
+
+def school_member(dev: Device = Depends(device)) -> Device:
+    """FastAPI dependency: a student or teacher phone, i.e. one that belongs to a school and may sync student data."""
+    if not dev.school_id or dev.role not in ("student", "teacher"):
+        raise HTTPException(403, "Only a student's or teacher's phone can do this")
+    return dev
 
 
 def teacher(dev: Device = Depends(device)) -> Device:
@@ -64,3 +73,12 @@ def teacher(dev: Device = Depends(device)) -> Device:
     if not dev.is_teacher:
         raise HTTPException(403, "Only a teacher's phone can do this")
     return dev
+
+
+def role_in(*roles: str):
+    """FastAPI dependency factory: a signed-in phone whose role is one of `roles`."""
+    def check(dev: Device = Depends(device)) -> Device:
+        if dev.role not in roles:
+            raise HTTPException(403, f"Only {' or '.join(roles)} accounts can do this")
+        return dev
+    return check

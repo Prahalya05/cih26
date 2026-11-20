@@ -3,6 +3,7 @@ import { LangContext, type LangCode } from "./lib/i18n";
 import { stopSpeaking } from "./lib/speech";
 import { syncNow } from "./lib/sync";
 import { refreshSchemes } from "./lib/schemes";
+import { refreshPostings } from "./lib/postings";
 import Home from "./screens/Home";
 import NewStudent from "./screens/NewStudent";
 import Consent from "./screens/Consent";
@@ -22,6 +23,9 @@ import { scorePending } from "./lib/samples";
 import Situation from "./screens/Situation";
 import Talk from "./screens/Talk";
 import { setXrayOn, xrayInitiallyOn } from "./lib/xray";
+import { useAccount } from "./lib/auth";
+import SignIn from "./screens/SignIn";
+import { BottomNav } from "./components/BottomNav";
 
 // Camera (MediaPipe), zero-knowledge and chain code load only when these screens open, so the everyday
 // student flow stays small on low-end phones.
@@ -35,6 +39,19 @@ const AimQuiz = lazy(() => import("./screens/AimQuiz"));
 const XRay = lazy(() => import("./components/XRay"));
 const HowItDecides = lazy(() => import("./screens/HowItDecides"));
 const GraphScreen = lazy(() => import("./screens/Graph"));
+// Accounts, jobs, resumes and documents.
+const Account = lazy(() => import("./screens/Account"));
+const Jobs = lazy(() => import("./screens/Jobs"));
+const Resume = lazy(() => import("./screens/Resume"));
+const Docs = lazy(() => import("./screens/Docs"));
+// Teacher courses, profiles and "who does what".
+const Courses = lazy(() => import("./screens/Courses"));
+const CourseScreen = lazy(() => import("./screens/Course"));
+const CourseBuilder = lazy(() => import("./screens/CourseBuilder"));
+const TeacherCourses = lazy(() => import("./screens/TeacherCourses"));
+const TeacherProfile = lazy(() => import("./screens/TeacherProfile"));
+const StudentProfile = lazy(() => import("./screens/StudentProfile"));
+const Roles = lazy(() => import("./screens/Roles"));
 
 export type Route =
   | { name: "home" }
@@ -59,7 +76,18 @@ export type Route =
   | { name: "proof"; id: string }
   | { name: "funder" }
   | { name: "aimTrack"; id: string; track: string }
-  | { name: "aimQuiz"; id: string; subject: string; mode: "check" | "practice"; track?: string };
+  | { name: "aimQuiz"; id: string; subject: string; mode: "check" | "practice"; track?: string }
+  | { name: "account" }
+  | { name: "jobs" }
+  | { name: "resume"; id: string }
+  | { name: "docs"; id: string }
+  | { name: "courses" }
+  | { name: "course"; courseId: string }
+  | { name: "courseBuilder"; courseId?: string }
+  | { name: "teacherCourses" }
+  | { name: "teacherProfile"; teacherId?: string }
+  | { name: "studentProfile"; id: string }
+  | { name: "roles" };
 
 export type Go = (r: Route) => void;
 
@@ -86,15 +114,30 @@ export default function App() {
     document.documentElement.lang = l;
   };
 
+  const account = useAccount();
+  // After sign-in (or on opening the app), each role starts on its own home.
+  useEffect(() => {
+    if (!account) return;
+    setRoute((r) => (r.name !== "home" ? r : account.role === "teacher" ? { name: "teacher" } : account.role === "funder" ? { name: "funder" }
+      : account.role === "employer" ? { name: "jobs" } : r));
+  }, [account?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const go: Go = (r) => {
     stopSpeaking();
     setRoute(r);
     window.scrollTo(0, 0);
   };
 
+  // Components deep in a screen can ask to open another screen (e.g. resume, documents) without prop drilling.
+  useEffect(() => {
+    const onGo = (e: Event) => go((e as CustomEvent<Route>).detail);
+    window.addEventListener("disha:go", onGo);
+    return () => window.removeEventListener("disha:go", onGo);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Sync whenever we come online, and every 30 s while online.
   useEffect(() => {
-    const run = () => { void syncNow().then(() => scorePending()); void refreshSchemes(); };
+    const run = () => { void syncNow().then(() => scorePending()); void refreshSchemes(); void refreshPostings(); };
     run();
     const onOnline = () => run();
     window.addEventListener("online", onOnline);
@@ -102,9 +145,20 @@ export default function App() {
     return () => { window.removeEventListener("online", onOnline); window.clearInterval(timer); };
   }, []);
 
+  // Signed out: only the sign-in screen, the buyer's confirmation link and "How Disha decides" are open.
+  const signedOut = account === null && !confirmToken;
+  if (account === undefined && !confirmToken) return null;
+  if (signedOut && route.name !== "how") {
+    return (
+      <LangContext.Provider value={{ lang, setLang }}>
+        <SignIn onExplore={() => go({ name: "how" })} />
+      </LangContext.Provider>
+    );
+  }
+
   return (
     <LangContext.Provider value={{ lang, setLang }}>
-      <div className={xray ? "lg:pr-[440px]" : ""}>
+      <div className={`${xray ? "lg:pr-[440px]" : ""} ${account && !confirmToken ? "pb-20" : ""}`}>
       {confirmToken && <ConfirmJob token={confirmToken} onClose={() => { history.replaceState(null, "", "/"); setConfirmToken(null); }} />}
       {!confirmToken && route.name === "home" && <Home go={go} />}
       {route.name === "new" && <NewStudent go={go} />}
@@ -124,7 +178,18 @@ export default function App() {
         {route.name === "proof" && <Proof go={go} id={route.id} />}
         {route.name === "funder" && <Funder go={go} />}
         {route.name === "aimTrack" && <AimTrack go={go} id={route.id} track={route.track} />}
-        {route.name === "how" && <HowItDecides go={go} back={route.from ? () => go(route.from!) : undefined} />}
+        {route.name === "how" && <HowItDecides go={go} back={route.from ? () => go(route.from!) : signedOut ? () => go({ name: "home" }) : undefined} />}
+        {route.name === "account" && <Account go={go} />}
+        {route.name === "jobs" && <Jobs go={go} />}
+        {route.name === "resume" && <Resume go={go} id={route.id} />}
+        {route.name === "docs" && <Docs go={go} id={route.id} />}
+        {route.name === "courses" && <Courses go={go} />}
+        {route.name === "course" && <CourseScreen key={route.courseId} go={go} courseId={route.courseId} />}
+        {route.name === "courseBuilder" && <CourseBuilder key={route.courseId ?? "new"} go={go} courseId={route.courseId} />}
+        {route.name === "teacherCourses" && <TeacherCourses go={go} />}
+        {route.name === "teacherProfile" && <TeacherProfile key={route.teacherId ?? "me"} go={go} teacherId={route.teacherId} />}
+        {route.name === "studentProfile" && <StudentProfile go={go} id={route.id} />}
+        {route.name === "roles" && <Roles go={go} />}
         {route.name === "graph" && <GraphScreen go={go} id={route.id} back={route.from ? () => go(route.from!) : undefined} />}
         {route.name === "aimQuiz" && <AimQuiz key={`${route.subject}|${route.mode}`} go={go} id={route.id} subject={route.subject} mode={route.mode} track={route.track} />}
       </Suspense>
@@ -132,6 +197,7 @@ export default function App() {
       {route.name === "rate" && <Rate go={go} id={route.id} mode={route.mode} />}
       {route.name === "privacy" && <Privacy go={go} id={route.id} />}
       </div>
+      {account && !confirmToken && <BottomNav account={account} route={route} go={go} />}
       {xray && (
         <Suspense fallback={null}>
           <XRay onClose={() => { setXray(false); setXrayOn(false); }} onHow={() => go({ name: "how", from: route })} />

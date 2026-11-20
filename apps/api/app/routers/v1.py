@@ -309,7 +309,7 @@ class SyncRequest(BaseModel):
 
 
 @router.post("/sync", summary="Upload students and actions saved offline; get back actions for those students")
-def sync(req: SyncRequest, dev: Device = Depends(auth.device)):
+def sync(req: SyncRequest, dev: Device = Depends(auth.school_member)):
     for s in req.students:
         if not isinstance(s.get("id"), str):
             raise HTTPException(422, "Each student needs a string id")
@@ -330,3 +330,21 @@ def cohort(code: str, dev: Device = Depends(auth.teacher)):
     with db.connect() as con:
         students = db.cohort(con, code, dev.school_id)
         return {"students": students, "actions": db.actions_for(con, [s["id"] for s in students])}
+
+
+# ---------- spoken prompts for phones without a Tamil voice ----------
+
+class TtsRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=400)
+    lang: Literal["ta", "hi", "en"] = "ta"
+
+
+@router.post("/tts", summary="Speak a screen prompt aloud (for phones with no Tamil voice). Returns WAV; prompts only, never student data",
+             dependencies=[Depends(limit("tts", per_minute=30))])
+def tts(req: TtsRequest, _dev: Device = Depends(auth.device)):
+    from ..adapters import gemini_tts
+    try:
+        audio = gemini_tts.speak(req.text, req.lang)
+    except gemini.GeminiUnavailable:
+        raise HTTPException(503, "Voice is not available right now") from None
+    return Response(audio, media_type="audio/wav", headers={"Cache-Control": "private, max-age=604800"})

@@ -15,6 +15,16 @@ services:
         sync: false
       - key: ADMIN_TOKEN
         generateValue: true
+      - key: AUTH_SECRET       # keys the HMAC that hides phone numbers and emails (accounts.py)
+        generateValue: true
+      - key: OTP_DEMO          # 1 = show sign-in codes on screen (no SMS/email provider yet); 0 for a real pilot
+        value: "1"
+      - key: PAYMENTS_DEMO     # 1 = labelled demo course payments when no Razorpay keys are set
+        value: "1"
+      - key: RAZORPAY_KEY_ID   # Razorpay test-mode keys (rzp_test_...); optional
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
       - key: CORS_ORIGINS      # the public address, e.g. https://disha.example.in
         sync: false
       - key: WEB_CONCURRENCY

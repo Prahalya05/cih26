@@ -8,6 +8,7 @@ import { Pill, Screen } from "../components/ui";
 import { useT } from "../lib/i18n";
 import { payConfig, type PayConfig } from "../lib/proof";
 import { Icon } from "../components/Icon";
+import { PayCheck } from "../components/PayCheck";
 
 const PAID = parseAbiItem("event Paid(uint256 indexed milestoneId, uint256 indexed nullifier, address indexed payout, uint256 amount, uint256 day)");
 
@@ -59,8 +60,9 @@ export default function Funder({ go }: { go: Go }) {
   const total = payouts.reduce((s, p) => s + p.amount, 0);
 
   return (
-    <Screen title={t("funderView")} onBack={() => go({ name: "home" })}>
+    <Screen title={t("funderView")}>
       <p className="text-muted">{t("funderHint")}</p>
+      <PayCheck />
       {cfg === null && <p className="rounded-xl bg-sun-soft p-3 text-warn">{t("needInternet")}</p>}
       {cfg && !cfg.enabled && <p className="rounded-xl bg-sun-soft p-3 text-warn">{t("payNotSetUp")}</p>}
 

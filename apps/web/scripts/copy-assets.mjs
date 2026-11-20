@@ -14,3 +14,15 @@ for (const f of ["vision_wasm_internal.js", "vision_wasm_internal.wasm", "vision
   const to = join(out, f);
   if (!existsSync(to)) copyFileSync(join(src, f), to);
 }
+
+// Face-api models for the identity check (rule.identity): tiny face detector, 68 landmarks (tiny) and the 128-number
+// face descriptor. About 6.5 MB, loaded only when a student enrols her face or films a task.
+const faceSrc = join(dirname(require.resolve("@vladmandic/face-api/package.json")), "model");
+const faceOut = join(dirname(fileURLToPath(import.meta.url)), "..", "public", "face-models");
+mkdirSync(faceOut, { recursive: true });
+for (const m of ["tiny_face_detector_model", "face_landmark_68_tiny_model", "face_recognition_model"]) {
+  for (const f of [`${m}-weights_manifest.json`, `${m}.bin`]) {
+    const to = join(faceOut, f);
+    if (!existsSync(to)) copyFileSync(join(faceSrc, f), to);
+  }
+}

@@ -78,10 +78,27 @@ outside `student_private`, or if any analytics or tracking SDK is added to the a
 - **Decision X-ray log:** keeps decision summaries only, no names, in this browser's localStorage. "Clear" empties it.
 - **Face blur** runs on the phone with MediaPipe. Filming is refused if the face model cannot start.
 
+## 6a. Sign-in, documents, identity and donor checks (added 21 Nov 2026)
+
+- **Sign-in for every role** (student, teacher, donor, employer/customer) with a phone number or email and a 6-digit one-time code (`apps/api/app/routers/accounts.py`, migration `0011_accounts.sql`).
+  - The phone number or email is **never stored in readable form**: only `HMAC-SHA256(AUTH_SECRET, login)` to find the account, plus a masked copy (`98•••••210`) to show back.
+  - Codes: only a hash is kept; 10 minutes, 5 tries, one use; a new code kills the old ones; rate limited per address.
+  - The **role of a student or teacher comes from the school's code**, never from the phone. Donors and employers have no school, so row-level security shows them no student rows.
+  - Sign-out kills the token on the server; "Delete my account" removes the sign-in.
+  - Without an SMS/email provider the code is shown on screen (`OTP_DEMO=1`). For a pilot: set `OTP_DEMO=0`, SMTP settings (or an SMS gateway), and a long random `AUTH_SECRET`.
+- **Documents** (`routers/trust.py`, migration `0012_trust.sql`): the photo goes to the AI once for a first look and is **never stored on the server**. The AI's note has ID-like numbers removed. Only the status (uploaded / verified / rejected) is kept, and only a **teacher who saw the original** can mark it verified.
+- **Identity in task videos** (`apps/web/src/lib/identity.ts`, rule `rule.identity`): her face descriptor is made and kept **only on her phone**; a liveness challenge (show N fingers) and a face match run on the phone; only the distances and finger counts are sent, and the server re-runs the same rule.
+- **Donors** see a pseudonym (`S-3F9A1C`, an HMAC of the student id), district, skill and the ✓/✗ of each check (`GET /v2/funder/paycheck`), never a name, and only for students whose family agreed to share.
+- **Employers** see an applicant's first name, skills (verified or "says she can"), and which documents are verified. Never a phone number: contact goes through the school.
+- **Customers** confirming a job are told what is kept (three answers) and what is never asked (phone, address, location), must agree first, and their name is kept only if they opt in.
+- **Teacher overrides** of a skill level need a written reason, keep the computed level beside them, and a raised level never counts as proof for a payout.
+
+- **Course payments** (`routers/courses.py`, `adapters/razorpay.py`): the server sets the price and creates the Razorpay order; a lesson unlocks only after the server checks `HMAC-SHA256(key_secret, order_id|payment_id)` against Razorpay's signature. No card or UPI data reaches Disha. Locked lessons are sent as titles only, and quiz answers never leave the server. Without Razorpay keys the app uses a labelled demo payment (`PAYMENTS_DEMO=1`) where no money moves.
+
 ## 7. Still open (before a real pilot)
 
 1. Guardian OTP as a second consent method, in addition to the paper form.
-2. Per-teacher PIN on shared phones. Today a teacher code is per phone.
+2. ~~Per-teacher PIN on shared phones~~ replaced by per-person sign-in (6a). Still open: a real SMS gateway for phone OTPs (today email via SMTP, or demo mode).
 3. Encrypt `student_private` columns at rest with pgcrypto, with the key in the host's secret store.
 4. Move buyer-confirmation tokens out of URLs, so they never reach access logs.
 5. Drop the legacy `legacy_student_doc` table, which still holds names as JSON.

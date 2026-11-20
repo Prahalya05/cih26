@@ -10,10 +10,10 @@ each decision live, tagged RULE, AI, or AI → RULE-CHECKED.
 
 | Kind | Count |
 |---|---|
-| Rules | 17 |
+| Rules | 24 |
 | Formulas | 5 |
-| Guardrails | 10 |
-| AI tasks (each checked by a rule) | 6 |
+| Guardrails | 14 |
+| AI tasks (each checked by a rule) | 8 |
 
 ## End to end
 
@@ -39,6 +39,8 @@ flowchart LR
 6. **opportunities**: Which internships, apprenticeships, jobs, mentors? Hard checks + skill share
 7. **aim_high**: Which higher-study route and exam? Route graph + readiness + study plan
 8. **safety**: Child safety, consent and privacy guardrails around everything
+9. **payouts**: Who confirms a skill, and when a donor's money may go to her
+10. **access**: Who may sign in and what each role may see
 
 ## Rules versus AI at a glance
 
@@ -72,6 +74,19 @@ flowchart LR
 | No hazardous tasks under 18 | GUARDRAIL | `guard.hazard_minor` |
 | Consent scopes | GUARDRAIL | `guard.consent_scope` |
 | Face blur on the phone | GUARDRAIL | `guard.face_blur` |
+| Teacher override of a skill level | RULE | `rule.override` |
+| Is it really her in the video? | RULE | `rule.identity` |
+| System confirms, or the teacher looks | RULE | `rule.autoconfirm` |
+| May a donor pay her? | RULE | `rule.paycheck` |
+| May she send the application? | RULE | `rule.apply_docs` |
+| AI: reading an uploaded resume | AI → checked by `guard.skill_ids` | `ai.resume_read` |
+| AI: first look at a document | AI → checked by `rule.apply_docs` | `ai.doc_check` |
+| Sign-in with a one-time code | GUARDRAIL | `rule.otp` |
+| What each role sees | GUARDRAIL | `guard.role_scope` |
+| Customer privacy | GUARDRAIL | `guard.buyer_privacy` |
+| Which course lessons are open | RULE | `rule.course_access` |
+| Which teacher courses to suggest | RULE | `rule.course_recommend` |
+| Course payments | GUARDRAIL | `guard.payment_signature` |
 | Proof Pays | RULE | `rule.proof_pays` |
 
 ## Onboarding
@@ -226,6 +241,72 @@ flowchart LR
 - **Decides:** The AI's scores are weighted by how well it agrees with teachers; a teacher's score replaces the AI's for the same work.
 - **Rule / formula:** `AI weight = max(0.3, quadratic weighted kappa vs teachers)`
 - **Code:** `apps/api/app/services/raters.py`
+
+### Teacher override of a skill level · `RULE`
+
+- **Id:** `rule.override`
+- **Decides:** A teacher may set a different level with a written reason. Lowering always applies. Raising is shown to her but never counts as proof for payouts, and 'Strong' still needs her own work.
+- **Rule / formula:** `latest override per sub-skill wins; reason ≥ 8 characters; computed level kept beside it`
+- **Code:** `packages/engine/src/trust.ts (applyOverrides)`
+
+```json
+{
+ "minReasonChars": 8
+}
+```
+
+### Is it really her in the video? · `RULE`
+
+- **Id:** `rule.identity`
+- **Decides:** A liveness challenge (show N fingers, checked by hand tracking) and a face match against the face she enrolled, computed on the phone. Only the numbers leave the phone.
+- **Rule / formula:** `verified = liveness passed AND share of frames with face distance ≤ 0.5 ≥ 0.6`
+- **Code:** `packages/engine/src/trust.ts (identityCheck), apps/web/src/lib/identity.ts`
+
+```json
+{
+ "maxFaceDistance": 0.5,
+ "minMatchedShare": 0.6,
+ "livenessRequired": true
+}
+```
+
+### System confirms, or the teacher looks · `RULE`
+
+- **Id:** `rule.autoconfirm`
+- **Decides:** An AI-scored task video is confirmed by the system only when every check passes; otherwise, and for a random spot-check share, it goes to the teacher.
+- **Rule / formula:** `identity verified ∧ no integrity flags ∧ no safety notes ∧ cannot-see ≤ 20% ∧ AI κ ≥ 0.6 ∧ not hazardous for a minor; then 10% still go to a teacher`
+- **Code:** `packages/engine/src/trust.ts (autoConfirm)`
+
+```json
+{
+ "minKappa": 0.6,
+ "maxCannotSee": 0.2,
+ "auditShare": 0.1
+}
+```
+
+### Which course lessons are open · `RULE`
+
+- **Id:** `rule.course_access`
+- **Decides:** Free course: all lessons. Any course: the first lesson is a free preview. Pay per lesson: a lesson opens after its payment. Subscription: all lessons while it is valid. Locked lessons send only their title; quiz answers never leave the server.
+- **Rule / formula:** `open = own course ∨ plan = free ∨ position < 1 ∨ paid(lesson) ∨ paid subscription with valid_until > now; quiz pass ≥ 70% → a "task" evidence event`
+- **Code:** `apps/api/app/routers/courses.py (module_open)`
+
+```json
+{
+ "platformFee": 0.1,
+ "quizPass": 0.7,
+ "previewLessons": 1,
+ "topCareers": 3
+}
+```
+
+### Which teacher courses to suggest · `RULE`
+
+- **Id:** `rule.course_recommend`
+- **Decides:** A course is suggested when the skill it trains is below what one of her top careers needs, or is a gap for an internship/job she is 'Almost' ready for.
+- **Rule / formula:** `skill level < level needed by one of her top 3 careers ∨ skill ∈ gaps of an 'Almost' opportunity`
+- **Code:** `packages/engine/src/courses.ts (recommendCourses)`
 
 ## Careers
 
@@ -418,6 +499,52 @@ flowchart LR
 - **Rule / formula:** `level ≥ 4 in a sub-skill the qualification covers, and age ≥ 18`
 - **Code:** `packages/engine/src/rpl.ts`
 
+### May she send the application? · `RULE`
+
+- **Id:** `rule.apply_docs`
+- **Decides:** Every document the listing needs is verified (by a teacher, or a Disha-made resume from her verified record) and she is not 'Later' on readiness.
+- **Rule / formula:** `internship: resume, id_proof; apprenticeship: resume, id_proof, marksheet, bank_passbook; job: resume, id_proof; mentorship: resume; training: id_proof`
+- **Code:** `packages/engine/src/trust.ts (applyCheck)`
+
+```json
+{
+ "internship": [
+  "resume",
+  "id_proof"
+ ],
+ "apprenticeship": [
+  "resume",
+  "id_proof",
+  "marksheet",
+  "bank_passbook"
+ ],
+ "job": [
+  "resume",
+  "id_proof"
+ ],
+ "mentorship": [
+  "resume"
+ ],
+ "training": [
+  "id_proof"
+ ]
+}
+```
+
+### AI: reading an uploaded resume · `AI`
+
+- **Id:** `ai.resume_read`
+- **Decides:** Reads a resume photo or PDF and proposes skills, education and experience with quotes.
+- **Checked by:** `guard.skill_ids`
+- **Code:** `apps/api/app/routers/trust.py (resume_read)`
+
+### AI: first look at a document · `AI`
+
+- **Id:** `ai.doc_check`
+- **Decides:** Says what kind of document a photo shows and whether the name on it matches. It never verifies: a teacher does.
+- **Checked by:** `rule.apply_docs`
+- **Code:** `apps/api/app/routers/trust.py (doc_check)`
+
 ### Paid Apprenticeship (NAPS) · `RULE`
 
 - **Id:** `rule.opp_naps_apprenticeship`
@@ -494,6 +621,55 @@ flowchart LR
 - **Decides:** Faces are pixelated on the phone before any video leaves it; filming is refused if the face model fails.
 - **Code:** `apps/web/src/lib/video.ts`
 
+### Customer privacy · `GUARDRAIL`
+
+- **Id:** `guard.buyer_privacy`
+- **Decides:** A customer confirming a job is asked first whether Disha may keep their name; without a yes, only the three answers are kept.
+- **Code:** `apps/api/app/routers/v2.py (confirm)`
+
 ## Payouts
 
-- **Proof Pays** (`rule.proof_pays`, RULE): A funder's money is released only when a zero-knowledge proof shows the skill milestone was met. Code: `contracts/src/ProofPays.sol, packages/zk`
+### May a donor pay her? · `RULE`
+
+- **Id:** `rule.paycheck`
+- **Decides:** Before money moves: the skill is shown by her own work (not an override), need is verified by a teacher-seen document, her family agreed to share, the video was really her, and she was not paid for it before.
+- **Rule / formula:** `skill ∧ need (income ≤ ₹2,50,000 ∧ teacher saw one of income_certificate/ration_card_bpl/scholarship_letter) ∧ consent ∧ identity ∧ once`
+- **Code:** `packages/engine/src/trust.ts (payCheck), apps/api/app/routers/trust.py`
+
+```json
+{
+ "maxIncomeInr": 250000,
+ "needDocs": [
+  "income_certificate",
+  "ration_card_bpl",
+  "scholarship_letter"
+ ]
+}
+```
+
+### Course payments · `GUARDRAIL`
+
+- **Id:** `guard.payment_signature`
+- **Decides:** The server sets the price and creates the Razorpay order; a lesson unlocks only after the server checks HMAC-SHA256(order_id|payment_id) against Razorpay's signature. No card or UPI data touches Disha. Without keys, a labelled demo payment where no money moves.
+- **Rule / formula:** `teacher earns 90%, Disha keeps 10%`
+- **Code:** `apps/api/app/adapters/razorpay.py`
+
+### Proof Pays · `RULE`
+
+- **Id:** `rule.proof_pays`
+- **Decides:** A funder's money is released only when a zero-knowledge proof shows the skill milestone was met.
+- **Code:** `contracts/src/ProofPays.sol, packages/zk`
+
+## Access
+
+### Sign-in with a one-time code · `GUARDRAIL`
+
+- **Id:** `rule.otp`
+- **Decides:** Phone or email + a 6-digit code (10 minutes, 5 tries, one use, only its hash stored). The number or email is stored only as an HMAC. Role comes from the school's code, never from the phone.
+- **Code:** `apps/api/app/routers/accounts.py`
+
+### What each role sees · `GUARDRAIL`
+
+- **Id:** `guard.role_scope`
+- **Decides:** Students and teachers see only their school (row-level security). Donors see anonymous pay checks and payouts only. Employers see applications students chose to send, nothing else.
+- **Code:** `apps/api/app/auth.py, migrations/0003_security.sql, 0011_accounts.sql`

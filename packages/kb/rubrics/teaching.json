@@ -1,0 +1,51 @@
+{
+  "id": "rb_teaching",
+  "skill": "sk_teaching_explaining",
+  "name": {
+    "en": "Teaching sample",
+    "ta": "கற்பித்தல் மாதிரி"
+  },
+  "media": "video",
+  "capture": {
+    "en": "Short video explaining one small topic to a younger child (for example, telling time).",
+    "ta": "சிறிய குழந்தைக்கு ஒரு சிறு தலைப்பை விளக்கும் வீடியோ (எ.கா. நேரம் பார்த்தல்)."
+  },
+  "criteria": [
+    {
+      "id": "steps",
+      "subskill": "ss_teach_explain",
+      "name": {
+        "en": "Explains step by step"
+      },
+      "scores": {
+        "0": "Confusing",
+        "1": "Some steps clear",
+        "2": "Clear steps in order"
+      }
+    },
+    {
+      "id": "check",
+      "subskill": "ss_teach_check",
+      "name": {
+        "en": "Checks the child understood"
+      },
+      "scores": {
+        "0": "Never asks",
+        "1": "Asks once",
+        "2": "Asks and corrects"
+      }
+    },
+    {
+      "id": "plan",
+      "subskill": "ss_teach_plan",
+      "name": {
+        "en": "Lesson has a plan"
+      },
+      "scores": {
+        "0": "No order",
+        "1": "Some order",
+        "2": "Start, practice, check"
+      }
+    }
+  ]
+}

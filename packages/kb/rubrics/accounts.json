@@ -1,0 +1,51 @@
+{
+  "id": "rb_accounts",
+  "skill": "sk_money_handling",
+  "name": {
+    "en": "Accounts sample",
+    "ta": "கணக்கு மாதிரி"
+  },
+  "media": "photo",
+  "capture": {
+    "en": "Photo of one page of accounts you keep (a shop, home or group) with totals.",
+    "ta": "நீங்கள் எழுதும் கணக்குப் பக்கத்தின் புகைப்படம் (கடை, வீடு அல்லது குழு), மொத்தத்துடன்."
+  },
+  "criteria": [
+    {
+      "id": "records",
+      "subskill": "ss_money_records",
+      "name": {
+        "en": "Entries are clear and dated"
+      },
+      "scores": {
+        "0": "Messy, undated",
+        "1": "Mostly clear",
+        "2": "Clear, dated, in order"
+      }
+    },
+    {
+      "id": "totals",
+      "subskill": "ss_money_counting",
+      "name": {
+        "en": "Totals are right"
+      },
+      "scores": {
+        "0": "Wrong totals",
+        "1": "Small mistakes",
+        "2": "All totals right"
+      }
+    },
+    {
+      "id": "pricing",
+      "subskill": "ss_money_pricing",
+      "name": {
+        "en": "Shows cost and profit"
+      },
+      "scores": {
+        "0": "No costs noted",
+        "1": "Costs or sales only",
+        "2": "Cost, price and profit worked out"
+      }
+    }
+  ]
+}

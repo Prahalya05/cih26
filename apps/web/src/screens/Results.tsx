@@ -171,6 +171,26 @@ function SkillLevels({ id, go, claimed, persona }: { id: string; go: Go; claimed
           </ul>
         </article>
       ))}
+      {/* Photo or video proof for any skill that has a checklist, not only the ones she already mentioned. */}
+      {(() => {
+        const more = Object.values(RUBRICS).filter((r) => !skills.includes(r.skill) && safeRubric(g, r, minor));
+        if (!more.length) return null;
+        return (
+          <article className="rounded-2xl border border-line bg-surface p-4">
+            <h3 className="flex items-center gap-2 text-lg font-semibold"><Icon name="camera" className="size-5 text-accent-dark" />{t("proveMoreSkills")}</h3>
+            <p className="text-sm text-muted">{t("proveMoreHint")}</p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {more.map((r) => (
+                <button key={r.id} onClick={() => go({ name: "sample", id, rubric: r.id })}
+                  className="flex min-h-14 items-center gap-2 rounded-xl border border-line px-3 text-left text-sm font-bold hover:border-accent">
+                  <Icon name={(r as { media?: string }).media === "video" ? "video" : "camera"} className="size-4 shrink-0 text-accent-dark" />
+                  <span className="min-w-0 flex-1">{pick(kb.skills[r.skill]?.name ?? { en: r.skill })}</span>
+                </button>
+              ))}
+            </div>
+          </article>
+        );
+      })()}
     </section>
   );
 }

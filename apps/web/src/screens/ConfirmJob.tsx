@@ -6,7 +6,8 @@ import { useT } from "../lib/i18n";
 import { Icon } from "../components/Icon";
 
 const API = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
-type Info = { student: string; skill: { en: string; ta?: string }; what: string; amount_inr: number };
+type Info = { student: string; skill: { en: string; ta?: string }; what: string; amount_inr: number;
+  privacy?: { kept: string[]; optional: string[]; never: string[]; delete_after_days: number } };
 const QUESTIONS = ["on_time", "quality", "rehire"] as const;
 
 export default function ConfirmJob({ token, onClose }: { token: string; onClose: () => void }) {
@@ -15,6 +16,10 @@ export default function ConfirmJob({ token, onClose }: { token: string; onClose:
   const [error, setError] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Partial<Record<(typeof QUESTIONS)[number], boolean>>>({});
   const [done, setDone] = useState(false);
+  // Customer privacy (guard.buyer_privacy): nothing about the customer is kept unless they say yes here.
+  const [privacyOk, setPrivacyOk] = useState(false);
+  const [shareName, setShareName] = useState(false);
+  const [buyerName, setBuyerName] = useState("");
 
   useEffect(() => {
     fetch(`${API}/v2/confirm/${encodeURIComponent(token)}`)
@@ -24,7 +29,7 @@ export default function ConfirmJob({ token, onClose }: { token: string; onClose:
 
   const send = async () => {
     const r = await fetch(`${API}/v2/confirm/${encodeURIComponent(token)}`, {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(answers),
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...answers, share_name: shareName && !!buyerName.trim(), buyer_name: shareName ? buyerName.trim() : null }),
     });
     if (r.ok) setDone(true);
     else setError((await r.json()).detail ?? t("linkInvalid"));
@@ -38,6 +43,14 @@ export default function ConfirmJob({ token, onClose }: { token: string; onClose:
         <>
           <p className="text-lg">{t("confirmJobIntro", { name: info.student, skill: pick(info.skill), amount: info.amount_inr })}</p>
           {info.what && <p className="text-muted">“{info.what}”</p>}
+          <div className="rounded-2xl border border-line bg-surface p-4 text-sm">
+            <p className="flex items-center gap-2 font-bold"><Icon name="shield" className="size-4 text-good" />{t("buyerPrivacyTitle")}</p>
+            <p className="mt-1">{t("buyerPrivacyKept")}</p>
+            <p className="mt-1 text-muted">{t("buyerPrivacyNever")}</p>
+            <label className="mt-3 flex items-start gap-2"><input type="checkbox" className="mt-1 size-5" checked={privacyOk} onChange={(e) => setPrivacyOk(e.target.checked)} />{t("buyerPrivacyOk")}</label>
+            <label className="mt-2 flex items-start gap-2"><input type="checkbox" className="mt-1 size-5" checked={shareName} onChange={(e) => setShareName(e.target.checked)} />{t("buyerShareName")}</label>
+            {shareName && <input value={buyerName} onChange={(e) => setBuyerName(e.target.value)} placeholder={t("yourName")} className="mt-2 min-h-11 w-full rounded-lg border border-line px-3" />}
+          </div>
           {QUESTIONS.map((q) => (
             <div key={q} className="rounded-2xl bg-surface p-4 border border-line">
               <p className="font-semibold">{t(`buyer_${q}`)}</p>
@@ -51,7 +64,7 @@ export default function ConfirmJob({ token, onClose }: { token: string; onClose:
               </div>
             </div>
           ))}
-          <Button disabled={QUESTIONS.some((q) => answers[q] === undefined)} onClick={() => void send()}>{t("send")}</Button>
+          <Button disabled={!privacyOk || QUESTIONS.some((q) => answers[q] === undefined)} onClick={() => void send()}>{t("send")}</Button>
         </>
       )}
     </Screen>

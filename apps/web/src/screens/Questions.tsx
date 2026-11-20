@@ -25,6 +25,7 @@ export default function Questions({ go, id }: { go: Go; id: string }) {
   const [note, setNote] = useState("");
   const stopRef = useRef<() => void>(() => {});
   const recorder = useRef<Recorder | null>(null);
+  const [live, setLive] = useState("");
 
   const q = QUESTIONS[index];
   useEffect(() => {
@@ -96,7 +97,8 @@ export default function Questions({ go, id }: { go: Go; id: string }) {
     if (!online) { setNote(t("voiceOffline")); return; }
     try {
       recorder.current = new Recorder();
-      await recorder.current.start(45, () => stopRef.current());
+      setLive("");
+      await recorder.current.start(45, () => stopRef.current(), { lang, onText: setLive });
       setVoice("recording");
     } catch {
       setNote(t("voiceOffline"));
@@ -154,6 +156,8 @@ export default function Questions({ go, id }: { go: Go; id: string }) {
           ⌨️ {t("type")}
         </button>
       </div>
+
+      {voice === "recording" && live && <p className="rounded-xl border border-dashed border-line bg-surface px-3 py-2 text-base" aria-live="polite">“{live}”</p>}
 
       {typing && (
         <div className="flex gap-2">

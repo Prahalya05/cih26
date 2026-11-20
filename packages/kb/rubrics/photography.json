@@ -1,0 +1,48 @@
+{
+  "id": "rb_photography",
+  "skill": "sk_photography",
+  "name": {
+    "en": "Photography sample",
+    "ta": "புகைப்பட மாதிரி"
+  },
+  "media": "photo",
+  "capture": {
+    "en": "One photo you took that you are proud of.",
+    "ta": "நீங்கள் எடுத்ததில் பெருமைப்படும் ஒரு புகைப்படம்."
+  },
+  "criteria": [
+    {
+      "id": "focus",
+      "name": {
+        "en": "Sharp and well lit"
+      },
+      "scores": {
+        "0": "Blurred or dark",
+        "1": "Acceptable",
+        "2": "Sharp, good light"
+      }
+    },
+    {
+      "id": "frame",
+      "name": {
+        "en": "Good framing"
+      },
+      "scores": {
+        "0": "Subject cut off",
+        "1": "Subject centred",
+        "2": "Thoughtful composition"
+      }
+    },
+    {
+      "id": "story",
+      "name": {
+        "en": "Tells a story or shows a subject clearly"
+      },
+      "scores": {
+        "0": "Unclear what it shows",
+        "1": "Subject is clear",
+        "2": "Strong subject and feeling"
+      }
+    }
+  ]
+}

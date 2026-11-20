@@ -3,7 +3,7 @@
 // photo checking, the photo is sent once for AI scoring; the result is a new work_sample event that
 // replaces the pending one. A teacher then confirms or corrects the scores (a rating event).
 
-import { safeRubric, type EvidenceEvent } from "@disha/engine";
+import { safeRubric, type EvidenceEvent, type IdentityInput } from "@disha/engine";
 import { db, hasScope, isMinorStudent, newId, type Student, type StoredEvent } from "./db";
 import { kb } from "./kb";
 import { RUBRICS } from "./skills";
@@ -27,6 +27,8 @@ export interface ScoreResult {
   cannot_see: string[];
   times?: Record<string, string>; // video only: MM:SS moment for each checklist item
   safety?: { time: string; note: string }[];
+  identity?: { status: string; why: string[]; matched_share: number };
+  autoconfirm?: { decision: "auto_confirm" | "teacher"; why: string[]; kappa_basis?: string };
 }
 
 /**
@@ -62,11 +64,11 @@ export async function saveSample(studentId: string, rubric: RubricFull, photo: B
 }
 
 /** Saves a filmed task (faces already blurred on the phone) as a pending work sample. Returns the event id. */
-export async function saveVideoSample(studentId: string, rubric: RubricFull, video: Blob, process: object): Promise<string | null> {
+export async function saveVideoSample(studentId: string, rubric: RubricFull, video: Blob, process: object, identity?: IdentityInput | null): Promise<string | null> {
   const mediaId = newId();
   const ev = await recordEvent({
     student_id: studentId, kind: "work_sample", skill_id: rubric.skill,
-    payload: { rubric_id: rubric.id, scorer: "pending", media_ref: mediaId, media: "video", process },
+    payload: { rubric_id: rubric.id, scorer: "pending", media_ref: mediaId, media: "video", process, ...(identity ? { identity_input: identity } : {}) },
   });
   if (!ev) return null;
   await db.media.put({ id: mediaId, student_id: studentId, event_id: ev.id, blob: video, created_at: Date.now() });
@@ -89,6 +91,8 @@ export async function scoreSample(pending: EvidenceEvent): Promise<ScoreResult |
     const ext = media.blob.type.includes("mp4") ? "mp4" : "webm";
     form.set("video", media.blob, `work.${ext}`);
     form.set("process", JSON.stringify(pending.payload.process ?? {}));
+    form.set("identity", JSON.stringify(pending.payload.identity_input ?? {}));
+    form.set("sample_id", pending.id);
   } else {
     form.set("image", media.blob, "work.jpg");
   }
@@ -101,7 +105,8 @@ export async function scoreSample(pending: EvidenceEvent): Promise<ScoreResult |
         student_id: pending.student_id, kind: "work_sample", skill_id: pending.skill_id,
         payload: { rubric_id: pending.payload.rubric_id, scorer: "ai", scores: out.scores, reasons: out.reasons,
           cannot_see: out.cannot_see, media_ref: pending.payload.media_ref, replaces: pending.id,
-          ...(isVideo ? { media: "video", times: out.times ?? {}, safety: out.safety ?? [], process: pending.payload.process } : {}) },
+          ...(isVideo ? { media: "video", times: out.times ?? {}, safety: out.safety ?? [], process: pending.payload.process,
+            identity: out.identity, autoconfirm: out.autoconfirm } : {}) },
       });
     }
     return out;
@@ -129,6 +134,16 @@ export async function samplesToConfirm(studentIds: string[]): Promise<StoredEven
   const all = (await db.events.toArray()).filter((e) => studentIds.includes(e.student_id));
   const replaced = new Set(all.filter((e) => e.kind === "work_sample" && e.payload.replaces).map((e) => String(e.payload.replaces)));
   const confirmed = new Set(all.filter((e) => e.kind === "rating" && e.refers_to).map((e) => e.refers_to));
-  return all.filter((e) => e.kind === "work_sample" && !replaced.has(e.id) && !confirmed.has(e.id))
+  return all.filter((e) => e.kind === "work_sample" && !replaced.has(e.id) && !confirmed.has(e.id) && !isAutoConfirmed(e))
     .sort((a, b) => (a.id < b.id ? -1 : 1));
+}
+
+/** rule.autoconfirm said the system may confirm this video itself (the teacher can still correct it). */
+export const isAutoConfirmed = (e: StoredEvent) => (e.payload.autoconfirm as { decision?: string } | undefined)?.decision === "auto_confirm";
+
+/** Videos the system confirmed, for the teacher's "confirmed by the system" list (spot checks and undo). */
+export async function autoConfirmed(studentIds: string[]): Promise<StoredEvent[]> {
+  const all = (await db.events.toArray()).filter((e) => studentIds.includes(e.student_id));
+  const confirmed = new Set(all.filter((e) => e.kind === "rating" && e.refers_to).map((e) => e.refers_to));
+  return all.filter((e) => e.kind === "work_sample" && isAutoConfirmed(e) && !confirmed.has(e.id));
 }

@@ -1,0 +1,51 @@
+{
+  "id": "rb_firstaid",
+  "skill": "sk_caring_people",
+  "name": {
+    "en": "First-aid sample",
+    "ta": "முதலுதவி மாதிரி"
+  },
+  "media": "video",
+  "capture": {
+    "en": "Short video bandaging a pretend cut on a friend's arm, saying each step.",
+    "ta": "நண்பரின் கையில் போலியான காயத்திற்குக் கட்டுப்போடும் சிறு வீடியோ, ஒவ்வொரு படியையும் சொல்லுங்கள்."
+  },
+  "criteria": [
+    {
+      "id": "clean",
+      "subskill": "ss_care_hygiene",
+      "name": {
+        "en": "Cleans hands and wound first"
+      },
+      "scores": {
+        "0": "Skips it",
+        "1": "Partly",
+        "2": "Washes hands, cleans wound"
+      }
+    },
+    {
+      "id": "bandage",
+      "subskill": "ss_care_firstaid",
+      "name": {
+        "en": "Bandage is firm and neat"
+      },
+      "scores": {
+        "0": "Loose or too tight",
+        "1": "Holds, untidy",
+        "2": "Firm, neat, not too tight"
+      }
+    },
+    {
+      "id": "calm",
+      "subskill": "ss_care_listening",
+      "name": {
+        "en": "Talks calmly to the person"
+      },
+      "scores": {
+        "0": "Ignores them",
+        "1": "Some reassurance",
+        "2": "Explains and reassures"
+      }
+    }
+  ]
+}

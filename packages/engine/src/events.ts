@@ -116,6 +116,7 @@ export function validateEvent(e: EvidenceEvent, now = Date.now()): string[] {
       } else {
         if (!target) errs.push("needs skill_id or subskill_id");
         if (!isLevel(p.level) && p.endorse !== true) errs.push("payload.level must be 1-4 (or endorse: true)");
+        if (p.override === true && (!isLevel(p.level) || String(p.reason ?? "").trim().length < 8)) errs.push("an override needs a level 1-4 and a reason of at least 8 characters");
       }
       break;
     case "order":

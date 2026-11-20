@@ -1,0 +1,51 @@
+{
+  "id": "rb_selling",
+  "skill": "sk_selling",
+  "name": {
+    "en": "Selling sample",
+    "ta": "விற்பனை மாதிரி"
+  },
+  "media": "video",
+  "capture": {
+    "en": "Short role-play video selling one product to a friend acting as a customer.",
+    "ta": "நண்பரை வாடிக்கையாளராக வைத்து ஒரு பொருளை விற்கும் சிறு வீடியோ."
+  },
+  "criteria": [
+    {
+      "id": "greet",
+      "subskill": "ss_sell_customer",
+      "name": {
+        "en": "Greets and listens"
+      },
+      "scores": {
+        "0": "Ignores the customer",
+        "1": "Greets only",
+        "2": "Greets, asks what they need"
+      }
+    },
+    {
+      "id": "explain",
+      "subskill": "ss_sell_explain",
+      "name": {
+        "en": "Explains the product"
+      },
+      "scores": {
+        "0": "Wrong or nothing",
+        "1": "Basic facts",
+        "2": "Clear benefits and price"
+      }
+    },
+    {
+      "id": "price",
+      "subskill": "ss_sell_negotiate",
+      "name": {
+        "en": "Agrees a fair price"
+      },
+      "scores": {
+        "0": "Gives in or argues",
+        "1": "Some give and take",
+        "2": "Polite, fair deal"
+      }
+    }
+  ]
+}

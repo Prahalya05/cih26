@@ -1,0 +1,51 @@
+{
+  "id": "rb_farming",
+  "skill": "sk_crop_farming",
+  "name": {
+    "en": "Farming work sample",
+    "ta": "விவசாய வேலை மாதிரி"
+  },
+  "media": "either",
+  "capture": {
+    "en": "Photo or short video of a bed or plot you prepared or plants you grow, with the soil visible.",
+    "ta": "நீங்கள் தயாரித்த பாத்தி அல்லது வளர்க்கும் செடிகளின் புகைப்படம் / வீடியோ."
+  },
+  "criteria": [
+    {
+      "id": "soil",
+      "subskill": "ss_farm_soil_water",
+      "name": {
+        "en": "Soil and watering"
+      },
+      "scores": {
+        "0": "Dry or waterlogged",
+        "1": "Uneven",
+        "2": "Moist, well prepared"
+      }
+    },
+    {
+      "id": "health",
+      "subskill": "ss_farm_pests",
+      "name": {
+        "en": "Plants are healthy"
+      },
+      "scores": {
+        "0": "Pests or disease clear",
+        "1": "Some damage",
+        "2": "Healthy leaves, no pests"
+      }
+    },
+    {
+      "id": "layout",
+      "subskill": "ss_farm_planning",
+      "name": {
+        "en": "Planting is planned"
+      },
+      "scores": {
+        "0": "Random",
+        "1": "Partly in rows",
+        "2": "Even spacing and rows"
+      }
+    }
+  ]
+}

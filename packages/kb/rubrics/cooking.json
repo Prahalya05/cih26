@@ -1,0 +1,51 @@
+{
+  "id": "rb_cooking",
+  "skill": "sk_cooking",
+  "name": {
+    "en": "Cooking work sample",
+    "ta": "சமையல் வேலை மாதிரி"
+  },
+  "media": "video",
+  "capture": {
+    "en": "Short video (under 20 s) cooking one dish: washing hands, measuring, cooking, the finished dish.",
+    "ta": "ஒரு உணவைச் சமைக்கும் சிறு வீடியோ: கை கழுவுதல், அளவிடுதல், சமைத்தல், முடிந்த உணவு."
+  },
+  "criteria": [
+    {
+      "id": "hygiene",
+      "subskill": "ss_cook_hygiene",
+      "name": {
+        "en": "Clean hands, clean place"
+      },
+      "scores": {
+        "0": "Dirty hands or place",
+        "1": "Partly clean",
+        "2": "Hands washed, surface and vessels clean"
+      }
+    },
+    {
+      "id": "quantity",
+      "subskill": "ss_cook_quantity",
+      "name": {
+        "en": "Measures ingredients"
+      },
+      "scores": {
+        "0": "Guesses everything",
+        "1": "Measures some",
+        "2": "Measures with spoons/cups"
+      }
+    },
+    {
+      "id": "result",
+      "subskill": "ss_cook_quantity",
+      "name": {
+        "en": "Dish looks done well"
+      },
+      "scores": {
+        "0": "Burnt or raw",
+        "1": "Edible, uneven",
+        "2": "Evenly cooked, well presented"
+      }
+    }
+  ]
+}

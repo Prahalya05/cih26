@@ -17,7 +17,7 @@ const CLASS_KEY = "disha.code"; // the class code students are filed under
 const read = (k: string) => { try { return localStorage.getItem(k) ?? ""; } catch { return ""; } };
 const write = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* private mode */ } };
 
-export type Role = "student" | "teacher";
+export type Role = "student" | "teacher" | "funder" | "employer";
 export interface Registration { role: Role; class_code: string }
 
 /** Registers this phone with a join code. Returns null if offline, the code is unknown, or the server says no. */
@@ -63,6 +63,13 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   let tok = await token();
   if (!tok) return new Response(null, { status: 401 });
   let res = await send(tok);
+  if (res.status === 401 && (await db.meta.get("session"))) {
+    // A signed-in account whose token stopped working (signed out elsewhere, or switched off): sign in again.
+    await db.meta.delete("session");
+    await db.meta.delete(TOKEN);
+    window.dispatchEvent(new Event("disha:session"));
+    return res;
+  }
   if (res.status === 401) {
     await db.meta.delete(TOKEN);
     tok = await token();

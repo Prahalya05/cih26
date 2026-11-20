@@ -40,6 +40,7 @@ export default function Talk({ go, id }: { go: Go; id: string }) {
   const [turns, setTurns] = useState<{ q?: string; said: string }[]>([]);
   const [followup, setFollowup] = useState<{ q: string; ai: boolean } | null>(null);
   const recorder = useRef<Recorder | null>(null);
+  const [live, setLive] = useState("");
   const stopRef = useRef<() => void>(() => {});
 
   useEffect(() => { speak(t("talkHint"), lang, "talk_hint"); }, [lang]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -123,7 +124,8 @@ export default function Talk({ go, id }: { go: Go; id: string }) {
     if (!online) { setNote(t("voiceOffline")); return; }
     try {
       recorder.current = new Recorder();
-      await recorder.current.start(45, () => stopRef.current());
+      setLive("");
+      await recorder.current.start(45, () => stopRef.current(), { lang, onText: setLive });
       setBusy("recording");
       setMode("voice");
     } catch { setNote(t("voiceOffline")); }
@@ -189,6 +191,7 @@ export default function Talk({ go, id }: { go: Go; id: string }) {
       </Button>
 
       {busy === "recording" && <p className="text-center font-medium text-red-700">{t("listening")}</p>}
+      {busy === "recording" && live && <p className="rounded-xl border border-dashed border-line bg-surface px-3 py-2 text-base" aria-live="polite">“{live}”</p>}
       {busy === "thinking" && <p className="text-center font-medium text-muted">{t("thinking")}</p>}
       {note && <p className="rounded-xl bg-sun-soft px-3 py-2 text-sm text-warn">{note}</p>}
 

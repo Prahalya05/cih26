@@ -12,10 +12,30 @@
 | D. Partner self-service screen, `0010` migration for orgs and applications | Not built. Applications travel as `apply` actions through the existing sync, and teachers see them | — |
 | E. Each student's knowledge graph (student and teacher views) | **Built** | `packages/engine/src/persongraph.ts`, `components/PersonGraph.tsx`, `screens/Graph.tsx` |
 | F. Hindi (core screens and all new screens, picture cards) | **Built**, needs a native-speaker review | `apps/web/src/lib/i18n.ts` |
-| G. Teacher courses with Razorpay | **Future scope**, Phase 2 in `docs/ROADMAP.md` | — |
+| G. Teacher courses with Razorpay | **Built** (21 Nov): free / per lesson / subscription, Razorpay test mode or labelled demo payment, server signature check, quiz pass → skill evidence, course suggestions by rule, teacher earnings (90%) | `routers/courses.py`, `0013_courses.sql`, `screens/{Courses,Course,CourseBuilder,TeacherCourses}.tsx` |
 | H. SECURITY.md, ROADMAP.md, HOW_DISHA_DECIDES.md | **Written** | `docs/` |
 | Rate limits on device registration and AI routes | **Built** | `apps/api/app/ratelimit.py` |
 | Demo cache for AI answers | **Built** | `apps/api/app/adapters/demo_cache.py` |
+
+### Round 3 (21 Nov 2026): team's list + sign-in for everyone
+
+| Item | Status | Where |
+|---|---|---|
+| Sign-in for all roles (phone or email + one-time code; demo shows code on screen) | **Built** | `routers/accounts.py`, `0011_accounts.sql`, `screens/SignIn.tsx`, `lib/auth.ts` |
+| Standard app shell: role homes, bottom tabs, Account screen (language, privacy, sign out, delete) | **Built** | `components/BottomNav.tsx`, `screens/Account.tsx`, `App.tsx` |
+| Tamil voice: server speech when the phone has no Tamil voice; live Tamil dictation while recording | **Built** | `POST /v1/tts` (`adapters/gemini_tts.py`), `lib/speech.ts` |
+| Resume: made from her record (verified skills marked), add lines, read an old resume (AI, quote-checked) | **Built** | `screens/Resume.tsx`, `lib/resume.ts`, `POST /v2/resume/read` |
+| Teacher override of a skill level, with reason (`rule.override`) | **Built** | `engine/src/trust.ts`, `components/TeacherTools.tsx` |
+| Teacher and employer job posts; applications with status | **Built** | `screens/Jobs.tsx`, `/v2/postings`, `/v2/applications` |
+| Teacher suggests internships/schemes with a note; student sees "Your teacher suggests" | **Built** | `TeacherTools.tsx` SuggestPanel, `Opportunities.tsx` MyJobs |
+| Donor pay check: skill + verified need + consent + identity + once (`rule.paycheck`) | **Built** | `GET /v2/funder/paycheck`, `components/PayCheck.tsx` |
+| Video identity: on-phone face match + finger-count liveness (`rule.identity`) | **Built**, needs testing on a real phone | `lib/identity.ts`, `components/IdentityGate.tsx` |
+| System confirms clear videos itself, random 10% spot checks (`rule.autoconfirm`) | **Built** | `routers/see.py`, Teacher "confirmed by the system" list |
+| Customer privacy consent on the job-confirmation page (`guard.buyer_privacy`) | **Built** | `ConfirmJob.tsx`, `v2.py` confirm |
+| Job applications: documents checked (AI first look) and verified by teacher (`rule.apply_docs`) | **Built** | `screens/Docs.tsx`, `/v2/docs/*` |
+| Teacher profile (public: bio, subjects, experience, courses) and detailed student profile | **Built** | `screens/TeacherProfile.tsx`, `screens/StudentProfile.tsx`, `/v2/teachers*` |
+| Who does what: Disha / AI / teacher / student / donor / employer | **Written**, in app and docs | `screens/Roles.tsx`, `docs/RESPONSIBILITIES.md` |
+| Photo and video proof for 12 skills (was 2), media type per checklist | **Built** | `packages/kb/rubrics/*.json`, `WorkSample.tsx`, Results "Show your work for another skill" |
 
 The demo script is in `docs/Disha_Commands.md` §15.
 

@@ -1,0 +1,48 @@
+{
+  "id": "rb_tools",
+  "skill": "sk_tools_handling",
+  "name": {
+    "en": "Hand-tools sample",
+    "ta": "கைக்கருவி மாதிரி"
+  },
+  "media": "video",
+  "capture": {
+    "en": "Short video making or fixing one simple thing with hand tools (no power tools under 18).",
+    "ta": "கைக்கருவிகளால் ஒரு எளிய பொருளைச் செய்யும் / சரிசெய்யும் சிறு வீடியோ."
+  },
+  "criteria": [
+    {
+      "id": "safe",
+      "name": {
+        "en": "Holds tools safely"
+      },
+      "scores": {
+        "0": "Unsafe grip",
+        "1": "Mostly safe",
+        "2": "Safe grip, steady"
+      }
+    },
+    {
+      "id": "result",
+      "name": {
+        "en": "The job is done well"
+      },
+      "scores": {
+        "0": "Not finished",
+        "1": "Works, rough",
+        "2": "Neat and works"
+      }
+    },
+    {
+      "id": "measure",
+      "name": {
+        "en": "Measures and marks before cutting"
+      },
+      "scores": {
+        "0": "No measuring",
+        "1": "Rough marks",
+        "2": "Measured and marked"
+      }
+    }
+  ]
+}

@@ -17,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import db, settings
 from .adapters import gemini
-from .routers import proof, see, v1, v2
+from .routers import accounts, courses, proof, see, trust, v1, v2
 
 
 @asynccontextmanager
@@ -40,10 +40,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(accounts.router)
 app.include_router(v1.router)
 app.include_router(v2.router)
 app.include_router(see.router)
 app.include_router(proof.router)
+app.include_router(trust.router)
+app.include_router(courses.router)
 
 
 @app.get("/health")
