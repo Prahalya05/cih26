@@ -33,15 +33,26 @@ def test_every_scheme_has_a_rule():
     assert sorted(kb.schemes()) == sorted(kb.rules())
 
 
+def _close(a, b):
+    """Equal, except floats only need to agree to 1e-9 (maths libraries differ in the last bits across OSes)."""
+    if isinstance(a, float) or isinstance(b, float):
+        return isinstance(a, (int, float)) and isinstance(b, (int, float)) and a == pytest.approx(b, rel=1e-9, abs=1e-12)
+    if isinstance(a, dict) and isinstance(b, dict):
+        return a.keys() == b.keys() and all(_close(a[k], b[k]) for k in a)
+    if isinstance(a, list) and isinstance(b, list):
+        return len(a) == len(b) and all(_close(x, y) for x, y in zip(a, b))
+    return a == b
+
+
 def test_golden_is_current():
     golden = json.loads((ROOT / "packages" / "engine" / "test" / "golden.json").read_text(encoding="utf-8"))
     for case in golden["recommend"]:
-        assert matcher.recommend(case["persona"]) == case["result"]
+        assert _close(matcher.recommend(case["persona"]), case["result"])
     for case in golden["eligibility"]:
-        assert eligibility.evaluate_all(case["facts"]) == case["result"]
+        assert _close(eligibility.evaluate_all(case["facts"]), case["result"])
     from app.services import tracing
     for case in golden["fold"]:
-        assert tracing.fold_events(case["events"], case["opts"]) == case["result"], case["name"]
+        assert _close(tracing.fold_events(case["events"], case["opts"]), case["result"]), case["name"]
     from app.services import fitreach
     for case in golden["recommend_v2"]:
-        assert fitreach.recommend_v2(case["persona"]) == case["result"]
+        assert _close(fitreach.recommend_v2(case["persona"]), case["result"])
