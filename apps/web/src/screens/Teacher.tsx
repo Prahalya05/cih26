@@ -76,6 +76,7 @@ export default function Teacher({ go }: { go: Go }) {
             className="min-h-14 rounded-xl border border-line bg-surface px-4 text-lg uppercase" />
         </label>
         <p className="text-muted">{t("teacherCodeHint")}</p>
+        {account && <Button kind="soft" onClick={() => go({ name: "classrooms" })}><Icon name="users" className="size-5" />{t("teachOnline")}</Button>}
         <Button disabled={!draft.trim() || joining} onClick={async () => {
           const typed = draft.trim().toUpperCase();
           // A teacher code registers this phone as a teacher's phone and tells us which class it is for.
@@ -97,7 +98,7 @@ export default function Teacher({ go }: { go: Go }) {
     <Screen
       title={t("teacherTitle")}
       onBack={back}
-      right={<button onClick={() => !account && setCode("")} className="rounded-full bg-brand-soft px-3 py-1 text-sm font-semibold text-brand-dark">{code}</button>}
+      right={<button onClick={() => (account ? go({ name: "classrooms" }) : setCode(""))} className="rounded-full bg-brand-soft px-3 py-1 text-sm font-semibold text-brand-dark">{code}</button>}
     >
       <div className="grid grid-cols-3 gap-2 text-center">
         <Stat value={rows.length} label={t("students")} />
@@ -106,6 +107,7 @@ export default function Teacher({ go }: { go: Go }) {
       </div>
       {pending > 0 && online && <Button kind="soft" onClick={() => void syncNow()}><Icon name="sync" className="size-5" />Sync ({pending})</Button>}
       {role === "student" && <p className="rounded-xl bg-brand-soft p-3 text-sm">{t("notTeacherPhone")}</p>}
+      {account && <Button kind="soft" onClick={() => go({ name: "classrooms" })}><Icon name="users" className="size-5" />{t("onlineClassrooms")}</Button>}
 
       <WorkQueue students={students} />
 

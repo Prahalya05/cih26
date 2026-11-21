@@ -68,6 +68,19 @@ export default function Home({ go }: { go: Go }) {
         </button>
       </div>
 
+      {/* Signed up without a school code: find an online class (or see the requests she already sent). */}
+      {account?.role === "student" && !account.school_id && (
+        <button onClick={() => go({ name: "findClass" })}
+          className="flex items-center gap-3 rounded-2xl bg-brand p-4 text-left text-white active:bg-brand-dark">
+          <span className="flex size-10 items-center justify-center rounded-xl bg-white/10 text-accent"><Icon name="users" className="size-6" /></span>
+          <span className="flex-1">
+            <span className="block text-lg font-semibold">{t("findClass")}</span>
+            <span className="block text-sm opacity-90">{t("findClassShort")}</span>
+          </span>
+          <Icon name="chevron" className="size-6" />
+        </button>
+      )}
+
       {/* Teacher, donor and employer screens are reached by signing in with that role, not from a student's home. */}
       {account?.role === "student" && account.student_id && (
         <nav className="mt-auto flex flex-col divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">

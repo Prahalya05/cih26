@@ -21,7 +21,8 @@ PERSONAL = re.compile(r"(^|_)(name|phone|mobile|email|address|aadhaa?r|dob|whats
 # Columns that match the pattern but are not about a person.
 # account.name: the sign-in table (0011) is never granted to the analysis role (disha_readonly) and never leaves the API
 # except to its own owner; the phone number or email itself is stored only as an HMAC.
-ALLOWED = {("school", "name"), ("opportunity", "title"), ("account", "name")}
+# classroom.name: a class's title ("Spoken English"), not a person's name.
+ALLOWED = {("school", "name"), ("opportunity", "title"), ("account", "name"), ("classroom", "name")}
 
 TRACKERS = ["google-analytics", "gtag", "@vercel/analytics", "mixpanel", "@segment", "analytics-node", "amplitude",
             "posthog", "hotjar", "@sentry", "sentry-sdk", "sentry_sdk", "logrocket", "fullstory",

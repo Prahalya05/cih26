@@ -13,7 +13,7 @@ function tabsFor(a: Account): Tab[] {
   switch (a.role) {
     case "teacher":
       return [
-        { label: "tabClass", icon: "teacher", to: { name: "teacher" }, match: ["teacher", "rate", "graph", "docs", "studentProfile"] },
+        { label: "tabClass", icon: "teacher", to: { name: "teacher" }, match: ["teacher", "rate", "graph", "docs", "studentProfile", "classrooms"] },
         { label: "tabCourses", icon: "cap", to: { name: "teacherCourses" }, match: ["teacherCourses", "courseBuilder", "course"] },
         { label: "tabJobs", icon: "briefcase", to: { name: "jobs" }, match: ["jobs"] },
         { ...account, match: ["account", "privacy", "teacherProfile", "roles", "how"] },
@@ -27,7 +27,7 @@ function tabsFor(a: Account): Tab[] {
         { label: "tabHome", icon: "target", to: { name: "home" }, match: ["home", "new", "situation", "talk", "consent", "cards", "questions", "facts", "results", "career", "assess", "game", "sample", "order", "proof", "aimTrack", "aimQuiz", "graph"] },
         { label: "tabLearn", icon: "cap", to: { name: "courses" }, match: ["courses", "course", "teacherProfile"] },
         { label: "tabResume", icon: "idcard", to: { name: "home" }, match: ["resume", "docs"] },
-        { ...account, match: ["account", "privacy", "studentProfile", "roles", "how"] },
+        { ...account, match: ["account", "privacy", "studentProfile", "roles", "how", "findClass"] },
       ];
   }
 }

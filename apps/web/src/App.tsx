@@ -52,6 +52,10 @@ const TeacherCourses = lazy(() => import("./screens/TeacherCourses"));
 const TeacherProfile = lazy(() => import("./screens/TeacherProfile"));
 const StudentProfile = lazy(() => import("./screens/StudentProfile"));
 const Roles = lazy(() => import("./screens/Roles"));
+// Online classrooms: teachers make them, students ask to join.
+const FindClass = lazy(() => import("./screens/FindClass"));
+const Classrooms = lazy(() => import("./screens/Classrooms"));
+const ReviewTeachers = lazy(() => import("./screens/ReviewTeachers"));
 
 export type Route =
   | { name: "home" }
@@ -87,7 +91,9 @@ export type Route =
   | { name: "teacherCourses" }
   | { name: "teacherProfile"; teacherId?: string }
   | { name: "studentProfile"; id: string }
-  | { name: "roles" };
+  | { name: "roles" }
+  | { name: "findClass" }
+  | { name: "classrooms" };
 
 export type Go = (r: Route) => void;
 
@@ -99,6 +105,8 @@ export default function App() {
   const [route, setRoute] = useState<Route>(() => (new URLSearchParams(location.search).has("funder") ? { name: "funder" } : { name: "home" }));
   // A buyer opening a job-confirmation link (?confirm=token) sees only that page.
   const [confirmToken, setConfirmToken] = useState(() => new URLSearchParams(location.search).get("confirm"));
+  // A Disha reviewer opening ?review checks online teachers' proofs (needs the admin token, not a sign-in).
+  const [reviewing, setReviewing] = useState(() => new URLSearchParams(location.search).has("review"));
   const [lang, setLangState] = useState<LangCode>(() => (read("disha.lang") as LangCode) || "ta");
   // Decision X-ray: ?xray=1 (or holding the logo) shows every decision as RULE / AI live, for demos.
   const [xray, setXray] = useState(xrayInitiallyOn);
@@ -145,6 +153,16 @@ export default function App() {
     return () => { window.removeEventListener("online", onOnline); window.clearInterval(timer); };
   }, []);
 
+  if (reviewing) {
+    return (
+      <LangContext.Provider value={{ lang, setLang }}>
+        <Suspense fallback={<p className="p-6 text-center text-muted">…</p>}>
+          <ReviewTeachers onClose={() => { history.replaceState(null, "", "/"); setReviewing(false); }} />
+        </Suspense>
+      </LangContext.Provider>
+    );
+  }
+
   // Signed out: only the sign-in screen, the buyer's confirmation link and "How Disha decides" are open.
   const signedOut = account === null && !confirmToken;
   if (account === undefined && !confirmToken) return null;
@@ -190,6 +208,8 @@ export default function App() {
         {route.name === "teacherProfile" && <TeacherProfile key={route.teacherId ?? "me"} go={go} teacherId={route.teacherId} />}
         {route.name === "studentProfile" && <StudentProfile go={go} id={route.id} />}
         {route.name === "roles" && <Roles go={go} />}
+        {route.name === "findClass" && <FindClass go={go} />}
+        {route.name === "classrooms" && <Classrooms go={go} />}
         {route.name === "graph" && <GraphScreen go={go} id={route.id} back={route.from ? () => go(route.from!) : undefined} />}
         {route.name === "aimQuiz" && <AimQuiz key={`${route.subject}|${route.mode}`} go={go} id={route.id} subject={route.subject} mode={route.mode} track={route.track} />}
       </Suspense>

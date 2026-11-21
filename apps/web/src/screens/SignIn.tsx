@@ -121,10 +121,11 @@ export default function SignIn({ onExplore }: { onExplore: () => void }) {
               </label>
               {(role === "student" || role === "teacher") && (
                 <label className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold">{role === "student" ? t("classCodeLabel") : t("teacherCodeLabel")}</span>
-                  <input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder={role === "student" ? "DEMO-XXXXX" : ""}
+                  <span className="text-sm font-semibold">{role === "student" ? t("classCodeLabel") : t("teacherCodeLabel")} <span className="font-normal text-muted">({t("optional")})</span></span>
+                  <input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder={t("leaveEmptyIfNone")}
                     className="min-h-12 rounded-xl border border-line px-3 text-base uppercase" />
                   <span className="text-xs text-muted">{role === "student" ? t("classCodeHint") : t("teacherCodeHint")}</span>
+                  <span className="text-xs font-semibold text-accent-dark">{role === "student" ? t("noCodeStudent") : t("noCodeTeacher")}</span>
                 </label>
               )}
               {(role === "funder" || role === "employer") && (
@@ -141,7 +142,7 @@ export default function SignIn({ onExplore }: { onExplore: () => void }) {
             </section>
           )}
 
-          <Button disabled={code.length !== 6 || busy || (sent.new_account && (!name.trim() || !privacyOk || ((role === "student" || role === "teacher") && !joinCode.trim())))}
+          <Button disabled={code.length !== 6 || busy || (sent.new_account && (!name.trim() || !privacyOk))}
             onClick={() => void verify()}>{busy ? "…" : t("signInButton")} <Icon name="check" className="size-5" /></Button>
           <button onClick={() => void ask()} className="text-sm font-bold text-accent-dark">{t("resendCode")}</button>
         </>

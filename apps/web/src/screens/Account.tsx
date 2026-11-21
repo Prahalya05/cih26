@@ -54,6 +54,8 @@ export default function Account({ go }: { go: Go }) {
       <nav className="flex flex-col divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
         {account.role === "student" && account.student_id && <Row icon="users" label={t("myProfile")} onClick={() => go({ name: "studentProfile", id: account.student_id! })} />}
         {account.role === "teacher" && <Row icon="teacher" label={t("myTeacherProfile")} onClick={() => go({ name: "teacherProfile" })} />}
+        {account.role === "teacher" && <Row icon="users" label={t("onlineClassrooms")} onClick={() => go({ name: "classrooms" })} />}
+        {account.role === "student" && <Row icon="users" label={t(account.school_id ? "myClass" : "findClass")} onClick={() => go({ name: "findClass" })} />}
         {account.role === "student" && account.student_id && <Row icon="idcard" label={t("myResume")} onClick={() => go({ name: "resume", id: account.student_id! })} />}
         {account.role === "student" && account.student_id && <Row icon="clipboard" label={t("myDocs")} onClick={() => go({ name: "docs", id: account.student_id! })} />}
         <Row icon="layers" label={t("whoDoesWhat")} onClick={() => go({ name: "roles" })} />

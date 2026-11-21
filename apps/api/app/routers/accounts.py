@@ -124,7 +124,8 @@ class VerifyIn(BaseModel):
     role: str | None = Field(None, description="student | teacher | funder | employer")
     name: str | None = Field(None, max_length=80)
     org: str | None = Field(None, max_length=120)
-    join_code: str | None = Field(None, max_length=64, description="Class code (students) or teacher code (teachers)")
+    join_code: str | None = Field(None, max_length=64, description="Class code (students) or teacher code (teachers); "
+                                  "leave it out to join or teach online")
     privacy_ok: bool = False
 
 
@@ -200,12 +201,14 @@ def _create_account(con, body: VerifyIn, kind: str, value: str, lh: str) -> dict
     if not body.privacy_ok:
         raise HTTPException(400, "Please read and accept how Disha uses your details")
     school_id = class_code = None
-    if body.role in ("student", "teacher"):
-        code = (body.join_code or "").strip().upper()
+    code = (body.join_code or "").strip().upper()
+    # No code: the online way. A student finds a classroom and asks to join; a teacher makes her own classrooms.
+    if body.role in ("student", "teacher") and code:
         jc = con.execute("select school_id, role, class_code from join_code where code = %s and revoked_at is null",
-                         (code,)).fetchone() if code else None
+                         (code,)).fetchone()
         if not jc:
-            raise HTTPException(400, "Enter your school's class code" if body.role == "student" else "Enter your teacher code")
+            raise HTTPException(400, "That class code is not right; check it, or leave it empty to join online" if body.role == "student"
+                                else "That teacher code is not right; check it, or leave it empty to teach online")
         # The role comes from the code: a class code can never make a teacher account.
         if jc["role"] != body.role:
             raise HTTPException(400, "That is not a teacher code" if body.role == "teacher" else "That is a teacher code; choose Teacher")
