@@ -19,7 +19,7 @@ import { emit } from "../lib/xray";
 import { ITEMS, RUBRICS, profileOf } from "../lib/skills";
 import { STORY_KEY } from "../lib/stories";
 import { GAMES } from "./Game";
-import { nextToTest, personaFromProfile, rplOpportunities, safeRubric, type PersonaV2, type UnitState } from "@disha/engine";
+import { nextToTest, personaFromProfile, rplOpportunities, safeRubric, skillInterestFit, type PersonaV2, type UnitState } from "@disha/engine";
 import { Icon, type IconName } from "../components/Icon";
 import { AimHigh } from "./AimHigh";
 
@@ -117,6 +117,7 @@ function SkillLevels({ id, go, claimed, persona }: { id: string; go: Go; claimed
   const { t, pick } = useT();
   const profile = useLive(() => profileOf(id), [id], null);
   const student = useLive(() => db.students.get(id), [id], undefined);
+  const [showAll, setShowAll] = useState(false);
   if (!profile || !student) return null;
   const g = kb.graph!;
   const minor = isMinorStudent(student); // no work samples on hazardous sub-skills under 18
@@ -125,7 +126,12 @@ function SkillLevels({ id, go, claimed, persona }: { id: string; go: Go; claimed
     claimed.includes(sk) || g.bySkill[sk].some((u) => (profile.units[u]?.n ?? 0) > 0));
   // The test most likely to change her career list (only sub-skills that have questions, not yet sure).
   const candidates = [...testable].filter((u) => (profile.units[u]?.confidence ?? 0) < 0.8 || (profile.units[u]?.n ?? 0) === 0);
-  const best = nextToTest(kb, persona, candidates, 1)[0];
+  // Weighed by her interests too, so the suggestion is a skill she cares about, not just any that moves the list.
+  const fit = skillInterestFit(kb, persona.riasec);
+  const likes = (skill: string) => (fit ? fit[skill] ?? 0 : 1);
+  const best = nextToTest(kb, persona, candidates, candidates.length)
+    .map((c) => ({ ...c, value: c.value * (0.3 + 0.7 * likes(g.subskills[c.id].skill)) }))
+    .sort((a, b) => b.value - a.value || (a.id < b.id ? -1 : 1))[0];
   const rpl = rplOpportunities(kb, profile.units, minor);
   return (
     <section className="flex flex-col gap-3">
@@ -173,7 +179,11 @@ function SkillLevels({ id, go, claimed, persona }: { id: string; go: Go; claimed
       ))}
       {/* Photo or video proof for any skill that has a checklist, not only the ones she already mentioned. */}
       {(() => {
-        const more = Object.values(RUBRICS).filter((r) => !skills.includes(r.skill) && safeRubric(g, r, minor));
+        // Closest to her interests first; with interests known, only the ones that match (the rest behind "show all").
+        const all = Object.values(RUBRICS).filter((r) => !skills.includes(r.skill) && safeRubric(g, r, minor))
+          .sort((a, b) => likes(b.skill) - likes(a.skill));
+        const matching = fit ? all.filter((r) => likes(r.skill) >= 0.5) : all;
+        const more = showAll || matching.length === 0 ? all : matching;
         if (!more.length) return null;
         return (
           <article className="rounded-2xl border border-line bg-surface p-4">
@@ -188,6 +198,9 @@ function SkillLevels({ id, go, claimed, persona }: { id: string; go: Go; claimed
                 </button>
               ))}
             </div>
+            {more.length < all.length && (
+              <button onClick={() => setShowAll(true)} className="mt-2 text-sm font-bold text-accent-dark">{t("showAllSkills", { n: all.length })}</button>
+            )}
           </article>
         );
       })()}

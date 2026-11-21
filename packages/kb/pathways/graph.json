@@ -110,6 +110,15 @@
     {"from": "ug_science", "to": "civil", "years": 1.5, "exams": ["upsc_cse", "tnpsc"], "note": {"en": "Any degree is enough. Most people prepare for 1 to 2 years.", "ta": "எந்தப் பட்டமும் போதும். பெரும்பாலானோர் 1–2 ஆண்டுகள் தயாராகின்றனர்."}},
     {"from": "ug_commerce", "to": "civil", "years": 1.5, "exams": ["upsc_cse", "tnpsc"], "note": {"en": "Any degree is enough. Most people prepare for 1 to 2 years.", "ta": "எந்தப் பட்டமும் போதும். பெரும்பாலானோர் 1–2 ஆண்டுகள் தயாராகின்றனர்."}},
     {"from": "ug_arts", "to": "civil", "years": 1.5, "exams": ["upsc_cse", "tnpsc"], "note": {"en": "Any degree is enough. Most people prepare for 1 to 2 years.", "ta": "எந்தப் பட்டமும் போதும். பெரும்பாலானோர் 1–2 ஆண்டுகள் தயாராகின்றனர்."}},
-    {"from": "btech", "to": "civil", "years": 1.5, "exams": ["upsc_cse", "tnpsc"], "note": {"en": "Any degree is enough. Most people prepare for 1 to 2 years.", "ta": "எந்தப் பட்டமும் போதும். பெரும்பாலானோர் 1–2 ஆண்டுகள் தயாராகின்றனர்."}}
+    {"from": "btech", "to": "civil", "years": 1.5, "exams": ["upsc_cse", "tnpsc"], "note": {"en": "Any degree is enough. Most people prepare for 1 to 2 years.", "ta": "எந்தப் பட்டமும் போதும். பெரும்பாலானோர் 1–2 ஆண்டுகள் தயாராகின்றனர்."}},
+    {"from": "ug_science", "to": "iitm_bs", "years": 4, "exams": ["iitm_q"], "note": {"en": "Open to anyone who has passed Class 12, including graduates.", "ta": "12ஆம் வகுப்பு முடித்த எவரும், பட்டதாரிகளும் சேரலாம்."}},
+    {"from": "ug_commerce", "to": "iitm_bs", "years": 4, "exams": ["iitm_q"], "note": {"en": "Open to anyone who has passed Class 12, including graduates.", "ta": "12ஆம் வகுப்பு முடித்த எவரும், பட்டதாரிகளும் சேரலாம்."}},
+    {"from": "ug_arts", "to": "iitm_bs", "years": 4, "exams": ["iitm_q"], "note": {"en": "Open to anyone who has passed Class 12, including graduates.", "ta": "12ஆம் வகுப்பு முடித்த எவரும், பட்டதாரிகளும் சேரலாம்."}},
+    {"from": "btech", "to": "iitm_bs", "years": 4, "exams": ["iitm_q"], "note": {"en": "Open to anyone who has passed Class 12, including graduates.", "ta": "12ஆம் வகுப்பு முடித்த எவரும், பட்டதாரிகளும் சேரலாம்."}},
+    {"from": "ug_science", "to": "ca", "years": 3.5, "note": {"en": "Graduates can skip Foundation and go straight to Intermediate (direct entry; 60% marks if not commerce).", "ta": "பட்டதாரிகள் Foundation இன்றி நேரடியாக Intermediate எழுதலாம் (வணிகவியல் அல்லாதோருக்கு 60% மதிப்பெண்)."}},
+    {"from": "ug_arts", "to": "ca", "years": 3.5, "note": {"en": "Graduates can skip Foundation and go straight to Intermediate (direct entry; 60% marks if not commerce).", "ta": "பட்டதாரிகள் Foundation இன்றி நேரடியாக Intermediate எழுதலாம் (வணிகவியல் அல்லாதோருக்கு 60% மதிப்பெண்)."}},
+    {"from": "btech", "to": "ca", "years": 3.5, "note": {"en": "Graduates can skip Foundation and go straight to Intermediate (direct entry; 60% marks if not commerce).", "ta": "பட்டதாரிகள் Foundation இன்றி நேரடியாக Intermediate எழுதலாம் (வணிகவியல் அல்லாதோருக்கு 60% மதிப்பெண்)."}},
+    {"from": "btech", "to": "llb", "years": 3, "exams": ["tndalu"]},
+    {"from": "btech", "to": "msc", "years": 2, "exams": ["iit_jam"]}
   ]
 }

@@ -117,3 +117,11 @@ test("Leitner: right moves up a box, wrong goes back to box 1", () => {
   assert.deepEqual(review(c, false, 140), { box: 1, due: 141 });
   assert.deepEqual(dueCards({ a: { box: 2, due: 5 }, b: { box: 1, due: 5 }, c: { box: 1, due: 9 } }, 6), ["b", "a"]);
 });
+
+test("an engineering student still has graduate doors: IIT Madras online, LLB, CA direct entry, M.Sc", () => {
+  const ds = doors(pw, startOf("ug", "btech", 2), 20);
+  for (const id of ["trk_data", "trk_lawyer", "trk_ca", "trk_scientist", "trk_civil", "trk_engineer"]) {
+    assert.equal(door(ds, id).status, "open", id);
+  }
+  assert.notEqual(door(ds, "trk_doctor").status, "open"); // MBBS needs Class 12 Biology, not a degree
+});

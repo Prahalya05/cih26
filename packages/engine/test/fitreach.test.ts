@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { nextToTest, recommendV2, scoreAllV2, type PersonaV2 } from "../src/index.ts";
+import { nextToTest, recommendV2, scoreAllV2, skillInterestFit, type PersonaV2 } from "../src/index.ts";
 import { loadKb } from "./loadKb.ts";
 
 const kb = loadKb();
@@ -27,4 +27,12 @@ test("next test: a sub-skill no career needs is never chosen first", () => {
   const picks = nextToTest(kb, p, ["ss_stitch_machine", "ss_stitch_fitting", ...unused]);
   assert.ok(!unused.includes(picks[0].id), JSON.stringify(picks));
   assert.ok(recommendV2(kb, p).careers.length === 8);
+});
+
+test("skills follow her interests: people-minded puts teaching above wiring, hands-on the other way", () => {
+  const social = skillInterestFit(kb, { S: 1, A: 0.6 })!;
+  const handsOn = skillInterestFit(kb, { R: 1, I: 0.5 })!;
+  assert.ok(social.sk_teaching_explaining > social.sk_electrical_basic);
+  assert.ok(handsOn.sk_electrical_basic > handsOn.sk_teaching_explaining);
+  assert.equal(skillInterestFit(kb, undefined), undefined); // no interests: no guessing
 });

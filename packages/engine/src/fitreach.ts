@@ -214,3 +214,22 @@ export function nextToTest(kb: KB, persona: PersonaV2, candidates: string[], n =
   }
   return out.sort((a, b) => b.value - a.value || (a.id < b.id ? -1 : 1)).slice(0, n);
 }
+
+/**
+ * How well each skill fits her interests (0..1): the interest match of the careers that use the skill, averaged
+ * by how much each career leans on it. undefined when she gave no interests, so callers keep their usual order.
+ */
+export function skillInterestFit(kb: KB, riasec: Persona["riasec"]): Record<string, number> | undefined {
+  const me = studentRiasecVec({ riasec });
+  if (!me.some((x) => x > 0)) return undefined;
+  const sum: Record<string, number> = {};
+  const weight: Record<string, number> = {};
+  for (const occ of Object.values(kb.occupations)) {
+    const c = cosine(me, occRiasecVec(occ.riasec));
+    for (const s of occ.skills) {
+      sum[s.id] = (sum[s.id] ?? 0) + s.w * c;
+      weight[s.id] = (weight[s.id] ?? 0) + s.w;
+    }
+  }
+  return Object.fromEntries(Object.keys(sum).map((k) => [k, weight[k] ? sum[k] / weight[k] : 0]));
+}

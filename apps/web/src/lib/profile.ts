@@ -113,7 +113,15 @@ export function analyse(student: Student, actions: Action[], lang: string, profi
   const schemes = evaluateAll(kb, facts);
   const opportunities = rankOpportunities(kb, [...POSTED, ...OPPORTUNITIES], { levels: personaV2.levels, facts, age: ageOf(student), education: persona.education });
   const recommendations = actions.filter((a) => a.kind === "recommend" && a.student_id === student.id);
-  const applications = actions.filter((a) => a.kind === "apply" && a.student_id === student.id);
+  // The latest "apply" note per listing wins, so "I did not apply after all" (withdrawn) takes it back.
+  const latest = new Map<string, Action>();
+  for (const x of actions) {
+    if (x.kind !== "apply" || x.student_id !== student.id) continue;
+    const key = String(x.payload.opportunity_id);
+    const prev = latest.get(key);
+    if (!prev || x.created_at >= prev.created_at) latest.set(key, x);
+  }
+  const applications = [...latest.values()].filter((x) => !x.payload.withdrawn);
   return { skills, persona, personaV2, facts, careers, schemes, opportunities, recommendations, applications };
 }
 

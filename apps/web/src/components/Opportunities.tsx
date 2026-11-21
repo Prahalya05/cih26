@@ -27,6 +27,10 @@ export function Opportunities({ a, student }: { a: Analysis; student: Student })
   const [kind, setKind] = useState<OpportunityKind | "all">("all");
   const [applying, setApplying] = useState<Opportunity | null>(null);
   const applied = new Set(a.applications.map((x) => String(x.payload.opportunity_id)));
+  // External sites: opening the link is not applying. Ask her afterwards and only then note it.
+  const [opened, setOpened] = useState<Set<string>>(() => new Set());
+  const note = (opp: Opportunity, r: OppReadiness, withdrawn: boolean) => void addAction({ student_id: student.id, kind: "apply", by: "student",
+    payload: { opportunity_id: opp.id, readiness: r.status, skill_share: r.skill_share, external: true, ...(withdrawn ? { withdrawn: true } : {}) } });
   const list = a.opportunities.filter((x) => kind === "all" || x.opp.kind === kind);
   const groups: OppReadiness["status"][] = ["ready", "almost", "later"];
 
@@ -51,12 +55,16 @@ export function Opportunities({ a, student }: { a: Analysis; student: Student })
           <div key={g} className="flex flex-col gap-2">
             <p className={`eyebrow ${g === "ready" ? "!text-good" : g === "almost" ? "!text-warn" : ""}`}>{t(`opp_${g}`)} · {items.length}</p>
             {items.map(({ opp, r }) => (
-              <OppCard key={opp.id} opp={opp} r={r} applied={applied.has(opp.id)} onApply={() => {
-                // External: the link opens the official site; we only note that she went to apply.
-                if (opp.apply.mode === "external") void addAction({ student_id: student.id, kind: "apply", by: "student",
-                  payload: { opportunity_id: opp.id, readiness: r.status, skill_share: r.skill_share, external: true } });
-                else setApplying(opp);
-              }} />
+              <OppCard key={opp.id} opp={opp} r={r} applied={applied.has(opp.id)} opened={opened.has(opp.id)}
+                onApply={() => {
+                  if (opp.apply.mode === "external") setOpened((s) => new Set(s).add(opp.id));
+                  else setApplying(opp);
+                }}
+                onConfirm={(yes) => {
+                  setOpened((s) => { const n = new Set(s); n.delete(opp.id); return n; });
+                  if (yes) note(opp, r, false);
+                }}
+                onUndo={() => note(opp, r, true)} />
             ))}
           </div>
         );
@@ -66,7 +74,10 @@ export function Opportunities({ a, student }: { a: Analysis; student: Student })
   );
 }
 
-function OppCard({ opp, r, applied, onApply }: { opp: Opportunity; r: OppReadiness; applied: boolean; onApply: () => void }) {
+function OppCard({ opp, r, applied, opened, onApply, onConfirm, onUndo }: {
+  opp: Opportunity; r: OppReadiness; applied: boolean; opened: boolean;
+  onApply: () => void; onConfirm: (applied: boolean) => void; onUndo: () => void;
+}) {
   const { t, pick } = useT();
   const unit = (id: string) => pick(kb.graph?.subskills[id]?.name ?? kb.skills[id]?.name ?? { en: id });
   return (
@@ -87,8 +98,22 @@ function OppCard({ opp, r, applied, onApply }: { opp: Opportunity; r: OppReadine
       </div>
       {opp.description_en && <p className="mt-2 text-sm">{opp.description_en}</p>}
       {r.status === "almost" && r.gaps.length > 0 && <p className="mt-2 rounded-lg bg-sun-soft px-2 py-1 text-sm text-warn">{t("toClose", { skills: r.gaps.map(unit).join(", ") })}</p>}
+      {opened && !applied && (
+        <div className="mt-3 rounded-xl bg-brand-soft p-3">
+          <p className="text-sm font-semibold">{t("didYouApply")}</p>
+          <div className="mt-2 flex gap-2">
+            <Button className="!min-h-10 !px-3 text-sm" onClick={() => onConfirm(true)}><Icon name="check" className="size-4" />{t("yesApplied")}</Button>
+            <Button kind="ghost" className="!min-h-10 !px-3 text-sm" onClick={() => onConfirm(false)}>{t("notYetApplied")}</Button>
+          </div>
+        </div>
+      )}
       <div className="mt-3 flex items-center gap-2">
-        {applied ? <Pill tone="good"><Icon name="check" className="size-3.5" />{t("applied")}</Pill>
+        {applied ? (
+          <>
+            <Pill tone="good"><Icon name="check" className="size-3.5" />{t("applied")}</Pill>
+            {opp.apply.mode === "external" && <button onClick={onUndo} className="text-xs font-bold text-muted underline">{t("didNotApply")}</button>}
+          </>
+        )
           : opp.apply.mode === "external"
             ? <a href={opp.apply.url} target="_blank" rel="noreferrer" onClick={onApply} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-brand px-3 text-sm font-bold text-white"><Icon name="link" className="size-4" />{t("applyOutside")}</a>
             : <Button className="!min-h-10 !px-3 text-sm" disabled={r.status === "later"} onClick={onApply}>{t("applyNow")}</Button>}
