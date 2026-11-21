@@ -121,7 +121,8 @@ function SkillLevels({ id, go, claimed, persona }: { id: string; go: Go; claimed
   if (!profile || !student) return null;
   const g = kb.graph!;
   const minor = isMinorStudent(student); // no work samples on hazardous sub-skills under 18
-  const testable = new Set(Object.values(ITEMS).map((it) => it.subskill));
+  // Only questions tied to a sub-skill in the graph. Aptitude-game items have a domain instead and no sub-skill.
+  const testable = new Set(Object.values(ITEMS).map((it) => it.subskill).filter((u) => u && g.subskills[u]));
   const skills = Object.keys(g.bySkill).filter((sk) =>
     claimed.includes(sk) || g.bySkill[sk].some((u) => (profile.units[u]?.n ?? 0) > 0));
   // The test most likely to change her career list (only sub-skills that have questions, not yet sure).
@@ -130,7 +131,7 @@ function SkillLevels({ id, go, claimed, persona }: { id: string; go: Go; claimed
   const fit = skillInterestFit(kb, persona.riasec);
   const likes = (skill: string) => (fit ? fit[skill] ?? 0 : 1);
   const best = nextToTest(kb, persona, candidates, candidates.length)
-    .map((c) => ({ ...c, value: c.value * (0.3 + 0.7 * likes(g.subskills[c.id].skill)) }))
+    .map((c) => ({ ...c, value: c.value * (0.3 + 0.7 * likes(g.subskills[c.id]?.skill ?? c.id)) }))
     .sort((a, b) => b.value - a.value || (a.id < b.id ? -1 : 1))[0];
   const rpl = rplOpportunities(kb, profile.units, minor);
   return (

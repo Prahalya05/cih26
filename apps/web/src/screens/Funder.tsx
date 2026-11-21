@@ -64,7 +64,7 @@ export default function Funder({ go }: { go: Go }) {
       <p className="text-muted">{t("funderHint")}</p>
       <PayCheck />
       {cfg === null && <p className="rounded-xl bg-sun-soft p-3 text-warn">{t("needInternet")}</p>}
-      {cfg && !cfg.enabled && <p className="rounded-xl bg-sun-soft p-3 text-warn">{t("payNotSetUp")}</p>}
+      {cfg && !cfg.enabled && <p className="rounded-xl bg-sun-soft p-3 text-warn">{t(cfg.error ? "payChainOffline" : "payNotSetUp")}</p>}
 
       {cfg?.enabled && (
         <>

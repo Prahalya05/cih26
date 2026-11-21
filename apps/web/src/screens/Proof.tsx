@@ -105,7 +105,7 @@ export default function Proof({ go, id }: { go: Go; id: string }) {
       <p className="text-muted">{t("proofPaysHint")}</p>
 
       {cfg === null && <p className="rounded-xl bg-sun-soft p-3 text-warn">{t("needInternet")}</p>}
-      {cfg && !cfg.enabled && <p className="rounded-xl bg-sun-soft p-3 text-warn">{t("payNotSetUp")}</p>}
+      {cfg && !cfg.enabled && <p className="rounded-xl bg-sun-soft p-3 text-warn">{t(cfg.error ? "payChainOffline" : "payNotSetUp")}</p>}
       {!shareOk && <p className="rounded-xl bg-sun-soft p-3 text-warn">{t("shareConsentNeeded")}</p>}
       {cfg?.enabled && cfg.milestones.length === 0 && (
         <p className="rounded-xl bg-sun-soft p-3 text-warn">{t(cfg.error ? "payChainOffline" : "payNoMilestones")}</p>
