@@ -45,6 +45,29 @@ def test_role_comes_from_the_code(api):
     assert r.json()["account"]["role"] == "teacher"
 
 
+def test_wrong_class_code_keeps_the_sign_in_code(api):
+    out = api.post("/v2/auth/otp", json={"login": "9111111111"}).json()
+    body = {"login": "9111111111", "code": out["demo_code"], "device_id": "ph_k", "role": "student",
+            "name": "Kavi", "privacy_ok": True}
+    r = api.post("/v2/auth/verify", json={**body, "join_code": "DEMO-XXXXX"})
+    assert r.status_code == 400 and "class code" in r.json()["detail"]
+    # Same 6-digit code, right class code: works.
+    r = api.post("/v2/auth/verify", json={**body, "join_code": "CLS-1"})
+    assert r.status_code == 200, r.text
+    # Now it is used up.
+    assert api.post("/v2/auth/verify", json={**body, "join_code": "CLS-1"}).status_code == 400
+
+
+def test_refused_forms_still_run_out(api):
+    out = api.post("/v2/auth/otp", json={"login": "9222222222"}).json()
+    body = {"login": "9222222222", "code": out["demo_code"], "device_id": "ph_g", "role": "teacher",
+            "name": "G", "privacy_ok": True, "join_code": "GUESS"}
+    for _ in range(5):
+        assert api.post("/v2/auth/verify", json=body).status_code == 400
+    r = api.post("/v2/auth/verify", json={**body, "join_code": "TCH-SECRET"})
+    assert "expired" in r.json()["detail"]
+
+
 def test_donor_sees_no_students(api):
     r = sign_in(api, "donor@fund.org", role="funder", name="Asha", org="Fund", privacy_ok=True)
     tok = r.json()["token"]

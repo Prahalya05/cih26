@@ -128,20 +128,21 @@ class VerifyIn(BaseModel):
     privacy_ok: bool = False
 
 
-def _check_code(con, lh: str, code: str) -> str | None:
-    """None when the code is right (and uses it up); otherwise the reason it was refused.
+def _check_code(con, lh: str, code: str) -> tuple[str | None, int | None]:
+    """(None, otp id) when the code is right; otherwise (the reason it was refused, None).
+    Does not use the code up: verify() does that in the same transaction that signs in, so a refused
+    sign-up form (wrong class code, no name) leaves the code good for another try.
     Returns instead of raising so the wrong-try count is committed."""
     row = con.execute("select id, code_hash, attempts, expires_at from login_otp where login_hash = %s and used_at is null "
                       "order by created_at desc limit 1", (lh,)).fetchone()
     now = datetime.now(tz=timezone.utc)
     if not row or row["expires_at"] < now or row["attempts"] >= OTP_TRIES:
-        return "This code has expired; ask for a new one"
+        return "This code has expired; ask for a new one", None
     if not hmac.compare_digest(row["code_hash"], _code_hash(lh, code)):
         con.execute("update login_otp set attempts = attempts + 1 where id = %s", (row["id"],))
         left = OTP_TRIES - row["attempts"] - 1
-        return f"Wrong code. {left} tries left" if left > 0 else "Too many wrong tries; ask for a new code"
-    con.execute("update login_otp set used_at = %s where id = %s", (now, row["id"]))
-    return None
+        return (f"Wrong code. {left} tries left" if left > 0 else "Too many wrong tries; ask for a new code"), None
+    return None, row["id"]
 
 
 def _public(acc: dict) -> dict:
@@ -156,10 +157,24 @@ def verify(body: VerifyIn):
     lh = login_hash(value)
     # The code check commits on its own, so a wrong guess is always counted.
     with db.connect() as con:
-        problem = _check_code(con, lh, body.code)
+        problem, otp_id = _check_code(con, lh, body.code)
     if problem:
         raise HTTPException(400, problem)
+    try:
+        return _sign_in(body, kind, value, lh, otp_id)
+    except HTTPException:
+        # Nothing was saved (the code is still unused). A refused form still counts as a try, so the code
+        # cannot be used to guess class or teacher codes for ever.
+        with db.connect() as con:
+            con.execute("update login_otp set attempts = attempts + 1 where id = %s", (otp_id,))
+        raise
+
+
+def _sign_in(body: VerifyIn, kind: str, value: str, lh: str, otp_id: int) -> dict:
     with db.connect() as con:
+        if con.execute("update login_otp set used_at = now() where id = %s and used_at is null",
+                       (otp_id,)).rowcount != 1:
+            raise HTTPException(400, "This code has expired; ask for a new one")
         acc = con.execute("select * from account where login_hash = %s", (lh,)).fetchone()
         if acc and acc["disabled_at"] is not None:
             raise HTTPException(403, "This account has been switched off")
