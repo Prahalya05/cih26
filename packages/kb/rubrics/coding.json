@@ -1,0 +1,48 @@
+{
+  "id": "rb_coding",
+  "skill": "sk_coding",
+  "name": {
+    "en": "Coding work sample",
+    "ta": "நிரலாக்க வேலை மாதிரி"
+  },
+  "media": "photo",
+  "capture": {
+    "en": "Photo of the screen showing a short program you wrote and what it printed when you ran it.",
+    "ta": "நீங்கள் எழுதிய சிறு நிரலும், அதை இயக்கியபோது வந்த வெளியீடும் தெரியும் திரையின் புகைப்படம்."
+  },
+  "criteria": [
+    {
+      "id": "runs",
+      "name": {
+        "en": "Program runs"
+      },
+      "scores": {
+        "0": "Error or no output shown",
+        "1": "Runs with small mistakes",
+        "2": "Runs and gives the right output"
+      }
+    },
+    {
+      "id": "readable",
+      "name": {
+        "en": "Easy to read"
+      },
+      "scores": {
+        "0": "Hard to follow",
+        "1": "Partly clear",
+        "2": "Clear names and neat spacing"
+      }
+    },
+    {
+      "id": "logic",
+      "name": {
+        "en": "Uses logic"
+      },
+      "scores": {
+        "0": "Only fixed text",
+        "1": "One simple step",
+        "2": "Uses conditions or loops correctly"
+      }
+    }
+  ]
+}

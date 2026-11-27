@@ -1,0 +1,48 @@
+{
+  "id": "rb_reading_writing",
+  "skill": "sk_reading_writing",
+  "name": {
+    "en": "Writing work sample",
+    "ta": "எழுத்து வேலை மாதிரி"
+  },
+  "media": "photo",
+  "capture": {
+    "en": "Photo of a short piece you wrote by hand (5 to 10 lines: a letter, a story or a notice), the whole page visible.",
+    "ta": "நீங்கள் கையால் எழுதிய சிறு பகுதியின் புகைப்படம் (5 முதல் 10 வரிகள்: கடிதம், கதை அல்லது அறிவிப்பு), முழுப் பக்கமும் தெரியும்படி."
+  },
+  "criteria": [
+    {
+      "id": "clear",
+      "name": {
+        "en": "Handwriting is clear"
+      },
+      "scores": {
+        "0": "Hard to read",
+        "1": "Mostly readable",
+        "2": "Clear and even"
+      }
+    },
+    {
+      "id": "spelling",
+      "name": {
+        "en": "Spelling and sentences"
+      },
+      "scores": {
+        "0": "Many mistakes",
+        "1": "A few mistakes",
+        "2": "Almost no mistakes"
+      }
+    },
+    {
+      "id": "ideas",
+      "name": {
+        "en": "Ideas in order"
+      },
+      "scores": {
+        "0": "Ideas jumbled",
+        "1": "Some order",
+        "2": "Clear beginning, middle and end"
+      }
+    }
+  ]
+}
