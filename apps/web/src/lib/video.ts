@@ -120,7 +120,8 @@ export interface LiveStatus {
 }
 
 /** Warnings noted while filming. Sent with the video; they never change the score, only who checks it. */
-export type VideoFlag = "multi_face" | "dark" | "camera_lost" | "tab_away";
+// "uploaded": chosen from the gallery, not filmed live in Disha, so a teacher always checks it.
+export type VideoFlag = "multi_face" | "dark" | "camera_lost" | "tab_away" | "uploaded";
 
 export interface Clip { blob: Blob; mime: string; process: Process; flags: VideoFlag[]; paused_seconds: number }
 
@@ -155,8 +156,47 @@ export async function startFilming(canvas: HTMLCanvasElement): Promise<Filming> 
   video.playsInline = true;
   video.srcObject = stream;
   await video.play();
-  canvas.width = video.videoWidth || 640;
-  canvas.height = video.videoHeight || 480;
+  return run(canvas, video, models, { kind: "camera", stream });
+}
+
+/** Longest gallery video we try to open (the first MAX_SECONDS of it are used). */
+export const MAX_UPLOAD_BYTES = 200 * 1024 * 1024;
+
+/**
+ * Opens a video chosen from the gallery. It is played once, hidden, through the same face blur as live filming,
+ * and only the blurred copy is recorded: the original file is never uploaded. Only its first MAX_SECONDS are used.
+ * Throws if the phone cannot play the file or the face model is not available.
+ */
+export async function startFromFile(canvas: HTMLCanvasElement, file: Blob): Promise<Filming> {
+  if (!file.type.startsWith("video/") || file.size > MAX_UPLOAD_BYTES) throw new Error("not a usable video");
+  const models = await loadModels();
+  const url = URL.createObjectURL(file);
+  const video = document.createElement("video");
+  video.muted = true; // the sound is never used
+  video.playsInline = true;
+  video.preload = "auto";
+  video.src = url;
+  try {
+    await new Promise<void>((resolve, reject) => {
+      video.onloadeddata = () => resolve();
+      video.onerror = () => reject(new Error("cannot play this video"));
+    });
+  } catch (e) {
+    URL.revokeObjectURL(url);
+    throw e;
+  }
+  return run(canvas, video, models, { kind: "file", url });
+}
+
+type Source = { kind: "camera"; stream: MediaStream } | { kind: "file"; url: string };
+
+/** The blur-and-check loop shared by live filming and gallery videos. */
+function run(canvas: HTMLCanvasElement, video: HTMLVideoElement, models: Models, source: Source): Filming {
+  const vw = video.videoWidth || 640, vh = video.videoHeight || 480;
+  // big gallery videos are drawn at most 640 px wide (the camera is already 640 x 480)
+  const scale = Math.min(1, 640 / vw);
+  canvas.width = Math.round(vw * scale);
+  canvas.height = Math.round(vh * scale);
   const ctx = canvas.getContext("2d")!;
   const tiny = document.createElement("canvas");
   tiny.width = 12;
@@ -190,8 +230,8 @@ export async function startFilming(canvas: HTMLCanvasElement): Promise<Filming> 
     if (on === status.paused) return;
     status.paused = on;
     if (!recorder || recorder.state === "inactive") return;
-    if (on && recorder.state === "recording") { recorder.pause(); pausedAt = now; }
-    if (!on && recorder.state === "paused") { recorder.resume(); pausedMs += now - pausedAt; }
+    if (on && recorder.state === "recording") { recorder.pause(); pausedAt = now; if (source.kind === "file") video.pause(); }
+    if (!on && recorder.state === "paused") { recorder.resume(); pausedMs += now - pausedAt; if (source.kind === "file") void video.play(); }
   };
 
   const draw = () => {
@@ -201,7 +241,7 @@ export async function startFilming(canvas: HTMLCanvasElement): Promise<Filming> 
       const keep = recording ? FACE_HOLD_RECORDING : FACE_HOLD_FRAMES;
       const found = models.face.detectForVideo(video, ts).detections
         .map((d) => d.boundingBox).filter((b) => !!b)
-        .map((b) => ({ x: b!.originX, y: b!.originY, w: b!.width, h: b!.height, ttl: keep }));
+        .map((b) => ({ x: b!.originX * scale, y: b!.originY * scale, w: b!.width * scale, h: b!.height * scale, ttl: keep }));
       faces = [...found, ...faces.filter((f) => f.ttl > 0 && !found.some((g) => Math.abs(g.x - f.x) < f.w && Math.abs(g.y - f.y) < f.h))
         .map((f) => ({ ...f, ttl: f.ttl - 1 }))];
       status.faces = found.length;
@@ -237,13 +277,16 @@ export async function startFilming(canvas: HTMLCanvasElement): Promise<Filming> 
   const onHide = () => { if (recording && document.hidden) flags.add("tab_away"); };
   const onEnded = () => { if (recording) flags.add("camera_lost"); };
   document.addEventListener("visibilitychange", onHide);
-  stream.getVideoTracks().forEach((t) => t.addEventListener("ended", onEnded));
+  if (source.kind === "camera") source.stream.getVideoTracks().forEach((t) => t.addEventListener("ended", onEnded));
+  // a gallery video stops recording when it ends
+  else video.addEventListener("ended", () => { if (recorder && recorder.state !== "inactive") recorder.stop(); });
 
   const close = () => {
     cancelAnimationFrame(raf);
     document.removeEventListener("visibilitychange", onHide);
     if (recorder && recorder.state !== "inactive") recorder.stop();
-    stream.getTracks().forEach((t) => t.stop());
+    if (source.kind === "camera") source.stream.getTracks().forEach((t) => t.stop());
+    else { video.pause(); video.removeAttribute("src"); video.load(); URL.revokeObjectURL(source.url); }
   };
 
   return {
@@ -259,6 +302,7 @@ export async function startFilming(canvas: HTMLCanvasElement): Promise<Filming> 
       const chunks: Blob[] = [];
       recording = { frames: [] };
       flags.clear();
+      if (source.kind === "file") flags.add("uploaded");
       pausedMs = 0;
       const t0 = performance.now();
       // time actually recorded: paused time does not count towards MAX_SECONDS
@@ -282,6 +326,7 @@ export async function startFilming(canvas: HTMLCanvasElement): Promise<Filming> 
           resolve({ blob: new Blob(chunks, { type }), mime: type, process, flags: [...flags], paused_seconds });
         };
         recorder!.start(1000);
+        if (source.kind === "file") { video.currentTime = 0; if (!status.paused) void video.play(); }
         // if blurring is already failing when she presses record, start paused
         if (status.paused) { recorder!.pause(); pausedAt = performance.now(); }
       });
