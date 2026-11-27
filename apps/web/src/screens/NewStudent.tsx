@@ -15,17 +15,16 @@ export default function NewStudent({ go }: { go: Go }) {
   const account = useAccount();
   // A signed-in student making her own profile: her name and class come from her account.
   const own = account?.role === "student" && !account.student_id;
-  const [name, setName] = useState(() => "");
-  if (own && !name && account?.name) setName(account.name);
+  const [name, setName] = useState(() => (own && account?.name ? account.name : ""));
   const [avatar, setAvatar] = useState("");
-  const [code, setCode] = useState(lastCode);
+  const [code, setCode] = useState(() => account?.class_code ?? lastCode());
   const [birthYear, setBirthYear] = useState("");
   const year = Number(birthYear);
   const validYear = Number.isInteger(year) && year >= 1950 && year <= new Date().getFullYear() - 8;
 
   const create = async () => {
     const id = newId();
-    const facilitator_code = code.trim().toUpperCase() || undefined;
+    const facilitator_code = (account?.class_code || code.trim().toUpperCase()) || undefined;
     try { if (facilitator_code) localStorage.setItem("disha.code", facilitator_code); } catch { /* ignore */ }
     await saveStudent({
       id, name: name.trim() || avatar, avatar, facilitator_code, birth_year: validYear ? year : undefined,

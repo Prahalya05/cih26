@@ -19,6 +19,7 @@ const ROLES: { role: AccountRole; emoji: string; label: StringKey; hint: StringK
 export default function SignIn({ onExplore }: { onExplore: () => void }) {
   const { t } = useT();
   const [role, setRole] = useState<AccountRole | null>(null);
+  const [mode, setMode] = useState<"school" | "online">("school");
   const [login, setLogin] = useState("");
   const [sent, setSent] = useState<OtpSent | null>(null);
   const [code, setCode] = useState("");
@@ -40,7 +41,17 @@ export default function SignIn({ onExplore }: { onExplore: () => void }) {
 
   const verify = async () => {
     setBusy(true); setError("");
-    const extra = sent?.new_account && role ? { role, name, org: org || undefined, join_code: joinCode || undefined, privacy_ok: privacyOk } : undefined;
+    const needsCode = sent?.new_account && (role === "student" || role === "teacher");
+    const extra = sent?.new_account && role
+      ? {
+          role,
+          mode: needsCode ? mode : undefined,
+          name,
+          org: org || undefined,
+          join_code: needsCode && mode === "school" ? joinCode.trim() : undefined,
+          privacy_ok: privacyOk,
+        }
+      : undefined;
     const r = await verifyOtp(login, code, extra);
     setBusy(false);
     if ("error" in r) setError(r.error);
@@ -120,13 +131,34 @@ export default function SignIn({ onExplore }: { onExplore: () => void }) {
                 <input value={name} onChange={(e) => setName(e.target.value)} className="min-h-12 rounded-xl border border-line px-3 text-base" />
               </label>
               {(role === "student" || role === "teacher") && (
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold">{role === "student" ? t("classCodeLabel") : t("teacherCodeLabel")} <span className="font-normal text-muted">({t("optional")})</span></span>
-                  <input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder={t("leaveEmptyIfNone")}
-                    className="min-h-12 rounded-xl border border-line px-3 text-base uppercase" />
-                  <span className="text-xs text-muted">{role === "student" ? t("classCodeHint") : t("teacherCodeHint")}</span>
-                  <span className="text-xs font-semibold text-accent-dark">{role === "student" ? t("noCodeStudent") : t("noCodeTeacher")}</span>
-                </label>
+                <div className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold">{t("joinModeLabel")}</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => setMode("school")} aria-pressed={mode === "school"}
+                      className={`flex flex-col items-start gap-0.5 rounded-xl border p-3 text-left ${mode === "school" ? "border-brand bg-brand-soft" : "border-line bg-paper"}`}>
+                      <span className="text-sm font-extrabold">{t(role === "teacher" ? "teacherModeSchool" : "studentModeSchool")}</span>
+                      <span className="text-xs text-muted">{t(role === "teacher" ? "teacherModeSchoolHint" : "studentModeSchoolHint")}</span>
+                    </button>
+                    <button type="button" onClick={() => { setMode("online"); setJoinCode(""); }} aria-pressed={mode === "online"}
+                      className={`flex flex-col items-start gap-0.5 rounded-xl border p-3 text-left ${mode === "online" ? "border-brand bg-brand-soft" : "border-line bg-paper"}`}>
+                      <span className="text-sm font-extrabold">{t(role === "teacher" ? "teacherModeOnline" : "studentModeOnline")}</span>
+                      <span className="text-xs text-muted">{t(role === "teacher" ? "teacherModeOnlineHint" : "studentModeOnlineHint")}</span>
+                    </button>
+                  </div>
+                  {mode === "school" ? (
+                    <label className="flex flex-col gap-1">
+                      <span className="text-sm font-semibold">{role === "student" ? t("classCodeLabel") : t("teacherCodeLabel")}</span>
+                      <input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                        placeholder={role === "student" ? "CLS-01" : "TCH-01"}
+                        className="min-h-12 rounded-xl border border-line px-3 text-base uppercase" />
+                      <span className="text-xs text-muted">{role === "student" ? t("classCodeHint") : t("teacherCodeHint")}</span>
+                    </label>
+                  ) : (
+                    <p className="rounded-xl bg-brand-soft/60 p-2.5 text-xs font-semibold text-accent-dark">
+                      {role === "student" ? t("noCodeStudent") : t("noCodeTeacher")}
+                    </p>
+                  )}
+                </div>
               )}
               {(role === "funder" || role === "employer") && (
                 <label className="flex flex-col gap-1">
@@ -142,7 +174,7 @@ export default function SignIn({ onExplore }: { onExplore: () => void }) {
             </section>
           )}
 
-          <Button disabled={code.length !== 6 || busy || (sent.new_account && (!name.trim() || !privacyOk))}
+          <Button disabled={code.length !== 6 || busy || (sent.new_account && (!name.trim() || !privacyOk || ((role === "student" || role === "teacher") && mode === "school" && !joinCode.trim())))}
             onClick={() => void verify()}>{busy ? "…" : t("signInButton")} <Icon name="check" className="size-5" /></Button>
           <button onClick={() => void ask()} className="text-sm font-bold text-accent-dark">{t("resendCode")}</button>
         </>

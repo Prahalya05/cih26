@@ -87,8 +87,9 @@ def create_posting(body: PostingIn, dev: Device = Depends(auth.role_in("teacher"
            "posted_by": dev.role, "sample": False}
     opp = {k: v for k, v in opp.items() if v is not None}
     with db.connect() as con:
+        target_school = (dev.school_id or (dev.schools[0] if dev.schools else None)) if dev.role == "teacher" else None
         con.execute("insert into posting(id, account_id, role, school_id, opportunity) values (%s, %s, %s, %s, %s)",
-                    (pid, acc, dev.role, dev.school_id if dev.role == "teacher" else None, Jsonb(opp)))
+                    (pid, acc, dev.role, target_school, Jsonb(opp)))
     return {"id": pid, "opportunity": opp}
 
 
@@ -98,8 +99,8 @@ def list_postings(dev: Device = Depends(auth.device)):
         rows = con.execute(
             "select p.id, p.opportunity, p.role, p.account_id, p.created_at, "
             "(select count(*) from application a where a.posting_id = p.id) as applications "
-            "from posting p where p.active and (p.school_id is null or p.school_id = %s or p.account_id = %s) "
-            "order by p.created_at desc limit 200", (dev.school_id, dev.account_id)).fetchall()
+            "from posting p where p.active and (p.school_id is null or p.school_id = any(%s) or p.account_id = %s) "
+            "order by p.created_at desc limit 200", (dev.schools, dev.account_id)).fetchall()
     return {"postings": [{"id": r["id"], "opportunity": r["opportunity"], "by": r["role"],
                           "mine": r["account_id"] == dev.account_id,
                           "applications": r["applications"] if r["account_id"] == dev.account_id else None,
@@ -130,6 +131,7 @@ def _doc_out(r: dict) -> dict:
 @router.get("/docs/{student_id}", summary="Status of each document for a student (never the documents themselves)")
 def list_docs(student_id: str, dev: Device = Depends(auth.school_member)):
     with db.connect(dev.schools) as con:
+        auth.check_student_access(con, dev, student_id)
         return {"docs": [_doc_out(r) for r in _doc_rows(con, student_id).values()]}
 
 
@@ -146,6 +148,7 @@ async def check_doc(student_id: str = Form(...), kind: str = Form(...), image: U
     if len(data) > MAX_DOC_BYTES:
         raise HTTPException(413, "File too large (max 5 MB)")
     with db.connect(dev.schools) as con:
+        auth.check_student_access(con, dev, student_id)
         name = con.execute("select name from student_private where student_id = %s", (student_id,)).fetchone()
         if not con.execute("select 1 from student where id = %s", (student_id,)).fetchone():
             raise HTTPException(404, "Sync this student first")
@@ -250,6 +253,7 @@ class ApplyIn(BaseModel):
 @router.post("/applications", summary="Send an application (needs share consent and verified documents: rule.apply_docs)")
 def apply(body: ApplyIn, dev: Device = Depends(auth.school_member)):
     with db.connect(dev.schools) as con:
+        auth.check_student_access(con, dev, body.student_id)
         st = con.execute("select school_id from student where id = %s", (body.student_id,)).fetchone()
         if not st:
             raise HTTPException(404, "Sync this student first")
@@ -286,6 +290,7 @@ def _app_out(r: dict) -> dict:
 @router.get("/applications/student/{student_id}", summary="A student's applications and their status")
 def student_applications(student_id: str, dev: Device = Depends(auth.school_member)):
     with db.connect(dev.schools) as con:
+        auth.check_student_access(con, dev, student_id)
         rows = con.execute("select * from application where student_id = %s order by created_at desc", (student_id,)).fetchall()
     return {"applications": [_app_out(r) for r in rows]}
 

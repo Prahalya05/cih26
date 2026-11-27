@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
 import type { Go } from "../App";
 import { Icon } from "../components/Icon";
 import { Button, Card, Pill, Screen } from "../components/ui";
-import { isError, saveAccount } from "../lib/auth";
+import { isError, saveAccount, useAccount } from "../lib/auth";
+import { TeacherAreaTabs } from "../components/TeacherAreaTabs";
 import {
   DOC_KINDS, decide, editClassroom, isChecked, makeClassroom, myClassrooms, roomRequests, sendProof,
   type CheckState, type Classroom, type IncomingRequest, type RoomDraft,
@@ -17,6 +18,7 @@ const EMPTY = { name: "", about: "", language: "", state: "Tamil Nadu", district
 
 export default function Classrooms({ go }: { go: Go }) {
   const { t } = useT();
+  const account = useAccount();
   const [rooms, setRooms] = useState<Classroom[] | null>(null);
   const [check, setCheck] = useState<CheckState | null>(null);
   const [form, setForm] = useState<typeof EMPTY | null>(null);
@@ -62,7 +64,8 @@ export default function Classrooms({ go }: { go: Go }) {
   };
 
   return (
-    <Screen title={t("onlineClassrooms")} onBack={() => go({ name: "teacher" })}>
+    <Screen title={t("onlineClassrooms")}>
+      <TeacherAreaTabs area="online" account={account} go={go} />
       <p className="text-muted">{t("onlineClassroomsHint")}</p>
       {check && <CheckCard check={check} onSent={setCheck} />}
 

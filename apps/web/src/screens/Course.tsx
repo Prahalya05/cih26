@@ -39,7 +39,7 @@ export default function Course({ go, courseId }: { go: Go; courseId: string }) {
   };
 
   return (
-    <Screen title={c.title} onBack={() => go({ name: own ? "teacherCourses" : "courses" })}>
+    <Screen title={c.title} onBack={() => go({ name: account?.role === "teacher" ? "teacherCourses" : "courses" })}>
       <Card>
         <div className="flex items-start gap-2">
           <p className="flex-1 text-sm text-muted">{unitName(pick, c.skill_id)}</p>

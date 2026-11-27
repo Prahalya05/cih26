@@ -37,8 +37,11 @@ DOC_KINDS = ("school_id", "tet", "bed", "appointment", "other")
 PHOTO_TYPES = ("image/jpeg", "image/png", "image/webp")
 MAX_PHOTO = 4 * 1024 * 1024
 
-# A classroom is shown to students when its teacher is vouched for: by a school (teacher code) or by a reviewer.
-VOUCHED = ("(s.kind = 'school' or exists (select 1 from teacher_verification v "
+# A classroom is shown to students when its teacher is vouched for: by a physical school (teacher code) or by a reviewer.
+VOUCHED = ("(s.kind = 'school' "
+           "or exists (select 1 from account ta join school ts on ts.id = ta.school_id "
+           "where ta.id = c.teacher_account and ts.kind = 'school') "
+           "or exists (select 1 from teacher_verification v "
            "where v.account_id = c.teacher_account and v.status = 'approved'))")
 
 CODE_LETTERS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"  # no 0/O, 1/I/L
@@ -127,9 +130,16 @@ def make_classroom(body: RoomIn, dev: Device = Depends(auth.device)):
         raise HTTPException(400, "The youngest age must not be above the oldest")
     acc = _teacher(dev)
     with db.connect() as con:
-        school_id = acc["school_id"]
-        if not school_id:
-            # Her first classroom: she gets her own online "school", so row-level security keeps her students hers.
+        # Online classrooms always live in an 'online' school so online students stay isolated from a teacher's physical school.
+        online_row = con.execute(
+            "select c.school_id from classroom c join school s on s.id = c.school_id "
+            "where c.teacher_account = %s and s.kind = 'online' limit 1", (acc["id"],)).fetchone()
+        acc_school = con.execute("select id, kind from school where id = %s", (acc["school_id"],)).fetchone() if acc["school_id"] else None
+        if online_row:
+            school_id = online_row["school_id"]
+        elif acc_school and acc_school["kind"] == "online":
+            school_id = acc_school["id"]
+        else:
             school_id = f"onl_{new_ulid()}"
             con.execute("insert into school(id, name, district, kind) values (%s, %s, %s, 'online')",
                         (school_id, f"{acc['name']} (online)", _norm(body.district) or "Online"))
@@ -138,18 +148,21 @@ def make_classroom(body: RoomIn, dev: Device = Depends(auth.device)):
                     "min_age, max_age, seats, open) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                     (code, school_id, acc["id"], body.name.strip(), _norm(body.about), _norm(body.language), _norm(body.state),
                      _norm(body.district), body.min_age, body.max_age, body.seats, body.open))
-        if not acc["school_id"] or not acc["class_code"]:
+        if not acc["school_id"]:
             _set_school(con, acc["id"], school_id, acc["class_code"] or code)
-        room = con.execute("select * from classroom where code = %s", (code,)).fetchone()
+        room = con.execute("select c.*, s.name as school_name, s.kind as school_kind from classroom c "
+                           "join school s on s.id = c.school_id where c.code = %s", (code,)).fetchone()
         fresh = con.execute("select * from account where id = %s", (acc["id"],)).fetchone()
-        return {"classroom": _room_out(con, room, acc["name"]), "account": _public(fresh)}
+        return {"classroom": _room_out(con, room, acc["name"]), "account": _public(fresh, con)}
 
 
 @router.get("/mine", summary="Teacher: my classrooms, with how many requests are waiting")
 def my_classrooms(dev: Device = Depends(auth.device)):
     acc = _teacher(dev)
     with db.connect() as con:
-        rooms = con.execute("select * from classroom where teacher_account = %s order by created_at", (acc["id"],)).fetchall()
+        rooms = con.execute("select c.*, s.name as school_name, s.kind as school_kind from classroom c "
+                            "join school s on s.id = c.school_id where c.teacher_account = %s order by c.created_at",
+                            (acc["id"],)).fetchall()
         out = []
         for r in rooms:
             row = _room_out(con, r, acc["name"])
@@ -178,7 +191,9 @@ def edit_classroom(code: str, body: RoomIn, dev: Device = Depends(auth.device)):
                     "max_age = %s, seats = %s, open = %s where code = %s",
                     (body.name.strip(), _norm(body.about), _norm(body.language), _norm(body.state), _norm(body.district),
                      body.min_age, body.max_age, body.seats, body.open, room["code"]))
-        return {"classroom": _room_out(con, con.execute("select * from classroom where code = %s", (room["code"],)).fetchone(), acc["name"])}
+        updated = con.execute("select c.*, s.name as school_name, s.kind as school_kind from classroom c "
+                              "join school s on s.id = c.school_id where c.code = %s", (room["code"],)).fetchone()
+        return {"classroom": _room_out(con, updated, acc["name"])}
 
 
 @router.get("/{code}/requests", summary="Teacher: who asked to join this classroom")
@@ -306,7 +321,7 @@ def my_requests(dev: Device = Depends(auth.device)):
             "select r.id, r.status, r.created_at, r.decided_at, c.code, c.name, a.name as teacher from join_request r "
             "join classroom c on c.code = r.classroom_code join account a on a.id = c.teacher_account "
             "where r.student_account = %s order by r.created_at desc limit 50", (acc["id"],)).fetchall()
-    return {"requests": rows, "account": _public(acc)}
+        return {"requests": rows, "account": _public(acc, con)}
 
 
 @router.delete("/requests/{request_id}", summary="Student: take back a request that is still waiting")
@@ -333,10 +348,14 @@ def leave(dev: Device = Depends(auth.device)):
         con.execute("update join_request set status = 'left', decided_at = now() "
                     "where student_account = %s and classroom_code = %s and status = 'approved'", (acc["id"], room["code"]))
         if acc["student_id"]:
-            # Unclaimed again: the next class she joins takes the record over on her next sync.
-            con.execute("update student set school_id = null where id = %s and school_id = %s", (acc["student_id"], room["school_id"]))
+            # Unclaimed again: the next class she joins takes the record over on her next sync,
+            # and her old online teacher's cohort no longer lists her.
+            con.execute("update student set school_id = null, facilitator_code = null where id = %s and school_id = %s",
+                        (acc["student_id"], room["school_id"]))
+            con.execute("delete from legacy_student_doc where id = %s and school_id = %s",
+                        (acc["student_id"], room["school_id"]))
         fresh = con.execute("select * from account where id = %s", (acc["id"],)).fetchone()
-    return {"account": _public(fresh)}
+        return {"account": _public(fresh, con)}
 
 
 # ---------- teacher verification (a person checks a teaching proof) ----------

@@ -13,10 +13,10 @@ function tabsFor(a: Account): Tab[] {
   switch (a.role) {
     case "teacher":
       return [
-        { label: "tabClass", icon: "teacher", to: { name: "teacher" }, match: ["teacher", "rate", "graph", "docs", "studentProfile", "classrooms"] },
-        { label: "tabCourses", icon: "cap", to: { name: "teacherCourses" }, match: ["teacherCourses", "courseBuilder", "course"] },
+        { label: "tabClass", icon: "teacher", to: { name: a.school_kind === "school" ? "teacher" : "classrooms" }, match: ["teacher", "rate", "graph", "docs", "studentProfile", "classrooms"] },
+        { label: "tabCourses", icon: "cap", to: { name: "teacherCourses" }, match: ["teacherCourses", "courseBuilder", "course", "teacherProfile"] },
         { label: "tabJobs", icon: "briefcase", to: { name: "jobs" }, match: ["jobs"] },
-        { ...account, match: ["account", "privacy", "teacherProfile", "roles", "how"] },
+        { ...account, match: ["account", "privacy", "roles", "how"] },
       ];
     case "funder":
       return [{ label: "tabPayouts", icon: "wallet", to: { name: "funder" }, match: ["funder"] }, how, account];

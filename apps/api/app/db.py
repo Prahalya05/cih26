@@ -93,13 +93,16 @@ def upsert_student(con, doc: dict, school_id: str) -> bool:
     return cur.rowcount == 1
 
 
-def other_schools_students(con, school_id: str, student_ids: list[str]) -> set[str]:
-    """Which of these students (v1 documents or v2 students) belong to a school other than this one."""
+def other_schools_students(con, schools: str | list[str], student_ids: list[str]) -> set[str]:
+    """Which of these students (v1 documents or v2 students) belong to a school other than the caller's."""
     if not student_ids:
         return set()
-    rows = con.execute("select id from legacy_student_doc where id = any(%s) and school_id <> %s "
-                       "union select id from student where id = any(%s) and school_id <> %s",
-                       (student_ids, school_id, student_ids, school_id)).fetchall()
+    allowed = [schools] if isinstance(schools, str) else list(schools)
+    if not allowed:
+        return set(student_ids)
+    rows = con.execute("select id from legacy_student_doc where id = any(%s) and school_id <> all(%s) "
+                       "union select id from student where id = any(%s) and school_id <> all(%s)",
+                       (student_ids, allowed, student_ids, allowed)).fetchall()
     return {r["id"] for r in rows}
 
 

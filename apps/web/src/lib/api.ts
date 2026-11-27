@@ -65,8 +65,7 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   let res = await send(tok);
   if (res.status === 401 && (await db.meta.get("session"))) {
     // A signed-in account whose token stopped working (signed out elsewhere, or switched off): sign in again.
-    await db.meta.delete("session");
-    await db.meta.delete(TOKEN);
+    await db.meta.bulkDelete(["session", TOKEN, ROLE]);
     window.dispatchEvent(new Event("disha:session"));
     return res;
   }

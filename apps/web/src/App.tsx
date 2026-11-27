@@ -23,7 +23,7 @@ import { scorePending } from "./lib/samples";
 import Situation from "./screens/Situation";
 import Talk from "./screens/Talk";
 import { setXrayOn, xrayInitiallyOn } from "./lib/xray";
-import { useAccount } from "./lib/auth";
+import { refreshAccount, useAccount } from "./lib/auth";
 import SignIn from "./screens/SignIn";
 import { BottomNav } from "./components/BottomNav";
 
@@ -123,11 +123,18 @@ export default function App() {
   };
 
   const account = useAccount();
-  // After sign-in (or on opening the app), each role starts on its own home.
+  // After sign-in (or on opening the app), each role starts on its own home; signing out resets route.
   useEffect(() => {
+    if (account === null) {
+      setRoute((r) => (r.name === "how" ? r : { name: "home" }));
+      return;
+    }
     if (!account) return;
-    setRoute((r) => (r.name !== "home" ? r : account.role === "teacher" ? { name: "teacher" } : account.role === "funder" ? { name: "funder" }
-      : account.role === "employer" ? { name: "jobs" } : r));
+    setRoute((r) => (r.name !== "home" ? r
+      : account.role === "teacher" ? (account.school_kind === "school" ? { name: "teacher" } : { name: "classrooms" })
+      : account.role === "funder" ? { name: "funder" }
+      : account.role === "employer" ? { name: "jobs" }
+      : r));
   }, [account?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const go: Go = (r) => {
@@ -145,13 +152,14 @@ export default function App() {
 
   // Sync whenever we come online, and every 30 s while online.
   useEffect(() => {
-    const run = () => { void syncNow().then(() => scorePending()); void refreshSchemes(); void refreshPostings(); };
+    if (!account) return;
+    const run = () => { void refreshAccount().then(() => syncNow().then(() => scorePending())); void refreshSchemes(); void refreshPostings(); };
     run();
     const onOnline = () => run();
     window.addEventListener("online", onOnline);
     const timer = window.setInterval(() => navigator.onLine && run(), 30_000);
     return () => { window.removeEventListener("online", onOnline); window.clearInterval(timer); };
-  }, []);
+  }, [account?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (reviewing) {
     return (

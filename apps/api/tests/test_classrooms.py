@@ -174,6 +174,36 @@ def test_school_code_teachers_need_no_extra_check(api, pg):
                     "on conflict do nothing")
     _, th = sign_up(api, "school@x.org", "teacher", "Sch", "ph_sc", join_code="CODE-TCH")
     assert api.get("/v2/classrooms/verification", headers=th).json()["status"] == "by_school"
-    code = api.post("/v2/classrooms", headers=th, json={"name": "School extra"}).json()["classroom"]["code"]
+    made = api.post("/v2/classrooms", headers=th, json={"name": "School extra"}).json()
+    code = made["classroom"]["code"]
+    # The online classroom gets its own online school, separate from sch_c
+    assert made["classroom"]["online"] is True
     _, sh = sign_up(api, "9000000701", "student", "B", "ph_b")
     assert code in [c["code"] for c in api.get("/v2/classrooms", headers=sh).json()["classrooms"]]
+
+    # School-only course & job posted by the teacher are hidden from online-classroom students
+    sc = api.post("/v2/courses", headers=th, json={"title": "School internal", "skill_id": "sk_basic_math",
+                                                   "plan": "free", "open_to_all": False}).json()["id"]
+    api.post(f"/v2/courses/{sc}/modules", headers=th, json={"title": "M1", "body": "hi"})
+    api.post(f"/v2/courses/{sc}/publish", headers=th)
+    sp = api.post("/v2/postings", headers=th, json={"kind": "internship", "title": "School lab", "org": "Code School"}).json()["id"]
+
+    # Approve online student B into the teacher's online classroom
+    api.post(f"/v2/classrooms/{code}/join", headers=sh, json={"age": 15})
+    req_id = api.get(f"/v2/classrooms/{code}/requests", headers=th).json()["requests"][0]["id"]
+    api.post(f"/v2/classrooms/requests/{req_id}/decide", headers=th, json={"approve": True})
+
+    # B is in the online school (onl_...), NOT sch_c, so she cannot see sch_c's internal course or posting
+    b_acc = api.get("/v2/auth/me", headers=sh).json()
+    assert b_acc["school_kind"] == "online" and b_acc["school_id"] != "sch_c"
+    assert sc not in [c["id"] for c in api.get("/v2/courses", headers=sh).json()["courses"]]
+    assert sp not in [p["id"] for p in api.get("/v2/postings", headers=sh).json()["postings"]]
+
+    # B syncs into the online classroom; teacher sees her in cohort, then B leaves and disappears from teacher's cohort
+    assert api.post("/v1/sync", headers=sh, json={
+        "students": [{"id": "st_onl_b", "name": "B", "facilitator_code": code, "cards": {}, "answers": {}, "factAnswers": {}, "updated_at": 1763000000000}],
+        "actions": [], "pull": ["st_onl_b"],
+    }).status_code == 200
+    assert [s["id"] for s in api.get(f"/v1/facilitator/{code}/cohort", headers=th).json()["students"]] == ["st_onl_b"]
+    assert api.post("/v2/classrooms/leave", headers=sh).status_code == 200
+    assert api.get(f"/v1/facilitator/{code}/cohort", headers=th).json()["students"] == []
