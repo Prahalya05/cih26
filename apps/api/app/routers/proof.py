@@ -69,13 +69,17 @@ def pay_config():
            "subskill_order": credential.subskill_order(), "milestones": []}
     if not chain.enabled():
         return out
+    try:
+        milestones = chain.milestones()
+    except chain.ChainError as e:
+        # Chain configured but not reachable (e.g. the committed local Anvil deployment on a server with no Anvil).
+        # Report it as off and hand out no RPC address, or every visitor's browser would try to reach 127.0.0.1.
+        out.update({"enabled": False, "error": str(e)})
+        return out
     dep = chain.deployment()
     out.update({k: dep.get(k) for k in ("chain_id", "rpc_url", "explorer", "proofpays", "token", "from_block")})
-    try:
-        out["milestones"] = [{**m, "amount": int(m["amount"]), "budget": int(m["budget"]), "paid_count": int(m["paid_count"])}
-                             for m in chain.milestones()]
-    except chain.ChainError as e:
-        out["error"] = str(e)
+    out["milestones"] = [{**m, "amount": int(m["amount"]), "budget": int(m["budget"]), "paid_count": int(m["paid_count"])}
+                         for m in milestones]
     return out
 
 

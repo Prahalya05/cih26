@@ -7,7 +7,7 @@ import { recordEvent } from "./events";
 import { emit } from "./xray";
 
 export type Plan = "free" | "per_module" | "subscription";
-export interface CourseRow { id: string; title: string; description?: string; language: string; skill_id: string; plan: Plan; price_inr: number; period_days: number;
+export interface CourseRow { id: string; school_id?: string | null; title: string; description?: string; language: string; skill_id: string; plan: Plan; price_inr: number; period_days: number;
   teacher_id: string; teacher_name: string; modules: number; subscribed?: boolean; lessons_bought?: number; passed?: number }
 export interface Lesson { id: string; position: number; title: string; open: boolean; why: string; subskill_id?: string; quiz_count: number; passed: boolean; score?: number;
   body?: string; video_url?: string; quiz?: { q: string; options: string[] }[]; answers?: number[] }

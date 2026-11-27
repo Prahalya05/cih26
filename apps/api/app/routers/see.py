@@ -10,7 +10,7 @@ import json
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
-from .. import db, kb
+from .. import auth, db, kb
 from ..adapters import gemini_video
 from ..adapters.gemini import GeminiUnavailable
 from ..auth import Device, device
@@ -31,6 +31,7 @@ async def score_video(student_id: str = Form(...), rubric_id: str = Form(...), p
     if not rubric:
         raise HTTPException(404, "Unknown checklist")
     with db.connect(dev.schools) as con:
+        auth.check_student_access(con, dev, student_id)
         ok = con.execute("select 1 from consent where student_id = %s and revoked_at is null and 'photos' = any(scopes)",
                          (student_id,)).fetchone()
         st = con.execute("select birth_year from student where id = %s", (student_id,)).fetchone()

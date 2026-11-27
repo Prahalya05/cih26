@@ -5,7 +5,7 @@ import type { Go } from "../App";
 import { Button, Card, Pill, Screen } from "../components/ui";
 import { Icon } from "../components/Icon";
 import { LangContext, useT, type StringKey } from "../lib/i18n";
-import { call, signOut, useAccount } from "../lib/auth";
+import { call, linkSchoolCode, signOut, useAccount } from "../lib/auth";
 import { PrivacyNotice } from "./SignIn";
 
 const ROLE_LABEL: Record<string, StringKey> = { student: "roleStudent", teacher: "roleTeacher", funder: "roleFunder", employer: "roleEmployer" };
@@ -15,7 +15,14 @@ export default function Account({ go }: { go: Go }) {
   const account = useAccount();
   const { lang, setLang } = useContext(LangContext);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [schoolCode, setSchoolCode] = useState("");
+  const [linkErr, setLinkErr] = useState("");
+  const [linkOk, setLinkOk] = useState(false);
   if (!account) return null;
+
+  const canLinkSchool =
+    (account.role === "teacher" && account.school_kind !== "school") ||
+    (account.role === "student" && !account.school_id);
 
   return (
     <Screen title={t("tabAccount")}>
@@ -26,10 +33,34 @@ export default function Account({ go }: { go: Go }) {
           <p className="text-sm text-muted">{account.login}{account.org ? ` · ${account.org}` : ""}</p>
           <div className="mt-1 flex flex-wrap gap-1">
             <Pill tone="brand">{t(ROLE_LABEL[account.role])}</Pill>
+            {(account.role === "teacher" || account.role === "student") && (
+              <Pill tone={account.school_kind === "school" ? "good" : "neutral"}>
+                {account.school_kind === "school" ? (account.school_name || t("accountModeSchool")) : t("accountModeOnline")}
+              </Pill>
+            )}
             {account.class_code && <Pill>{account.class_code}</Pill>}
           </div>
         </div>
       </Card>
+
+      {canLinkSchool && (
+        <Card className="flex flex-col gap-2">
+          <p className="font-bold">{t(account.role === "teacher" ? "linkSchoolTitle" : "linkSchoolStudentTitle")}</p>
+          <p className="text-xs text-muted">{t("linkSchoolHint")}</p>
+          <div className="flex gap-2">
+            <input value={schoolCode} onChange={(e) => setSchoolCode(e.target.value.toUpperCase())} placeholder={account.role === "teacher" ? "TCH-01" : "CLS-01"}
+              className="min-h-11 flex-1 rounded-xl border border-line bg-paper px-3 text-sm uppercase" />
+            <Button kind="soft" className="!min-h-11 !px-3 text-sm" disabled={!schoolCode.trim()} onClick={async () => {
+              setLinkErr(""); setLinkOk(false);
+              const r = await linkSchoolCode(schoolCode.trim());
+              if ("error" in r) setLinkErr(r.error);
+              else { setSchoolCode(""); setLinkOk(true); }
+            }}>{t("linkSchoolButton")}</Button>
+          </div>
+          {linkErr && <p className="text-xs font-semibold text-bad">{linkErr}</p>}
+          {linkOk && <p className="text-xs font-semibold text-good">{t("schoolLinked")}</p>}
+        </Card>
+      )}
 
       <Card>
         <p className="mb-2 font-bold">{t("language")}</p>
@@ -54,6 +85,8 @@ export default function Account({ go }: { go: Go }) {
       <nav className="flex flex-col divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
         {account.role === "student" && account.student_id && <Row icon="users" label={t("myProfile")} onClick={() => go({ name: "studentProfile", id: account.student_id! })} />}
         {account.role === "teacher" && <Row icon="teacher" label={t("myTeacherProfile")} onClick={() => go({ name: "teacherProfile" })} />}
+        {account.role === "teacher" && <Row icon="users" label={t("onlineClassrooms")} onClick={() => go({ name: "classrooms" })} />}
+        {account.role === "student" && <Row icon="users" label={t(account.school_id ? "myClass" : "findClass")} onClick={() => go({ name: "findClass" })} />}
         {account.role === "student" && account.student_id && <Row icon="idcard" label={t("myResume")} onClick={() => go({ name: "resume", id: account.student_id! })} />}
         {account.role === "student" && account.student_id && <Row icon="clipboard" label={t("myDocs")} onClick={() => go({ name: "docs", id: account.student_id! })} />}
         <Row icon="layers" label={t("whoDoesWhat")} onClick={() => go({ name: "roles" })} />

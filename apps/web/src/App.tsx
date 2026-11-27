@@ -24,7 +24,7 @@ import { scorePending } from "./lib/samples";
 import Situation from "./screens/Situation";
 import Talk from "./screens/Talk";
 import { setXrayOn, xrayInitiallyOn } from "./lib/xray";
-import { useAccount } from "./lib/auth";
+import { refreshAccount, useAccount } from "./lib/auth";
 import SignIn from "./screens/SignIn";
 import { BottomNav } from "./components/BottomNav";
 
@@ -54,6 +54,10 @@ const TeacherProfile = lazy(() => import("./screens/TeacherProfile"));
 const FindTeacher = lazy(() => import("./screens/FindTeacher"));
 const StudentProfile = lazy(() => import("./screens/StudentProfile"));
 const Roles = lazy(() => import("./screens/Roles"));
+// Online classrooms: teachers make them, students ask to join.
+const FindClass = lazy(() => import("./screens/FindClass"));
+const Classrooms = lazy(() => import("./screens/Classrooms"));
+const ReviewTeachers = lazy(() => import("./screens/ReviewTeachers"));
 
 export type Route =
   | { name: "home" }
@@ -90,7 +94,9 @@ export type Route =
   | { name: "teacherProfile"; teacherId?: string }
   | { name: "findTeacher" }
   | { name: "studentProfile"; id: string }
-  | { name: "roles" };
+  | { name: "roles" }
+  | { name: "findClass" }
+  | { name: "classrooms" };
 
 export type Go = (r: Route) => void;
 
@@ -105,6 +111,8 @@ export default function App() {
     new URLSearchParams(location.hash.replace(/^#/, "")).get("confirm") ?? new URLSearchParams(location.search).get("confirm"));
   const [publicSlug, setPublicSlug] = useState(() =>
     new URLSearchParams(location.hash.replace(/^#/, "")).get("public"));
+  // A Disha reviewer opening ?review checks online teachers' proofs (needs the admin token, not a sign-in).
+  const [reviewing, setReviewing] = useState(() => new URLSearchParams(location.search).has("review"));
   const [lang, setLangState] = useState<LangCode>(() => (read("disha.lang") as LangCode) || "ta");
   // Decision X-ray: ?xray=1 (or holding the logo) shows every decision as RULE / AI live, for demos.
   const [xray, setXray] = useState(xrayInitiallyOn);
@@ -121,11 +129,18 @@ export default function App() {
   };
 
   const account = useAccount();
-  // After sign-in (or on opening the app), each role starts on its own home.
+  // After sign-in (or on opening the app), each role starts on its own home; signing out resets route.
   useEffect(() => {
+    if (account === null) {
+      setRoute((r) => (r.name === "how" ? r : { name: "home" }));
+      return;
+    }
     if (!account) return;
-    setRoute((r) => (r.name !== "home" ? r : account.role === "teacher" ? { name: "teacher" } : account.role === "funder" ? { name: "funder" }
-      : account.role === "employer" ? { name: "jobs" } : r));
+    setRoute((r) => (r.name !== "home" ? r
+      : account.role === "teacher" ? (account.school_kind === "school" ? { name: "teacher" } : { name: "classrooms" })
+      : account.role === "funder" ? { name: "funder" }
+      : account.role === "employer" ? { name: "jobs" }
+      : r));
   }, [account?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const go: Go = (r) => {
@@ -143,13 +158,24 @@ export default function App() {
 
   // Sync whenever we come online, and every 30 s while online.
   useEffect(() => {
-    const run = () => { void syncNow().then(() => scorePending()); void refreshSchemes(); void refreshPostings(); };
+    if (!account) return;
+    const run = () => { void refreshAccount().then(() => syncNow().then(() => scorePending())); void refreshSchemes(); void refreshPostings(); };
     run();
     const onOnline = () => run();
     window.addEventListener("online", onOnline);
     const timer = window.setInterval(() => navigator.onLine && run(), 30_000);
     return () => { window.removeEventListener("online", onOnline); window.clearInterval(timer); };
-  }, []);
+  }, [account?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (reviewing) {
+    return (
+      <LangContext.Provider value={{ lang, setLang }}>
+        <Suspense fallback={<p className="p-6 text-center text-muted">…</p>}>
+          <ReviewTeachers onClose={() => { history.replaceState(null, "", "/"); setReviewing(false); }} />
+        </Suspense>
+      </LangContext.Provider>
+    );
+  }
 
   // Signed out: only the sign-in screen, the buyer's confirmation link and "How Disha decides" are open.
   const signedOut = account === null && !confirmToken;
@@ -198,6 +224,8 @@ export default function App() {
         {route.name === "findTeacher" && <FindTeacher go={go} />}
         {route.name === "studentProfile" && <StudentProfile go={go} id={route.id} />}
         {route.name === "roles" && <Roles go={go} />}
+        {route.name === "findClass" && <FindClass go={go} />}
+        {route.name === "classrooms" && <Classrooms go={go} />}
         {route.name === "graph" && <GraphScreen go={go} id={route.id} back={route.from ? () => go(route.from!) : undefined} />}
         {route.name === "aimQuiz" && <AimQuiz key={`${route.subject}|${route.mode}`} go={go} id={route.id} subject={route.subject} mode={route.mode} track={route.track} />}
       </Suspense>

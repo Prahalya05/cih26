@@ -17,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import db, settings
 from .adapters import gemini
-from .routers import accounts, courses, proof, publish, see, trust, v1, v2
+from .routers import accounts, classrooms, courses, proof, publish, see, trust, v1, v2
 
 
 @asynccontextmanager
@@ -48,6 +48,8 @@ app.include_router(proof.router)
 app.include_router(trust.router)
 app.include_router(courses.router)
 app.include_router(publish.router)
+app.include_router(classrooms.router)
+app.include_router(classrooms.review)
 
 
 @app.get("/health")
@@ -55,6 +57,20 @@ def health():
     return {"ok": True, "ai": "gemini" if gemini.enabled() else "keywords"}
 
 
+class _WebFiles(StaticFiles):
+    """Hashed build files never change, so cache them for a year. Everything else (index.html,
+    sw.js, the manifest) must be rechecked every time, or a browser keeps an old index.html that
+    points at chunk names the new deploy no longer has."""
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        if path.replace("\\", "/").startswith("assets/") and response.status_code == 200:
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        else:
+            response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 WEB_DIST = Path(os.getenv("WEB_DIST", Path(__file__).resolve().parents[2] / "web" / "dist"))
 if WEB_DIST.is_dir():
-    app.mount("/", StaticFiles(directory=WEB_DIST, html=True), name="web")
+    app.mount("/", _WebFiles(directory=WEB_DIST, html=True), name="web")

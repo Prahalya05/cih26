@@ -279,10 +279,11 @@ def _own_course(con, course_id: str, acc: str) -> dict:
 def create_course(body: CourseIn, dev: Device = Depends(auth.role_in("teacher"))):
     _check_course(body)
     cid = f"crs_{new_ulid().lower()}"
+    target_school = None if body.open_to_all else (dev.school_id or (dev.schools[0] if dev.schools else None))
     with db.connect() as con:
         con.execute("insert into course(id, teacher_id, school_id, title, description, language, skill_id, plan, price_inr, period_days) "
                     "values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                    (cid, _acc(dev), None if body.open_to_all else dev.school_id, body.title, body.description, body.language,
+                    (cid, _acc(dev), target_school, body.title, body.description, body.language,
                      body.skill_id, body.plan, 0 if body.plan == "free" else body.price_inr, body.period_days))
     return {"id": cid}
 
@@ -290,12 +291,13 @@ def create_course(body: CourseIn, dev: Device = Depends(auth.role_in("teacher"))
 @router.put("/courses/{course_id}", summary="Edit a course (teacher)")
 def edit_course(course_id: str, body: CourseIn, dev: Device = Depends(auth.role_in("teacher"))):
     _check_course(body)
+    target_school = None if body.open_to_all else (dev.school_id or (dev.schools[0] if dev.schools else None))
     with db.connect() as con:
         _own_course(con, course_id, _acc(dev))
         con.execute("update course set title=%s, description=%s, language=%s, skill_id=%s, plan=%s, price_inr=%s, period_days=%s, "
                     "school_id=%s where id=%s", (body.title, body.description, body.language, body.skill_id, body.plan,
                                                 0 if body.plan == "free" else body.price_inr, body.period_days,
-                                                None if body.open_to_all else dev.school_id, course_id))
+                                                target_school, course_id))
     return {"ok": True}
 
 
@@ -356,7 +358,7 @@ def my_courses(dev: Device = Depends(auth.role_in("teacher"))):
 def _visible(con, course_id: str, dev: Device) -> dict:
     c = con.execute("select c.*, a.name as teacher_name from course c join account a on a.id = c.teacher_id where c.id = %s",
                     (course_id,)).fetchone()
-    if not c or not (c["teacher_id"] == dev.account_id or (c["published"] and (c["school_id"] is None or c["school_id"] == dev.school_id))):
+    if not c or not (c["teacher_id"] == dev.account_id or (c["published"] and (c["school_id"] is None or c["school_id"] in dev.schools))):
         raise HTTPException(404, "No such course")
     return c
 
@@ -371,11 +373,11 @@ def _purchases(con, acc: str | None) -> list[dict]:
 def list_courses(dev: Device = Depends(auth.device)):
     with db.connect() as con:
         rows = con.execute(
-            "select c.id, c.title, c.description, c.language, c.skill_id, c.plan, c.price_inr, c.period_days, c.teacher_id, "
+            "select c.id, c.school_id, c.title, c.description, c.language, c.skill_id, c.plan, c.price_inr, c.period_days, c.teacher_id, "
             "a.name as teacher_name, (select count(*) from course_module m where m.course_id = c.id) as modules "
             "from course c join account a on a.id = c.teacher_id "
-            "where c.published and (c.school_id is null or c.school_id = %s) order by c.created_at desc limit 200",
-            (dev.school_id,)).fetchall()
+            "where c.published and (c.school_id is null or c.school_id = any(%s)) order by c.created_at desc limit 200",
+            (dev.schools,)).fetchall()
         mine = _purchases(con, dev.account_id)
         done = {r["module_id"] for r in con.execute("select module_id from module_progress where account_id = %s and passed",
                                                     (dev.account_id,))} if dev.account_id else set()

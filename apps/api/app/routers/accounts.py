@@ -21,6 +21,7 @@ import secrets
 import smtplib
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -122,9 +123,11 @@ class VerifyIn(BaseModel):
     device_id: str = Field(min_length=4, max_length=100)
     # only for a new account:
     role: str | None = Field(None, description="student | teacher | funder | employer")
+    mode: Literal["school", "online"] | None = Field(None, description="school (with code) | online (no code)")
     name: str | None = Field(None, max_length=80)
     org: str | None = Field(None, max_length=120)
-    join_code: str | None = Field(None, max_length=64, description="Class code (students) or teacher code (teachers)")
+    join_code: str | None = Field(None, max_length=64, description="Class code (students) or teacher code (teachers); "
+                                  "leave it out to join or teach online")
     privacy_ok: bool = False
 
 
@@ -145,9 +148,19 @@ def _check_code(con, lh: str, code: str) -> tuple[str | None, int | None]:
     return None, row["id"]
 
 
-def _public(acc: dict) -> dict:
+def _public(acc: dict, con=None) -> dict:
+    school_kind = school_name = None
+    if acc.get("school_id"):
+        if con is not None:
+            sc = con.execute("select name, kind from school where id = %s", (acc["school_id"],)).fetchone()
+        else:
+            with db.connect() as c2:
+                sc = c2.execute("select name, kind from school where id = %s", (acc["school_id"],)).fetchone()
+        if sc:
+            school_kind, school_name = sc["kind"], sc["name"]
     return {"id": acc["id"], "role": acc["role"], "name": acc["name"], "org": acc.get("org"), "login": acc["login_masked"],
-            "school_id": acc.get("school_id"), "class_code": acc.get("class_code"), "student_id": acc.get("student_id")}
+            "school_id": acc.get("school_id"), "school_kind": school_kind, "school_name": school_name,
+            "class_code": acc.get("class_code"), "student_id": acc.get("student_id")}
 
 
 @router.post("/verify", summary="Check the code; sign in, or create the account on first sign-in",
@@ -189,7 +202,7 @@ def _sign_in(body: VerifyIn, kind: str, value: str, lh: str, otp_id: int) -> dic
                     "token_hash = excluded.token_hash, account_id = excluded.account_id",
                     (body.device_id, acc["school_id"], acc["role"], auth.hash_token(token), acc["id"]))
         con.execute("update account set last_login_at = now() where id = %s", (acc["id"],))
-    return {"token": token, "account": _public(acc)}
+        return {"token": token, "account": _public(acc, con)}
 
 
 def _create_account(con, body: VerifyIn, kind: str, value: str, lh: str) -> dict:
@@ -200,12 +213,16 @@ def _create_account(con, body: VerifyIn, kind: str, value: str, lh: str) -> dict
     if not body.privacy_ok:
         raise HTTPException(400, "Please read and accept how Disha uses your details")
     school_id = class_code = None
-    if body.role in ("student", "teacher"):
-        code = (body.join_code or "").strip().upper()
+    code = "" if body.mode == "online" else (body.join_code or "").strip().upper()
+    if body.role in ("student", "teacher") and body.mode == "school" and not code:
+        raise HTTPException(400, "Enter your class code" if body.role == "student" else "Enter your teacher code")
+    # No code: the online way. A student finds a classroom and asks to join; a teacher makes her own classrooms.
+    if body.role in ("student", "teacher") and code:
         jc = con.execute("select school_id, role, class_code from join_code where code = %s and revoked_at is null",
-                         (code,)).fetchone() if code else None
+                         (code,)).fetchone()
         if not jc:
-            raise HTTPException(400, "Enter your school's class code" if body.role == "student" else "Enter your teacher code")
+            raise HTTPException(400, "That class code is not right; check it, or leave it empty to join online" if body.role == "student"
+                                else "That teacher code is not right; check it, or leave it empty to teach online")
         # The role comes from the code: a class code can never make a teacher account.
         if jc["role"] != body.role:
             raise HTTPException(400, "That is not a teacher code" if body.role == "teacher" else "That is a teacher code; choose Teacher")
@@ -231,7 +248,11 @@ def _account(dev: Device) -> dict:
 
 @router.get("/me", summary="The account this phone is signed in as")
 def me(dev: Device = Depends(auth.device)):
-    return _public(_account(dev))
+    with db.connect() as con:
+        acc = con.execute("select * from account where id = %s and disabled_at is null", (dev.account_id,)).fetchone() if dev.account_id else None
+        if not acc:
+            raise HTTPException(401, "Sign in first")
+        return _public(acc, con)
 
 
 class LinkIn(BaseModel):
@@ -242,8 +263,71 @@ class LinkIn(BaseModel):
 def link_student(body: LinkIn, dev: Device = Depends(auth.role_in("student"))):
     acc = _account(dev)
     with db.connect() as con:
+        taken = con.execute("select id from account where student_id = %s and id <> %s",
+                            (body.student_id, acc["id"])).fetchone()
+        if taken:
+            raise HTTPException(409, "That student profile belongs to another account")
         con.execute("update account set student_id = %s where id = %s", (body.student_id, acc["id"]))
     return {"ok": True}
+
+
+class SchoolLinkIn(BaseModel):
+    join_code: str = Field(min_length=2, max_length=64)
+
+
+@router.post("/me/school", summary="Link an existing online teacher or unlinked student to a school using a join code")
+def link_school(body: SchoolLinkIn, dev: Device = Depends(auth.role_in("student", "teacher"))):
+    acc = _account(dev)
+    code = body.join_code.strip().upper()
+    with db.connect() as con:
+        jc = con.execute("select school_id, role, class_code from join_code where code = %s and revoked_at is null",
+                         (code,)).fetchone()
+        if not jc:
+            raise HTTPException(400, "That class code is not right" if acc["role"] == "student" else "That teacher code is not right")
+        if jc["role"] != acc["role"]:
+            raise HTTPException(400, "That is not a teacher code" if acc["role"] == "teacher" else "That is a teacher code")
+        if acc["school_id"]:
+            sc = con.execute("select kind from school where id = %s", (acc["school_id"],)).fetchone()
+            if acc["role"] == "student":
+                raise HTTPException(409, "You are already in a class; leave it first to switch")
+            if sc and sc["kind"] == "school" and acc["school_id"] != jc["school_id"]:
+                raise HTTPException(409, "Your account is already linked to another school")
+        con.execute("update account set school_id = %s, class_code = %s where id = %s",
+                    (jc["school_id"], jc["class_code"], acc["id"]))
+        con.execute("update device set school_id = %s where account_id = %s", (jc["school_id"], acc["id"]))
+        fresh = con.execute("select * from account where id = %s", (acc["id"],)).fetchone()
+        return {"account": _public(fresh, con)}
+
+
+@router.get("/me/profile", summary="A signed-in student's own synced profile and events (for signing in on another device)")
+def my_profile(dev: Device = Depends(auth.role_in("student"))):
+    acc = _account(dev)
+    sid = acc.get("student_id")
+    if not sid or not dev.schools:
+        return {"student": None, "actions": [], "events": []}
+    from .v2 import _row_to_event
+    with db.connect(dev.schools) as con:
+        leg = con.execute("select doc from legacy_student_doc where id = %s and school_id = any(%s)",
+                          (sid, dev.schools)).fetchone()
+        st = con.execute("select * from student where id = %s", (sid,)).fetchone()
+        priv = con.execute("select name, guardian_name from student_private where student_id = %s", (sid,)).fetchone()
+        actions = db.actions_for(con, [sid])
+        events = [_row_to_event(r) for r in con.execute(
+            "select * from evidence_event where student_id = %s order by seq", (sid,)).fetchall()]
+    student_doc = leg["doc"] if leg else None
+    if not student_doc and st:
+        student_doc = {
+            "id": st["id"],
+            "name": (priv or {}).get("name") or acc["name"],
+            "avatar": "🦋",
+            "facilitator_code": st.get("facilitator_code") or acc.get("class_code"),
+            "birth_year": st.get("birth_year"),
+            "cards": {},
+            "answers": {},
+            "factAnswers": {},
+            "updated_at": db.now_ms(),
+        }
+    return {"student": student_doc, "actions": actions, "events": events}
 
 
 @router.post("/logout", summary="Sign out: this phone's token stops working")

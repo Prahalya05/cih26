@@ -7,9 +7,12 @@ import { INCOME_BANDS } from "@disha/zk";
 import type { Address } from "viem";
 import type { Go } from "../App";
 import { Button, Pill, Screen, useLive } from "../components/ui";
-import { db, hasScope } from "../lib/db";
+import { db, hasScope, isMinorStudent } from "../lib/db";
 import { useT } from "../lib/i18n";
 import { kb } from "../lib/kb";
+import { riasecOf } from "../lib/profile";
+import { RUBRICS } from "../lib/skills";
+import { safeRubric, skillInterestFit } from "@disha/engine";
 import { Icon } from "../components/Icon";
 import {
   balanceOf, claim, dayNumber, meetsMilestone, payConfig, prove, readPublic, requestCredential, savedCredential,
@@ -102,8 +105,13 @@ export default function Proof({ go, id }: { go: Go; id: string }) {
       <p className="text-muted">{t("proofPaysHint")}</p>
 
       {cfg === null && <p className="rounded-xl bg-sun-soft p-3 text-warn">{t("needInternet")}</p>}
-      {cfg && !cfg.enabled && <p className="rounded-xl bg-sun-soft p-3 text-warn">{t("payNotSetUp")}</p>}
+      {cfg && !cfg.enabled && <p className="rounded-xl bg-sun-soft p-3 text-warn">{t(cfg.error ? "payChainOffline" : "payNotSetUp")}</p>}
       {!shareOk && <p className="rounded-xl bg-sun-soft p-3 text-warn">{t("shareConsentNeeded")}</p>}
+      {cfg?.enabled && cfg.milestones.length === 0 && (
+        <p className="rounded-xl bg-sun-soft p-3 text-warn">{t(cfg.error ? "payChainOffline" : "payNoMilestones")}</p>
+      )}
+
+      <AddEvidence go={go} id={id} />
 
       <section className="rounded-2xl bg-surface p-4 border border-line">
         <h2 className="flex items-center gap-2 text-lg font-extrabold"><Icon name="idcard" className="size-5 text-accent-dark" />{t("myCredential")}</h2>
@@ -200,6 +208,34 @@ export default function Proof({ go, id }: { go: Go; id: string }) {
       {error && <p className="rounded-xl bg-sun-soft p-3 text-warn">{error}</p>}
       <Button kind="ghost" onClick={() => go({ name: "funder" })}><Icon name="chart" className="size-5" />{t("funderView")}</Button>
     </Screen>
+  );
+}
+
+/** Photo or video proof for a skill, her interests first: the credential signs what this evidence shows. */
+function AddEvidence({ go, id }: { go: Go; id: string }) {
+  const { t, pick } = useT();
+  const student = useLive(() => db.students.get(id), [id], undefined);
+  if (!student) return null;
+  const g = kb.graph!;
+  const fit = skillInterestFit(kb, riasecOf(student));
+  const likes = (skill: string) => (fit ? fit[skill] ?? 0 : 0);
+  const list = Object.values(RUBRICS).filter((r) => safeRubric(g, r, isMinorStudent(student)))
+    .sort((a, b) => likes(b.skill) - likes(a.skill)).slice(0, 6);
+  if (!list.length) return null;
+  return (
+    <section className="rounded-2xl border border-line bg-surface p-4">
+      <h2 className="flex items-center gap-2 text-lg font-extrabold"><Icon name="camera" className="size-5 text-accent-dark" />{t("addEvidence")}</h2>
+      <p className="text-sm text-muted">{t("addEvidenceHint")}</p>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        {list.map((r) => (
+          <button key={r.id} onClick={() => go({ name: "sample", id, rubric: r.id })}
+            className="flex min-h-14 items-center gap-2 rounded-xl border border-line px-3 text-left text-sm font-bold hover:border-accent">
+            <Icon name={(r as { media?: string }).media === "video" ? "video" : "camera"} className="size-4 shrink-0 text-accent-dark" />
+            <span className="min-w-0 flex-1">{pick(kb.skills[r.skill]?.name ?? { en: r.skill })}</span>
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 

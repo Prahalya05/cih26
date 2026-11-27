@@ -25,6 +25,7 @@ class Device:
     school_id: str | None
     role: str  # student | teacher | funder | employer
     account_id: str | None = None
+    extra_schools: tuple[str, ...] = ()
 
     @property
     def is_teacher(self) -> bool:
@@ -33,7 +34,12 @@ class Device:
     @property
     def schools(self) -> list[str]:
         # Donors and employers have no school, so row-level security shows them no student rows.
-        return [self.school_id] if self.school_id else []
+        # Teachers may have both a physical school and separate online classroom schools.
+        out: list[str] = []
+        for s in (self.school_id, *self.extra_schools):
+            if s and s not in out:
+                out.append(s)
+        return out
 
 
 def new_token() -> str:
@@ -56,16 +62,50 @@ def device(authorization: str | None = Header(None, description="Bearer <device 
     with db.connect() as con:
         row = con.execute("select id, school_id, role, account_id from device where token_hash = %s and revoked_at is null",
                           (hash_token(token.strip()),)).fetchone()
-    if not row:
-        raise _unauthorised("This phone's registration is not valid; enter the class code again")
-    return Device(**row)
+        if not row:
+            raise _unauthorised("This phone's registration is not valid; enter the class code again")
+        extra: tuple[str, ...] = ()
+        if row["account_id"] and row["role"] == "teacher":
+            rooms = con.execute("select distinct school_id from classroom where teacher_account = %s",
+                                (row["account_id"],)).fetchall()
+            extra = tuple(r["school_id"] for r in rooms if r["school_id"] and r["school_id"] != row["school_id"])
+    return Device(**row, extra_schools=extra)
 
 
 def school_member(dev: Device = Depends(device)) -> Device:
     """FastAPI dependency: a student or teacher phone, i.e. one that belongs to a school and may sync student data."""
-    if not dev.school_id or dev.role not in ("student", "teacher"):
+    if not dev.schools or dev.role not in ("student", "teacher"):
         raise HTTPException(403, "Only a student's or teacher's phone can do this")
     return dev
+
+
+def forbidden_student_ids(con, dev: Device, student_ids: set[str]) -> set[str]:
+    """Student ids this caller may NOT read/write (enforces per-student isolation for signed-in student accounts)."""
+    if dev.role != "student" or not dev.account_id or not student_ids:
+        return set()
+    acc = con.execute("select student_id from account where id = %s", (dev.account_id,)).fetchone()
+    if acc and acc["student_id"]:
+        return {sid for sid in student_ids if sid != acc["student_id"]}
+    taken = con.execute("select student_id from account where student_id = any(%s) and id <> %s",
+                        (sorted(student_ids), dev.account_id)).fetchall()
+    return {r["student_id"] for r in taken if r["student_id"]}
+
+
+def check_student_access(con, dev: Device, student_id: str) -> None:
+    """Refuses a signed-in student trying to access another student's record inside the same school/class."""
+    if student_id in forbidden_student_ids(con, dev, {student_id}):
+        raise HTTPException(403, "You can only access your own student record")
+
+
+def maybe_link_student(con, dev: Device, student_id: str) -> None:
+    """Links a signed-in student account's first synced profile if not linked yet."""
+    if dev.role != "student" or not dev.account_id:
+        return
+    taken = con.execute("select 1 from account where student_id = %s and id <> %s",
+                        (student_id, dev.account_id)).fetchone()
+    if not taken:
+        con.execute("update account set student_id = %s where id = %s and student_id is null",
+                    (student_id, dev.account_id))
 
 
 def teacher(dev: Device = Depends(device)) -> Device:

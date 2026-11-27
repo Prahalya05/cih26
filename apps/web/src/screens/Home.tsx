@@ -24,8 +24,12 @@ export default function Home({ go }: { go: Go }) {
   const { t } = useT();
   const account = useAccount();
   const students = useLive(
-    () => db.students.orderBy("updated_at").reverse().filter((s) => !s.simulated).toArray(),
-    [],
+    async () => {
+      const all = await db.students.orderBy("updated_at").reverse().filter((s) => !s.simulated).toArray();
+      if (account?.role === "student" && account.student_id) return all.filter((s) => s.id === account.student_id);
+      return all;
+    },
+    [account?.id, account?.student_id],
     [] as Student[],
   );
 
@@ -59,14 +63,29 @@ export default function Home({ go }: { go: Go }) {
             <span className="w-full truncate text-center text-sm font-bold">{s.name}</span>
           </button>
         ))}
-        <button
-          onClick={() => go({ name: "new" })}
-          className="flex aspect-[4/5] flex-col items-center justify-center gap-2 rounded-2xl border-[1.5px] border-dashed border-accent bg-brand-soft/60 p-2 text-accent-dark transition hover:bg-brand-soft active:scale-[0.98]"
-        >
-          <span className="flex size-16 items-center justify-center rounded-full bg-surface"><Icon name="plus" className="size-7" strokeWidth={2.2} /></span>
-          <span className="text-center text-sm font-bold">{t("newStudent")}</span>
-        </button>
+        {!(account?.role === "student" && account.student_id && students.length > 0) && (
+          <button
+            onClick={() => go({ name: "new" })}
+            className="flex aspect-[4/5] flex-col items-center justify-center gap-2 rounded-2xl border-[1.5px] border-dashed border-accent bg-brand-soft/60 p-2 text-accent-dark transition hover:bg-brand-soft active:scale-[0.98]"
+          >
+            <span className="flex size-16 items-center justify-center rounded-full bg-surface"><Icon name="plus" className="size-7" strokeWidth={2.2} /></span>
+            <span className="text-center text-sm font-bold">{t("newStudent")}</span>
+          </button>
+        )}
       </div>
+
+      {/* Signed up without a school code: find an online class (or see the requests she already sent). */}
+      {account?.role === "student" && !account.school_id && (
+        <button onClick={() => go({ name: "findClass" })}
+          className="flex items-center gap-3 rounded-2xl bg-brand p-4 text-left text-white active:bg-brand-dark">
+          <span className="flex size-10 items-center justify-center rounded-xl bg-white/10 text-accent"><Icon name="users" className="size-6" /></span>
+          <span className="flex-1">
+            <span className="block text-lg font-semibold">{t("findClass")}</span>
+            <span className="block text-sm opacity-90">{t("findClassShort")}</span>
+          </span>
+          <Icon name="chevron" className="size-6" />
+        </button>
+      )}
 
       {/* Teacher, donor and employer screens are reached by signing in with that role, not from a student's home. */}
       {account?.role === "student" && account.student_id && (

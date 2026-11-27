@@ -82,6 +82,15 @@ def test_payouts_off_without_a_chain(client):
     assert client.post("/v2/pay/claim", json=body).status_code == 503
 
 
+def test_unreachable_chain_is_off_and_hides_the_rpc_address(client, monkeypatch):
+    # The committed local Anvil deployment on a server with no Anvil: no 127.0.0.1 address may reach browsers.
+    monkeypatch.setattr(chain, "deployment", lambda: {"rpc_url": "http://127.0.0.1:1", "proofpays": "0x" + "ab" * 20,
+                                                      "token": "0x" + "cd" * 20, "chain_id": 31337})
+    cfg = client.get("/v2/pay/config").json()
+    assert cfg["enabled"] is False and cfg["error"] and cfg["milestones"] == []
+    assert "rpc_url" not in cfg and "token" not in cfg
+
+
 def video(client, rubric="rb_stitching", mime="video/webm", data=b"\x1a\x45\xdf\xa3fake"):
     return client.post("/v2/work-sample/video", data={"student_id": "stu1", "rubric_id": rubric, "process": '{"steadiness": 0.8}'},
                        files={"video": ("work.webm", data, mime)})

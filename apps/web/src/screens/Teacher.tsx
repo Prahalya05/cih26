@@ -13,7 +13,8 @@ import { SECTOR } from "../lib/labels";
 import { analyse, isStrongMatch, type Analysis } from "../lib/profile";
 import { pullCohort, syncNow } from "../lib/sync";
 import { deviceRole, register, apiFetch, type Role } from "../lib/api";
-import { useAccount } from "../lib/auth";
+import { linkSchoolCode, useAccount } from "../lib/auth";
+import { TeacherAreaTabs } from "../components/TeacherAreaTabs";
 import { autoConfirmed, rubricFor, samplesToConfirm } from "../lib/samples";
 import { DocsPanel, OverridePanel, SuggestPanel } from "../components/TeacherTools";
 import type { StoredEvent } from "../lib/db";
@@ -33,13 +34,19 @@ export default function Teacher({ go }: { go: Go }) {
   const online = useOnline();
   const [code, setCode] = useState(savedCode);
   const [draft, setDraft] = useState(code);
+  const [schoolErr, setSchoolErr] = useState("");
   const [open, setOpen] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
   const role = useLive(() => deviceRole(), [code, joining], null as Role | null);
   // A signed-in teacher's class comes from her account; the tab bar replaces the back arrow.
   const account = useAccount();
   const back = account ? undefined : () => go({ name: "home" });
-  useEffect(() => { if (account?.class_code && !code) setCode(account.class_code); }, [account?.class_code]); // eslint-disable-line react-hooks/exhaustive-deps
+  const isOnlineRoom = code.startsWith("ONL-");
+  useEffect(() => {
+    if (account?.school_kind === "school" && account.class_code && !code) {
+      setCode(account.class_code);
+    }
+  }, [account?.school_kind, account?.class_code]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const students = useLive(
     () => (code ? db.students.where("facilitator_code").equals(code).toArray() : Promise.resolve([] as Student[])),
@@ -68,14 +75,42 @@ export default function Teacher({ go }: { go: Go }) {
   }, [students, actions, lang, profiles]);
 
   if (!code) {
+    if (account && account.school_kind !== "school") {
+      return (
+        <Screen title={t("teacherTitle")} onBack={back}>
+          <TeacherAreaTabs area="school" account={account} go={go} />
+          <div className="rounded-2xl border border-line bg-surface p-4 flex flex-col gap-2">
+            <p className="text-lg font-extrabold">{t("onlineOnlyTeacherTitle")}</p>
+            <p className="text-sm text-muted">{t("onlineOnlyTeacherHint")}</p>
+            <Button onClick={() => go({ name: "classrooms" })}><Icon name="users" className="size-5" />{t("onlineClassrooms")}</Button>
+          </div>
+          <div className="rounded-2xl border border-line bg-surface p-4 flex flex-col gap-2">
+            <p className="font-bold">{t("linkSchoolTitle")}</p>
+            <p className="text-sm text-muted">{t("linkSchoolHint")}</p>
+            <input value={draft} onChange={(e) => setDraft(e.target.value.toUpperCase())} placeholder="TCH-01"
+              className="min-h-12 rounded-xl border border-line bg-paper px-3 text-base uppercase" />
+            {schoolErr && <p role="alert" className="rounded-xl bg-bad-soft p-2.5 text-sm font-semibold text-bad">{schoolErr}</p>}
+            <Button kind="soft" disabled={!draft.trim() || joining} onClick={async () => {
+              setJoining(true); setSchoolErr("");
+              const r = await linkSchoolCode(draft.trim());
+              setJoining(false);
+              if ("error" in r) setSchoolErr(r.error);
+              else if (r.class_code) { setCode(r.class_code); setDraft(""); }
+            }}>{t("linkSchoolButton")}</Button>
+          </div>
+        </Screen>
+      );
+    }
     return (
       <Screen title={t("teacherTitle")} onBack={back}>
+        <TeacherAreaTabs area="school" account={account} go={go} />
         <label className="flex flex-col gap-1">
           <span className="font-semibold">{t("facilitatorCode")}</span>
           <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="PSG01"
             className="min-h-14 rounded-xl border border-line bg-surface px-4 text-lg uppercase" />
         </label>
         <p className="text-muted">{t("teacherCodeHint")}</p>
+        {account && <Button kind="soft" onClick={() => go({ name: "classrooms" })}><Icon name="users" className="size-5" />{t("teachOnline")}</Button>}
         <Button disabled={!draft.trim() || joining} onClick={async () => {
           const typed = draft.trim().toUpperCase();
           // A teacher code registers this phone as a teacher's phone and tells us which class it is for.
@@ -97,8 +132,28 @@ export default function Teacher({ go }: { go: Go }) {
     <Screen
       title={t("teacherTitle")}
       onBack={back}
-      right={<button onClick={() => !account && setCode("")} className="rounded-full bg-brand-soft px-3 py-1 text-sm font-semibold text-brand-dark">{code}</button>}
+      right={<button onClick={() => (account ? go({ name: "classrooms" }) : setCode(""))} className="rounded-full bg-brand-soft px-3 py-1 text-sm font-semibold text-brand-dark">{code}</button>}
     >
+      <TeacherAreaTabs
+        area={isOnlineRoom ? "online" : "school"}
+        account={account}
+        go={go}
+        onSelectSchool={() => {
+          if (account?.school_kind === "school" && account.class_code) setCode(account.class_code);
+          else setCode("");
+        }}
+      />
+      <div className="flex items-center justify-between gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-sm">
+        <span className="font-bold text-brand">
+          {isOnlineRoom ? t("onlineClassroomTag", { code }) : t("schoolClassTag", { code })}
+          {!isOnlineRoom && account?.school_name ? ` · ${account.school_name}` : ""}
+        </span>
+        {isOnlineRoom && (
+          <button onClick={() => go({ name: "classrooms" })} className="text-xs font-bold text-accent-dark underline">
+            {t("backToOnlineRooms")}
+          </button>
+        )}
+      </div>
       <div className="grid grid-cols-3 gap-2 text-center">
         <Stat value={rows.length} label={t("students")} />
         <Stat value={strongCount} label={t("strongMatch")} />

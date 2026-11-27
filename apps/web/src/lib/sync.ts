@@ -5,15 +5,27 @@ import { db, deleteStudent, hasScope, type Action, type Experience, type SkillCl
 import { deviceId } from "./events";
 import { refreshSkillState } from "./skills";
 import { apiFetch } from "./api";
+import { currentAccount } from "./auth";
 
 
 export const isOnline = () => navigator.onLine;
 
+/** The server takes student data only from a student or teacher phone that belongs to a school (auth.school_member).
+ * Donors, employers and anyone not yet in a school would only get 403s, so they skip syncing; what is waiting on the
+ * phone stays queued and goes up once the account joins a school. */
+async function canSync(): Promise<boolean> {
+  const a = await currentAccount();
+  return !!a && !!a.school_id && (a.role === "student" || a.role === "teacher");
+}
+
 export async function syncNow(): Promise<boolean> {
-  if (!isOnline()) return false;
+  if (!isOnline() || !(await canSync())) return false;
   await flushErasures();
+  const acc = await currentAccount();
   // Demo (made-up) students never leave the phone; nor does anyone whose consent is missing or withdrawn.
-  const shared = (await db.students.toArray()).filter((s) => !s.simulated && hasScope(s, "assess"));
+  // A signed-in student only ever syncs her own profile.
+  const shared = (await db.students.toArray()).filter((s) => !s.simulated && hasScope(s, "assess")
+    && (acc?.role !== "student" || !acc.student_id || s.id === acc.student_id));
   const sharedIds = new Set(shared.map((s) => s.id));
   const students = shared.filter((s) => !s.synced_at || s.updated_at > s.synced_at);
   const actions = (await db.actions.where("synced").equals(0).toArray()).filter((a) => sharedIds.has(a.student_id));
@@ -62,11 +74,13 @@ interface SyncOut {
 
 /** Sends this phone's new events and fetches events made on other devices (teacher ratings and so on). */
 export async function syncEvents(): Promise<boolean> {
-  if (!isOnline()) return false;
+  if (!isOnline() || !(await canSync())) return false;
   const device = await deviceId();
+  const acc = await currentAccount();
   // Students with withdrawn consent are still sent (so the server records the withdrawal), but none of
   // their events go up and the server sends nothing back for them.
-  const real = (await db.students.toArray()).filter((s) => !s.simulated && s.consent);
+  const real = (await db.students.toArray()).filter((s) => !s.simulated && s.consent
+    && (acc?.role !== "student" || !acc.student_id || s.id === acc.student_id));
   const studentIds = real.filter((s) => hasScope(s, "assess")).map((s) => s.id);
   const pending = (await db.events.where("synced").equals(0).sortBy("id")).filter((e) => studentIds.includes(e.student_id));
   const myRater = `rater_${device}`;

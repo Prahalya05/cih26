@@ -13,6 +13,12 @@ function load(): Opportunity[] {
 /** Posted jobs known to this phone (updated in place by refreshPostings). */
 export const POSTED: Opportunity[] = load();
 
+export function clearPostings(): void {
+  POSTED.splice(0, POSTED.length);
+  try { localStorage.removeItem(KEY); } catch { /* ignore */ }
+  window.dispatchEvent(new Event("disha:postings"));
+}
+
 export async function refreshPostings(): Promise<void> {
   try {
     const res = await apiFetch("/v2/postings");

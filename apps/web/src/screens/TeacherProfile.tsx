@@ -32,7 +32,7 @@ export default function TeacherProfile({ go, teacherId }: { go: Go; teacherId?: 
   }, [teacherId, account?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <Screen title={own ? t("myTeacherProfile") : t("teacherProfile")} onBack={own ? () => go({ name: "account" }) : () => go({ name: "courses" })}>
+    <Screen title={own ? t("myTeacherProfile") : t("teacherProfile")} onBack={own ? () => go({ name: "account" }) : () => go({ name: account?.role === "teacher" ? "teacherCourses" : "courses" })}>
       {error && <p className="rounded-xl bg-sun-soft p-3 text-warn">{error}</p>}
       {p && !edit && (
         <>

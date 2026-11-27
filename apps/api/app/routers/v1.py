@@ -313,11 +313,23 @@ def sync(req: SyncRequest, dev: Device = Depends(auth.school_member)):
     for s in req.students:
         if not isinstance(s.get("id"), str):
             raise HTTPException(422, "Each student needs a string id")
-    # The legacy tables have no row-level security, so the school check is done here.
+    # The legacy tables have no row-level security, so the school and student checks are done here.
     with db.connect() as con:
         ids = sorted({s["id"] for s in req.students} | {a.student_id for a in req.actions} | set(req.pull))
-        others = db.other_schools_students(con, dev.school_id, ids)
-        stored = sum(db.upsert_student(con, s, dev.school_id) for s in req.students if s["id"] not in others)
+        forbidden = auth.forbidden_student_ids(con, dev, set(ids))
+        others = db.other_schools_students(con, dev.schools, ids) | forbidden
+        room_schools: dict[str, str] = {}
+        if dev.is_teacher and dev.account_id:
+            room_schools = {r["code"]: r["school_id"] for r in con.execute(
+                "select code, school_id from classroom where teacher_account = %s", (dev.account_id,)).fetchall()}
+        default_school = dev.school_id or dev.schools[0]
+        stored = sum(
+            db.upsert_student(con, s, room_schools.get((s.get("facilitator_code") or "").upper(), default_school))
+            for s in req.students if s["id"] not in others
+        )
+        valid_students = [s for s in req.students if s["id"] not in others]
+        if len(valid_students) == 1:
+            auth.maybe_link_student(con, dev, valid_students[0]["id"])
         # Endorsing and recommending are a teacher's actions.
         added = sum(db.add_action(con, a.model_dump()) for a in req.actions
                     if a.student_id not in others and (dev.is_teacher or a.kind not in ("endorse", "recommend")))
@@ -327,8 +339,28 @@ def sync(req: SyncRequest, dev: Device = Depends(auth.school_member)):
 
 @router.get("/facilitator/{code}/cohort", summary="All students linked to a facilitator code, with their actions")
 def cohort(code: str, dev: Device = Depends(auth.teacher)):
+    norm = code.strip().upper()
     with db.connect() as con:
-        students = db.cohort(con, code, dev.school_id)
+        room = con.execute("select school_id from classroom where code = %s and teacher_account = %s",
+                           (norm, dev.account_id)).fetchone() if dev.account_id else None
+        target_school = room["school_id"] if room else dev.school_id
+        if not target_school:
+            return {"students": [], "actions": []}
+        students = db.cohort(con, norm, target_school)
+        seen_ids = {s["id"] for s in students}
+        # Also include v2-only synced students in this class if no legacy doc exists yet.
+        extra = con.execute(
+            "select s.id, s.facilitator_code, s.birth_year, sp.name from student s "
+            "left join student_private sp on sp.student_id = s.id "
+            "where s.school_id = %s and upper(coalesce(s.facilitator_code, '')) = %s",
+            (target_school, norm)).fetchall()
+        for r in extra:
+            if r["id"] not in seen_ids:
+                students.append({
+                    "id": r["id"], "name": r["name"] or "Student", "avatar": "🦋",
+                    "facilitator_code": r["facilitator_code"], "birth_year": r["birth_year"],
+                    "cards": {}, "answers": {}, "factAnswers": {}, "updated_at": db.now_ms(),
+                })
         return {"students": students, "actions": db.actions_for(con, [s["id"] for s in students])}
 
 

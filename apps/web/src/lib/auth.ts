@@ -4,8 +4,10 @@
 
 import { useEffect, useState } from "react";
 import { API, apiFetch } from "./api";
-import { db } from "./db";
+import { db, type Action, type StoredEvent, type Student } from "./db";
 import { deviceId } from "./events";
+import { clearPostings } from "./postings";
+import { refreshSkillState } from "./skills";
 
 export type AccountRole = "student" | "teacher" | "funder" | "employer";
 
@@ -16,6 +18,8 @@ export interface Account {
   org?: string | null;
   login: string; // masked: 98•••••210
   school_id?: string | null;
+  school_kind?: "school" | "online" | null;
+  school_name?: string | null;
   class_code?: string | null;
   student_id?: string | null;
 }
@@ -23,9 +27,43 @@ export interface Account {
 const SESSION = "session";
 const TOKEN = "device_token";
 const ROLE = "device_role";
+const LAST_ACCOUNT = "last_account_id";
 const EVENT = "disha:session";
 
 export interface OtpSent { sent_to: string; kind: "phone" | "email"; new_account: boolean; delivery: "email" | "demo"; minutes: number; demo_code?: string }
+
+/** Wipes all user-scoped records from IndexedDB and localStorage so accounts never leak data on shared phones. */
+export async function clearLocalUserData(): Promise<void> {
+  await db.transaction("rw", [db.students, db.actions, db.events, db.skillState, db.media, db.meta], async () => {
+    await db.students.clear();
+    await db.actions.clear();
+    await db.events.clear();
+    await db.skillState.clear();
+    await db.media.clear();
+    await db.meta.bulkDelete([SESSION, TOKEN, ROLE, LAST_ACCOUNT, "event_cursor", "pending_erasures"]);
+  });
+  try {
+    localStorage.removeItem("disha.code");
+    localStorage.removeItem("disha.join");
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith("disha.docs.") || k.startsWith("disha.story."))) localStorage.removeItem(k);
+    }
+  } catch { /* ignore */ }
+  clearPostings();
+}
+
+async function hydrateMyProfile(studentId: string): Promise<void> {
+  if (await db.students.get(studentId)) return;
+  const r = await call<{ student: Student | null; actions: Omit<Action, "synced">[]; events: StoredEvent[] }>("/v2/auth/me/profile");
+  if (isError(r) || !r.student) return;
+  await db.transaction("rw", db.students, db.actions, db.events, async () => {
+    await db.students.put({ ...r.student!, synced_at: r.student!.updated_at });
+    for (const a of r.actions) await db.actions.put({ ...a, synced: 1 });
+    for (const e of r.events) await db.events.put({ ...e, synced: 1 });
+  });
+  await refreshSkillState(studentId);
+}
 
 async function errorOf(res: Response): Promise<string> {
   try {
@@ -41,7 +79,7 @@ export async function requestOtp(login: string): Promise<OtpSent | { error: stri
   } catch { return { error: "No internet. Sign-in needs the internet once." }; }
 }
 
-export interface NewAccount { role: AccountRole; name: string; org?: string; join_code?: string; privacy_ok: boolean }
+export interface NewAccount { role: AccountRole; mode?: "school" | "online"; name: string; org?: string; join_code?: string; privacy_ok: boolean }
 
 export async function verifyOtp(login: string, code: string, extra?: NewAccount): Promise<Account | { error: string }> {
   try {
@@ -51,10 +89,19 @@ export async function verifyOtp(login: string, code: string, extra?: NewAccount)
     });
     if (!res.ok) return { error: await errorOf(res) };
     const out = (await res.json()) as { token: string; account: Account };
+    const prevId = (await db.meta.get(LAST_ACCOUNT))?.value as string | undefined;
+    if (prevId && prevId !== out.account.id) await clearLocalUserData();
     await db.meta.put({ key: TOKEN, value: out.token });
     await db.meta.put({ key: ROLE, value: out.account.role });
     await db.meta.put({ key: SESSION, value: out.account });
-    if (out.account.class_code) { try { localStorage.setItem("disha.code", out.account.class_code); } catch { /* private mode */ } }
+    await db.meta.put({ key: LAST_ACCOUNT, value: out.account.id });
+    try {
+      if (out.account.class_code) localStorage.setItem("disha.code", out.account.class_code);
+      else localStorage.removeItem("disha.code");
+    } catch { /* private mode */ }
+    if (out.account.role === "student" && out.account.student_id) {
+      await hydrateMyProfile(out.account.student_id).catch(() => undefined);
+    }
     window.dispatchEvent(new Event(EVENT));
     return out.account;
   } catch { return { error: "No internet. Sign-in needs the internet once." }; }
@@ -66,16 +113,55 @@ export async function currentAccount(): Promise<Account | null> {
 
 export async function saveAccount(a: Account) {
   await db.meta.put({ key: SESSION, value: a });
+  await db.meta.put({ key: LAST_ACCOUNT, value: a.id });
   window.dispatchEvent(new Event(EVENT));
 }
 
 export async function signOut() {
   try { await apiFetch("/v2/auth/logout", { method: "POST" }); } catch { /* offline: the token is forgotten anyway */ }
-  await db.meta.delete(SESSION);
-  await db.meta.delete(TOKEN);
-  await db.meta.delete(ROLE);
-  try { localStorage.removeItem("disha.join"); } catch { /* ignore */ }
+  await clearLocalUserData();
   window.dispatchEvent(new Event(EVENT));
+}
+
+/** Refreshes the signed-in account from the server so approvals (e.g. online classroom join) and school links propagate. */
+export async function refreshAccount(): Promise<Account | null> {
+  const cur = await currentAccount();
+  if (!cur || !navigator.onLine) return cur;
+  const fresh = await call<Account>("/v2/auth/me");
+  if (isError(fresh)) return cur;
+  const changed =
+    fresh.school_id !== cur.school_id ||
+    fresh.class_code !== cur.class_code ||
+    fresh.school_kind !== cur.school_kind ||
+    fresh.school_name !== cur.school_name ||
+    fresh.student_id !== cur.student_id;
+  if (changed) {
+    await saveAccount(fresh);
+    try {
+      if (fresh.class_code) localStorage.setItem("disha.code", fresh.class_code);
+      else if (fresh.role === "student") localStorage.removeItem("disha.code");
+    } catch { /* private mode */ }
+    if (fresh.role === "student" && fresh.student_id) {
+      const existing = await db.students.get(fresh.student_id);
+      if (existing) {
+        await db.students.update(fresh.student_id, { facilitator_code: fresh.class_code ?? undefined, updated_at: Date.now() });
+      }
+    }
+  }
+  if (fresh.role === "student" && fresh.student_id) {
+    await hydrateMyProfile(fresh.student_id).catch(() => undefined);
+  }
+  return fresh;
+}
+
+export async function linkSchoolCode(joinCode: string): Promise<Account | { error: string }> {
+  const r = await call<{ account: Account }>("/v2/auth/me/school", { method: "POST", body: JSON.stringify({ join_code: joinCode }) });
+  if (isError(r)) return { error: r.error };
+  await saveAccount(r.account);
+  if (r.account.class_code) {
+    try { localStorage.setItem("disha.code", r.account.class_code); } catch { /* private mode */ }
+  }
+  return r.account;
 }
 
 /** The signed-in account, or null; undefined while loading. Updates on sign-in and sign-out. */
@@ -93,7 +179,7 @@ export function useAccount(): Account | null | undefined {
 /** Called when the server says the token is no longer valid for a signed-in account. */
 export async function sessionExpired() {
   if (await currentAccount()) {
-    await db.meta.delete(SESSION);
+    await db.meta.bulkDelete([SESSION, TOKEN, ROLE]);
     window.dispatchEvent(new Event(EVENT));
   }
 }

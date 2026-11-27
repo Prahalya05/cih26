@@ -7,7 +7,7 @@ import { Button, Card, Pill, Screen } from "../components/ui";
 import { Icon } from "../components/Icon";
 import { useT } from "../lib/i18n";
 import { kb } from "../lib/kb";
-import { call, isError } from "../lib/auth";
+import { call, isError, useAccount } from "../lib/auth";
 import { getCourse, type CourseDetail, type Plan } from "../lib/courses";
 
 /** Units a quiz can give evidence for: every sub-skill, and skills that have no sub-skills. */
@@ -25,6 +25,7 @@ interface Q { q: string; options: string[]; answer: number }
 
 export default function CourseBuilder({ go, courseId }: { go: Go; courseId?: string }) {
   const { t, pick } = useT();
+  const account = useAccount();
   const units = trainable(pick);
   const [id, setId] = useState(courseId);
   const [d, setD] = useState<CourseDetail | null>(null);
@@ -35,7 +36,7 @@ export default function CourseBuilder({ go, courseId }: { go: Go; courseId?: str
   const [plan, setPlan] = useState<Plan>("free");
   const [price, setPrice] = useState("49");
   const [period, setPeriod] = useState("30");
-  const [openToAll, setOpenToAll] = useState(false);
+  const [openToAll, setOpenToAll] = useState(() => account?.school_kind !== "school");
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
 
@@ -96,7 +97,19 @@ export default function CourseBuilder({ go, courseId }: { go: Go; courseId?: str
           </div>
         )}
         <p className="text-xs text-muted">{t("previewNote")}</p>
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="size-5" checked={openToAll} onChange={(e) => setOpenToAll(e.target.checked)} />{t("openToAll")}</label>
+        <p className="text-sm font-semibold">{t("courseVisibility")}</p>
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" onClick={() => setOpenToAll(false)} aria-pressed={!openToAll}
+            className={`flex flex-col items-start gap-0.5 rounded-xl border p-2.5 text-left ${!openToAll ? "border-brand bg-brand-soft" : "border-line"}`}>
+            <span className="text-sm font-bold">{t("visibilitySchool")}</span>
+            <span className="text-xs text-muted">{t("visibilitySchoolHint")}</span>
+          </button>
+          <button type="button" onClick={() => setOpenToAll(true)} aria-pressed={openToAll}
+            className={`flex flex-col items-start gap-0.5 rounded-xl border p-2.5 text-left ${openToAll ? "border-brand bg-brand-soft" : "border-line"}`}>
+            <span className="text-sm font-bold">{t("visibilityOnline")}</span>
+            <span className="text-xs text-muted">{t("visibilityOnlineHint")}</span>
+          </button>
+        </div>
         {error && <p className="rounded-lg bg-bad-soft p-2 text-sm text-bad">{error}</p>}
         {saved && <p className="rounded-lg bg-good-soft p-2 text-sm text-good">{t("saved")}</p>}
         <Button disabled={title.trim().length < 3 || (plan !== "free" && !Number(price))} onClick={() => void save()}>{t("save")}</Button>

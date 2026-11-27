@@ -117,23 +117,27 @@ def _ms(dt: datetime) -> int:
 
 
 def _claim_students(dev: Device, ids: set) -> set[str]:
-    """Returns the ids that belong to another school. Students synced before phones had tokens have no school:
-    the first school to sync them takes them."""
+    """Returns the ids that belong to another school (or another student account).
+    Students synced before phones had tokens have no school: the first school to sync them takes them."""
     ids = {i for i in ids if isinstance(i, str)}
     if not ids:
         return set()
+    allowed = set(dev.schools)
+    default_school = dev.school_id or (dev.schools[0] if dev.schools else None)
     with db.connect() as con:  # trusted: must see every school to tell "another school" from "new"
+        forbidden = auth.forbidden_student_ids(con, dev, ids)
         rows = con.execute("select id, school_id from student where id = any(%s)", (sorted(ids),)).fetchall()
-        orphans = [r["id"] for r in rows if r["school_id"] is None]
-        if orphans:
+        orphans = [r["id"] for r in rows if r["school_id"] is None and r["id"] not in forbidden]
+        if orphans and default_school:
             con.execute("update student set school_id = %s where id = any(%s) and school_id is null",
-                        (dev.school_id, orphans))
-    return {r["id"] for r in rows if r["school_id"] not in (None, dev.school_id)}
+                        (default_school, orphans))
+    return forbidden | {r["id"] for r in rows if r["school_id"] is not None and r["school_id"] not in allowed}
 
 
-def _save_students(con, students: list[StudentIn], school_id: str) -> None:
-    """The school always comes from the phone's token, never from what the phone says."""
+def _save_students(con, students: list[StudentIn], default_school: str, room_schools: dict[str, str] | None = None) -> None:
+    """The school always comes from the phone's token/classrooms, never from what the phone says."""
     for s in students:
+        school_id = (room_schools or {}).get((s.facilitator_code or "").upper(), default_school)
         con.execute(
             "insert into student(id, school_id, facilitator_code, district, class, gender, medium, birth_year) "
             "values (%s, %s, %s, %s, %s, %s, %s, %s) on conflict (id) do update set "
@@ -190,9 +194,9 @@ def _insert_events(con, dev: Device, events: list[dict], foreign: set[str]) -> t
     accepted: list[str] = []
     rejected: list[dict] = []
     ok_students = _consented(con, {e.get("student_id") for e in events if e.get("student_id")} - foreign)
-    # A rating counts only from a teacher's phone, and only with a rater of the same school.
-    known_raters = {r["id"] for r in con.execute("select id from rater where id = any(%s) and school_id = %s",
-                                                 ([e["rater_id"] for e in events if e.get("rater_id")], dev.school_id))}
+    # A rating counts only from a teacher's phone, and only with a rater of the same school(s).
+    known_raters = {r["id"] for r in con.execute("select id from rater where id = any(%s) and school_id = any(%s)",
+                                                 ([e["rater_id"] for e in events if e.get("rater_id")], dev.schools))}
     refs = list({e["refers_to"] for e in events if isinstance(e.get("refers_to"), str)})
     known_refs = {r["id"] for r in con.execute("select id from evidence_event where id = any(%s)", (refs,))} if refs else set()
     rows = []
@@ -264,12 +268,20 @@ def sync(req: SyncIn, dev: Device = Depends(auth.school_member)):
     foreign = _claim_students(dev, {s.id for s in req.students} | set(req.student_ids)
                               | {e.get("student_id") for e in req.events})
     with db.connect(dev.schools) as con:
-        _save_students(con, [s for s in req.students if s.id not in foreign], dev.school_id)
+        room_schools: dict[str, str] = {}
+        if dev.is_teacher and dev.account_id:
+            room_schools = {r["code"]: r["school_id"] for r in con.execute(
+                "select code, school_id from classroom where teacher_account = %s", (dev.account_id,)).fetchall()}
+        default_school = dev.school_id or dev.schools[0]
+        valid_students = [s for s in req.students if s.id not in foreign]
+        _save_students(con, valid_students, default_school, room_schools)
+        if len(valid_students) == 1:
+            auth.maybe_link_student(con, dev, valid_students[0].id)
         if dev.is_teacher:
             for r in req.raters:
                 if r.role in PHONE_RATER_ROLES:
                     con.execute("insert into rater(id, role, school_id) values (%s, %s, %s) on conflict (id) do nothing",
-                                (r.id, r.role, dev.school_id))
+                                (r.id, r.role, default_school))
         accepted, rejected = _insert_events(con, dev, req.events, foreign)
         refresh_state(con, {e["student_id"] for e in req.events if e.get("id") in set(accepted)})
         # Withdrawn consent stops sync both ways: nothing is accepted or sent back for that student.
@@ -306,6 +318,7 @@ async def score_work_sample(student_id: str = Form(...), rubric_id: str = Form(.
     if not rubric:
         raise HTTPException(404, "Unknown checklist")
     with db.connect(dev.schools) as con:  # another school's student has no visible consent, so is refused below
+        auth.check_student_access(con, dev, student_id)
         ok = con.execute("select 1 from consent where student_id = %s and revoked_at is null and 'photos' = any(scopes)",
                          (student_id,)).fetchone()
         st = con.execute("select birth_year from student where id = %s", (student_id,)).fetchone()
@@ -551,9 +564,10 @@ def delete_student(student_id: str, body: DeleteIn, dev: Device = Depends(auth.s
     if body.confirmed_by not in ("guardian", "student"):
         raise HTTPException(400, "A guardian (or the student, if 18 or over) must confirm")
     with db.connect() as con:  # trusted look-up, so another school's student is refused rather than skipped
+        auth.check_student_access(con, dev, student_id)
         rows = [con.execute(f"select school_id from {t} where id = %s", (student_id,)).fetchone()
                 for t in ("student", "legacy_student_doc")]
-    if any(r and r["school_id"] not in (None, dev.school_id) for r in rows):
+    if any(r and r["school_id"] is not None and r["school_id"] not in dev.schools for r in rows):
         raise HTTPException(403, "This student belongs to another school")
     with db.connect() as con:
         # Every table with a student_id cascades from student (migrations 0001, 0005); the legacy v1

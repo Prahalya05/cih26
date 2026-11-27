@@ -12,3 +12,7 @@ __pycache__/
 .DS_Store
 !.env.example
 apps/api/demo_cache.json
+cih26_helperdocs/
+docs/deck/
+.ui-preview/
+apps/web/dev-dist/
