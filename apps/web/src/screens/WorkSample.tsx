@@ -7,7 +7,7 @@ import { Button, Pill, Screen, useLive } from "../components/ui";
 import { db, hasScope, patchStudent, scopesOf } from "../lib/db";
 import { useT } from "../lib/i18n";
 import { compressImage, rubricFor, saveSample, saveVideoSample, scoreSample, type ScoreResult } from "../lib/samples";
-import { MAX_SECONDS, startFilming, type Filming, type Process } from "../lib/video";
+import { MAX_SECONDS, startFilming, type Filming, type LiveStatus, type Process, type VideoFlag } from "../lib/video";
 import type { IdentityInput } from "@disha/engine";
 import { IdentityGate } from "../components/IdentityGate";
 import { emit } from "../lib/xray";
@@ -26,12 +26,21 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
   const [process, setProcess] = useState<Process | null>(null);
   const [cameraError, setCameraError] = useState(false);
   const [seconds, setSeconds] = useState(0);
+  const [live, setLive] = useState<LiveStatus | null>(null);
+  const [warnings, setWarnings] = useState<VideoFlag[]>([]);
   const canvas = useRef<HTMLCanvasElement>(null);
   const player = useRef<HTMLVideoElement>(null);
   const filming = useRef<Filming | null>(null);
   const identity = useRef<IdentityInput | null>(null);
 
   useEffect(() => () => filming.current?.close(), []);
+  // Live hints: read what the phone sees a few times a second while the camera is open.
+  const cameraOpen = stage === "camera" || stage === "filming";
+  useEffect(() => {
+    if (!cameraOpen) { setLive(null); return; }
+    const timer = window.setInterval(() => setLive(filming.current?.live() ?? null), 300);
+    return () => window.clearInterval(timer);
+  }, [cameraOpen]);
   if (!student || !rubric) return null;
   const back = () => { filming.current?.close(); go({ name: "results", id, tab: "strengths" }); };
 
@@ -79,9 +88,10 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
       f.close();
       filming.current = null;
       setProcess(clip.process);
+      setWarnings(clip.flags);
       setVideoUrl(URL.createObjectURL(clip.blob));
       setStage("saving");
-      await score(await saveVideoSample(id, rubric, clip.blob, clip.process, identity.current));
+      await score(await saveVideoSample(id, rubric, clip.blob, clip.process, identity.current, clip.flags));
     } catch {
       setCameraError(true);
       setStage("ready");
@@ -143,13 +153,24 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
             </span>
           )}
           <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md bg-brand-dark/75 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur"><Icon name="eyeOff" className="size-3.5" />{t("faceBlurOn")}</span>
+          {live?.paused && stage === "filming" && (
+            <span className="absolute inset-x-3 top-12 rounded-md bg-bad px-2.5 py-1.5 text-center text-sm font-bold text-white">{t("livePaused")}</span>
+          )}
         </div>
+      )}
+      {live && (
+        <ul className="flex flex-wrap gap-2 text-sm">
+          <li><Pill tone={live.hands > 0 ? "good" : "sun"}>{live.hands > 0 ? t("liveHandsOk") : t("liveNoHands")}</Pill></li>
+          {live.dark && <li><Pill tone="sun">{t("liveDark")}</Pill></li>}
+          {live.faces >= 2 && <li><Pill tone="sun">{t("liveTwoFaces")}</Pill></li>}
+        </ul>
       )}
       {stage === "camera" && <Button onClick={() => void film()}><span className="size-3 rounded-full bg-bad" />{t("startFilming")}</Button>}
       {stage === "filming" && <Button kind="soft" onClick={() => filming.current?.stop()}><Icon name="stop" className="size-5" />{t("stopFilming")}</Button>}
 
       {preview && <img src={preview} alt="" className="max-h-72 w-full rounded-2xl object-contain" />}
       {videoUrl && <video ref={player} src={videoUrl} controls playsInline className="max-h-72 w-full rounded-2xl bg-black" />}
+      {warnings.length > 0 && <p className="rounded-xl bg-paper p-3 text-sm text-muted">{t("liveWarnedTeacher")}</p>}
       {process && (
         <p className="text-sm text-muted">
           {t("handsSeen", { pct: Math.round(process.hands_visible * 100) })} · {t("steadiness", { pct: Math.round(process.steadiness * 100) })}

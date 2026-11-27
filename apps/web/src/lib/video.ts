@@ -111,13 +111,36 @@ export function summarise(frames: { hands: number; wrist?: [number, number] }[],
   };
 }
 
+/** What the phone sees right now, for live hints. Nothing here leaves the phone. */
+export interface LiveStatus {
+  hands: number;        // hands in view now
+  faces: number;        // faces in view now (all are blurred)
+  dark: boolean;        // too dark to see the work
+  paused: boolean;      // recording paused because blurring could not be trusted
+}
+
+/** Warnings noted while filming. Sent with the video; they never change the score, only who checks it. */
+export type VideoFlag = "multi_face" | "dark" | "camera_lost" | "tab_away";
+
+export interface Clip { blob: Blob; mime: string; process: Process; flags: VideoFlag[]; paused_seconds: number }
+
 export interface Filming {
   /** Starts recording the blurred canvas; resolves when stopped or after MAX_SECONDS. */
-  record(onTick: (seconds: number) => void): Promise<{ blob: Blob; mime: string; process: Process }>;
+  record(onTick: (seconds: number) => void): Promise<Clip>;
   stop(): void;
   close(): void;
+  live(): LiveStatus;
   hands: boolean;
 }
+
+/** How long a condition must last before it counts as a warning (ms). Short blips are ignored. */
+const WARN_MS = { multi_face: 1500, dark: 2000 } as const;
+/** While recording, a lost face box stays blurred this many frames (about 1.5 s), longer than in the preview. */
+const FACE_HOLD_RECORDING = 24;
+/** Frames in a row the face model must work again before a safety pause ends. */
+const RESUME_AFTER = 5;
+/** Average brightness (0-255) below which the picture counts as dark. */
+const DARK_LEVEL = 35;
 
 /**
  * Opens the back camera and starts drawing the blurred preview into `canvas`.
@@ -144,31 +167,81 @@ export async function startFilming(canvas: HTMLCanvasElement): Promise<Filming> 
   let frame = 0;
   let raf = 0;
   let recording: { frames: { hands: number; wrist?: [number, number] }[] } | null = null;
+  let recorder: MediaRecorder | null = null;
+  const light = document.createElement("canvas");
+  light.width = 16;
+  light.height = 12;
+  const lightCtx = light.getContext("2d", { willReadFrequently: true })!;
+  const status: LiveStatus = { hands: 0, faces: 0, dark: false, paused: false };
+  // Warnings for this recording, and when each condition started (to ignore short blips).
+  const flags = new Set<VideoFlag>();
+  const since: Partial<Record<"multi_face" | "dark", number>> = {};
+  let goodFrames = 0;
+  let pausedMs = 0;
+  let pausedAt = 0;
+
+  const hold = (key: "multi_face" | "dark", on: boolean, now: number) => {
+    if (!on) { delete since[key]; return; }
+    since[key] ??= now;
+    if (recording && now - since[key]! >= WARN_MS[key]) flags.add(key);
+  };
+  // Safety pause: if the face model fails, faces might not be blurred, so those frames are not recorded.
+  const setPaused = (on: boolean, now: number) => {
+    if (on === status.paused) return;
+    status.paused = on;
+    if (!recorder || recorder.state === "inactive") return;
+    if (on && recorder.state === "recording") { recorder.pause(); pausedAt = now; }
+    if (!on && recorder.state === "paused") { recorder.resume(); pausedMs += now - pausedAt; }
+  };
 
   const draw = () => {
     const ts = performance.now();
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     try {
+      const keep = recording ? FACE_HOLD_RECORDING : FACE_HOLD_FRAMES;
       const found = models.face.detectForVideo(video, ts).detections
         .map((d) => d.boundingBox).filter((b) => !!b)
-        .map((b) => ({ x: b!.originX, y: b!.originY, w: b!.width, h: b!.height, ttl: FACE_HOLD_FRAMES }));
+        .map((b) => ({ x: b!.originX, y: b!.originY, w: b!.width, h: b!.height, ttl: keep }));
       faces = [...found, ...faces.filter((f) => f.ttl > 0 && !found.some((g) => Math.abs(g.x - f.x) < f.w && Math.abs(g.y - f.y) < f.h))
         .map((f) => ({ ...f, ttl: f.ttl - 1 }))];
-    } catch { /* keep the previous boxes */ }
+      status.faces = found.length;
+      hold("multi_face", found.length >= 2, ts);
+      if (status.paused && ++goodFrames >= RESUME_AFTER) setPaused(false, ts);
+    } catch {
+      // keep the previous boxes, and stop recording until the model works again
+      goodFrames = 0;
+      setPaused(true, ts);
+    }
     for (const f of faces) pixelate(ctx, tiny, f);
+    if (frame % 10 === 0) {
+      // average brightness of a tiny copy of the picture (read and thrown away at once)
+      lightCtx.drawImage(video, 0, 0, light.width, light.height);
+      const px = lightCtx.getImageData(0, 0, light.width, light.height).data;
+      let sum = 0;
+      for (let i = 0; i < px.length; i += 4) sum += (px[i] + px[i + 1] + px[i + 2]) / 3;
+      status.dark = sum / (px.length / 4) < DARK_LEVEL;
+    }
+    hold("dark", status.dark, ts);
     if (models.hand && frame % 2 === 0) {
       try { hands = models.hand.detectForVideo(video, ts + 0.5).landmarks; } catch { hands = []; }
     }
     if (hands.length) drawHands(ctx, hands);
-    if (recording) recording.frames.push({ hands: hands.length, wrist: hands[0] ? [hands[0][0].x, hands[0][0].y] : undefined });
+    status.hands = hands.length;
+    if (recording && !status.paused) recording.frames.push({ hands: hands.length, wrist: hands[0] ? [hands[0][0].x, hands[0][0].y] : undefined });
     frame++;
     raf = requestAnimationFrame(draw);
   };
   raf = requestAnimationFrame(draw);
 
-  let recorder: MediaRecorder | null = null;
+  // Leaving Disha or losing the camera while filming is noted, so a teacher looks at that video.
+  const onHide = () => { if (recording && document.hidden) flags.add("tab_away"); };
+  const onEnded = () => { if (recording) flags.add("camera_lost"); };
+  document.addEventListener("visibilitychange", onHide);
+  stream.getVideoTracks().forEach((t) => t.addEventListener("ended", onEnded));
+
   const close = () => {
     cancelAnimationFrame(raf);
+    document.removeEventListener("visibilitychange", onHide);
     if (recorder && recorder.state !== "inactive") recorder.stop();
     stream.getTracks().forEach((t) => t.stop());
   };
@@ -177,6 +250,7 @@ export async function startFilming(canvas: HTMLCanvasElement): Promise<Filming> 
     hands: !!models.hand,
     stop: () => { if (recorder && recorder.state !== "inactive") recorder.stop(); },
     close,
+    live: () => ({ ...status }),
     record(onTick) {
       const mime = pickMime();
       // Only the canvas (with faces already pixelated) is recorded, never the camera stream itself.
@@ -184,9 +258,13 @@ export async function startFilming(canvas: HTMLCanvasElement): Promise<Filming> 
       recorder = new MediaRecorder(out, { ...(mime ? { mimeType: mime } : {}), videoBitsPerSecond: 900_000 });
       const chunks: Blob[] = [];
       recording = { frames: [] };
+      flags.clear();
+      pausedMs = 0;
       const t0 = performance.now();
+      // time actually recorded: paused time does not count towards MAX_SECONDS
+      const recorded = () => (performance.now() - t0 - pausedMs - (status.paused ? performance.now() - pausedAt : 0)) / 1000;
       const tick = window.setInterval(() => {
-        const s = (performance.now() - t0) / 1000;
+        const s = recorded();
         onTick(s);
         if (s >= MAX_SECONDS) recorder?.stop();
       }, 250);
@@ -195,14 +273,17 @@ export async function startFilming(canvas: HTMLCanvasElement): Promise<Filming> 
         recorder!.onerror = () => { window.clearInterval(tick); reject(new Error("recording failed")); };
         recorder!.onstop = () => {
           window.clearInterval(tick);
-          const seconds = (performance.now() - t0) / 1000;
+          const seconds = recorded();
+          const paused_seconds = Math.round(((performance.now() - t0) / 1000 - seconds) * 10) / 10;
           const type = (recorder!.mimeType || mime || "video/webm").split(";")[0];
           const process = summarise(recording?.frames ?? [], seconds);
           recording = null;
           out.getTracks().forEach((t) => t.stop());
-          resolve({ blob: new Blob(chunks, { type }), mime: type, process });
+          resolve({ blob: new Blob(chunks, { type }), mime: type, process, flags: [...flags], paused_seconds });
         };
         recorder!.start(1000);
+        // if blurring is already failing when she presses record, start paused
+        if (status.paused) { recorder!.pause(); pausedAt = performance.now(); }
       });
     },
   };

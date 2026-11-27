@@ -64,11 +64,12 @@ export async function saveSample(studentId: string, rubric: RubricFull, photo: B
 }
 
 /** Saves a filmed task (faces already blurred on the phone) as a pending work sample. Returns the event id. */
-export async function saveVideoSample(studentId: string, rubric: RubricFull, video: Blob, process: object, identity?: IdentityInput | null): Promise<string | null> {
+export async function saveVideoSample(studentId: string, rubric: RubricFull, video: Blob, process: object, identity?: IdentityInput | null, integrity: string[] = []): Promise<string | null> {
   const mediaId = newId();
   const ev = await recordEvent({
     student_id: studentId, kind: "work_sample", skill_id: rubric.skill,
-    payload: { rubric_id: rubric.id, scorer: "pending", media_ref: mediaId, media: "video", process, ...(identity ? { identity_input: identity } : {}) },
+    // integrity: warnings noted while filming (lib/video.ts). They decide who checks the video, never the score.
+    payload: { rubric_id: rubric.id, scorer: "pending", media_ref: mediaId, media: "video", process, integrity, ...(identity ? { identity_input: identity } : {}) },
   });
   if (!ev) return null;
   await db.media.put({ id: mediaId, student_id: studentId, event_id: ev.id, blob: video, created_at: Date.now() });
@@ -92,6 +93,7 @@ export async function scoreSample(pending: EvidenceEvent): Promise<ScoreResult |
     form.set("video", media.blob, `work.${ext}`);
     form.set("process", JSON.stringify(pending.payload.process ?? {}));
     form.set("identity", JSON.stringify(pending.payload.identity_input ?? {}));
+    form.set("integrity", JSON.stringify(pending.payload.integrity ?? []));
     form.set("sample_id", pending.id);
   } else {
     form.set("image", media.blob, "work.jpg");
@@ -106,7 +108,7 @@ export async function scoreSample(pending: EvidenceEvent): Promise<ScoreResult |
         payload: { rubric_id: pending.payload.rubric_id, scorer: "ai", scores: out.scores, reasons: out.reasons,
           cannot_see: out.cannot_see, media_ref: pending.payload.media_ref, replaces: pending.id,
           ...(isVideo ? { media: "video", times: out.times ?? {}, safety: out.safety ?? [], process: pending.payload.process,
-            identity: out.identity, autoconfirm: out.autoconfirm } : {}) },
+            integrity: pending.payload.integrity ?? [], identity: out.identity, autoconfirm: out.autoconfirm } : {}) },
       });
     }
     return out;
