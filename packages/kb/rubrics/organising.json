@@ -1,0 +1,48 @@
+{
+  "id": "rb_organising",
+  "skill": "sk_organising",
+  "name": {
+    "en": "Record keeping work sample",
+    "ta": "பதிவேடு பராமரிப்பு வேலை மாதிரி"
+  },
+  "media": "photo",
+  "capture": {
+    "en": "Photo of one page of a list or register you keep (stock, attendance, a group's things), with dates.",
+    "ta": "நீங்கள் வைத்திருக்கும் ஒரு பட்டியல் அல்லது பதிவேட்டின் ஒரு பக்கத்தின் புகைப்படம் (சரக்கு, வருகை, குழுவின் பொருட்கள்), தேதிகளுடன்."
+  },
+  "criteria": [
+    {
+      "id": "complete",
+      "name": {
+        "en": "Entries are complete"
+      },
+      "scores": {
+        "0": "Many blanks",
+        "1": "Some entries missing",
+        "2": "Every entry filled in"
+      }
+    },
+    {
+      "id": "order",
+      "name": {
+        "en": "Kept in order"
+      },
+      "scores": {
+        "0": "Mixed up",
+        "1": "Partly in order",
+        "2": "In date order, under clear headings"
+      }
+    },
+    {
+      "id": "readable",
+      "name": {
+        "en": "Easy to read"
+      },
+      "scores": {
+        "0": "Hard to read",
+        "1": "Mostly readable",
+        "2": "Neat and easy to read"
+      }
+    }
+  ]
+}

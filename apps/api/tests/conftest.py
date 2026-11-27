@@ -24,6 +24,12 @@ from app import db, settings  # noqa: E402
 import migrate  # noqa: E402
 
 
+# Tests never send real email or SMS, even when a developer's .env has SMTP or MSG91 set:
+# sign-in codes are shown in the answer (demo mode), which the tests read.
+settings.SMTP_HOST = ""
+settings.MSG91_AUTH_KEY = ""
+settings.OTP_DEMO = True
+
 @pytest.fixture(scope="session")
 def database_url():
     base = settings.DATABASE_URL
