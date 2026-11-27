@@ -20,7 +20,7 @@ async function makeLink(orderId: string): Promise<string | null> {
     const res = await apiFetch(`/v2/orders/${orderId}/link`, { method: "POST" });
     if (!res.ok) return null;
     const { token } = (await res.json()) as { token: string };
-    return `${location.origin}/?confirm=${encodeURIComponent(token)}`;
+    return `${location.origin}/#confirm=${encodeURIComponent(token)}`;
   } catch {
     return null;
   }
@@ -38,7 +38,7 @@ export default function Order({ go, id }: { go: Go; id: string }) {
   const claimed = [...new Set(events.filter((e) => e.kind === "self_report" && e.skill_id).map((e) => e.skill_id!))];
   const choices = [...claimed, ...Object.keys(kb.skills).filter((s) => !claimed.includes(s))].slice(0, 12);
   const orders = events.filter((e) => e.kind === "order").sort((a, b) => (a.id < b.id ? 1 : -1));
-  const confirmed = new Set(events.filter((e) => e.kind === "rating" && e.refers_to).map((e) => e.refers_to));
+  const confirmed = new Set(events.filter((e) => e.kind === "rating" && e.refers_to && e.payload.unverified !== true).map((e) => e.refers_to));
 
   const save = async () => {
     if (!skill) return;

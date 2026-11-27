@@ -10,9 +10,9 @@ each decision live, tagged RULE, AI, or AI → RULE-CHECKED.
 
 | Kind | Count |
 |---|---|
-| Rules | 24 |
+| Rules | 26 |
 | Formulas | 5 |
-| Guardrails | 14 |
+| Guardrails | 15 |
 | AI tasks (each checked by a rule) | 8 |
 
 ## End to end
@@ -84,6 +84,9 @@ flowchart LR
 | Sign-in with a one-time code | GUARDRAIL | `rule.otp` |
 | What each role sees | GUARDRAIL | `guard.role_scope` |
 | Customer privacy | GUARDRAIL | `guard.buyer_privacy` |
+| Paid-job anti-self-confirm & teacher verification | RULE | `rule.order_verify` |
+| Who may publish a profile | RULE | `rule.publish` |
+| Published profile allow-list | GUARDRAIL | `guard.publish` |
 | Which course lessons are open | RULE | `rule.course_access` |
 | Which teacher courses to suggest | RULE | `rule.course_recommend` |
 | Course payments | GUARDRAIL | `guard.payment_signature` |
@@ -158,7 +161,7 @@ flowchart LR
 - **Id:** `rule.interest_unknown`
 - **Decides:** If she skips interests ('don't know yet'), no interest is guessed: the interest part is 0 for every career, so it favours none and careers are ranked on skills, reach and local demand.
 - **Rule / formula:** `interest = cosine(empty vector, career) = 0 for every career`
-- **Code:** `packages/engine/src/matcher.ts (studentRiasecVec)`
+- **Code:** `packages/engine/src/fitreach.ts (studentRiasecVec)`
 
 ## Skills
 
@@ -179,7 +182,7 @@ flowchart LR
 
 - **Id:** `formula.tracing`
 - **Decides:** Her level and confidence in every sub-skill, from all evidence.
-- **Rule / formula:** `posterior ∝ prior × Π likelihood(evidence | level)^(weight × age factor × rater reliability); learning drift +0.05/week (max 0.2); spreads 0.5 / 0.25 to related sub-skills`
+- **Rule / formula:** `posterior ∝ prior × Π likelihood(evidence | level)^(weight × age factor × rater reliability); learning drift +0.05/week (max 0.2); spreads 0.5 / 0.25 to related sub-skills; optional leniency bias correction (applyLeniency, off by default)`
 - **Code:** `packages/engine/src/tracing.ts (foldEvents)`
 
 ```json
@@ -354,7 +357,7 @@ flowchart LR
 - **Id:** `rule.mmr`
 - **Decides:** Re-ranks careers so the list is not all one kind of work.
 - **Rule / formula:** `MMR re-rank, λ = 0.7, at least 4 sectors in the top list`
-- **Code:** `packages/engine/src/matcher.ts (mmrRerank)`
+- **Code:** `packages/engine/src/fitreach.ts (mmrRerank)`
 
 ### AI: wider career ideas · `AI`
 
@@ -624,8 +627,21 @@ flowchart LR
 ### Customer privacy · `GUARDRAIL`
 
 - **Id:** `guard.buyer_privacy`
-- **Decides:** A customer confirming a job is asked first whether Disha may keep their name; without a yes, only the three answers are kept.
+- **Decides:** A customer confirming a job is asked first whether Disha may keep their name; without a yes, only the three answers are kept. Confirmation tokens stay in the URL fragment (#confirm=) and POST body, never in server logs; optional phone OTP stores only HMAC(AUTH_SECRET, phone).
 - **Code:** `apps/api/app/routers/v2.py (confirm)`
+
+### Who may publish a profile · `RULE`
+
+- **Id:** `rule.publish`
+- **Decides:** Opt-in only (publish_profile consent). Minors or unknown age can never go public (verified_partners max with guardian consent). Instant unpublish removes the snapshot.
+- **Rule / formula:** `is_minor → visibility ∈ {private, school, verified_partners}; public requires age ≥ 18 ∧ publish_profile consent`
+- **Code:** `apps/api/app/routers/publish.py`
+
+### Published profile allow-list · `GUARDRAIL`
+
+- **Id:** `guard.publish`
+- **Decides:** Server builds published snapshots from a strict allow-list (extra=forbid): pseudonym, avatar, district, age band, verified skills, interest tags. Never caste, income, gender, phone, birth date, documents, free text, or minor's school. 128-bit slug, noindex, no-store, aggregate view counts only.
+- **Code:** `apps/api/app/routers/publish.py (PublishedSnapshot)`
 
 ## Payouts
 
@@ -644,6 +660,20 @@ flowchart LR
   "ration_card_bpl",
   "scholarship_letter"
  ]
+}
+```
+
+### Paid-job anti-self-confirm & teacher verification · `RULE`
+
+- **Id:** `rule.order_verify`
+- **Decides:** Same-device/IP+UA buyer confirmations are flagged unverified (weight 1, never Level 4); links per day (5) and confirmations per week (5) are capped. A same-school teacher may verify a paid job with a method and reason.
+- **Rule / formula:** `self_confirm = (creator_fp == confirmer_fp) → unverified; else buyer or teacher verification counts as confirmed paid order`
+- **Code:** `apps/api/app/routers/v2.py (order_link, confirm, teacher_verify_order), packages/engine/src/tracing.ts`
+
+```json
+{
+ "maxLinksPerDay": 5,
+ "maxConfirmsPerWeek": 5
 }
 ```
 

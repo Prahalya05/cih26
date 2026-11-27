@@ -33,6 +33,11 @@ def schemes() -> dict[str, dict]:
 
 
 @lru_cache
+def districts() -> dict[str, dict]:
+    return {d["code"]: d for d in _load("districts.json")}
+
+
+@lru_cache
 def rules() -> dict[str, dict]:
     out = {}
     for p in sorted((KB_DIR / "rules").glob("*.json")):

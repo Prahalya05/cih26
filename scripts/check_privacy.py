@@ -18,6 +18,7 @@ MIGRATIONS = ROOT / "apps" / "api" / "migrations"
 
 PRIVATE_TABLE = "student_private"
 PERSONAL = re.compile(r"(^|_)(name|phone|mobile|email|address|aadhaa?r|dob|whatsapp)($|_)", re.I)
+LOCATION_PII = re.compile(r"(^|_)(lat|lng|lon|latitude|longitude|gps|coords)($|_)", re.I)
 # Columns that match the pattern but are not about a person.
 # account.name: the sign-in table (0011) is never granted to the analysis role (disha_readonly) and never leaves the API
 # except to its own owner; the phone number or email itself is stored only as an HMAC.
@@ -58,7 +59,7 @@ def schema_columns() -> set[tuple[str, str]]:
 
 def personal_columns_outside_private() -> list[str]:
     return [f"{t}.{c}" for t, c in sorted(schema_columns())
-            if t != PRIVATE_TABLE and PERSONAL.search(c) and (t, c) not in ALLOWED]
+            if (t != PRIVATE_TABLE and PERSONAL.search(c) and (t, c) not in ALLOWED) or LOCATION_PII.search(c)]
 
 
 def tracking_dependencies() -> list[str]:

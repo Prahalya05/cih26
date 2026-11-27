@@ -8,10 +8,13 @@ import { Button, Screen, SpeakButton, useLive } from "../components/ui";
 import { db, isMinorStudent, patchStudent, type ConsentMethod, type Scope } from "../lib/db";
 import { useT, type StringKey } from "../lib/i18n";
 import { Icon } from "../components/Icon";
+import { apiFetch } from "../lib/api";
+import { isOnline, syncNow } from "../lib/sync";
 
 export const OPTIONAL_SCOPES: { scope: Scope; key: StringKey }[] = [
   { scope: "photos", key: "consentPhotos" },
   { scope: "share_portfolio", key: "consentShare" },
+  { scope: "publish_profile", key: "consentPublish" },
 ];
 
 export default function Consent({ go, id }: { go: Go; id: string }) {
@@ -20,10 +23,15 @@ export default function Consent({ go, id }: { go: Go; id: string }) {
   const [extra, setExtra] = useState<Set<Scope>>(new Set());
   const [method, setMethod] = useState<ConsentMethod>("paper_form");
   const [guardian, setGuardian] = useState("");
+  const [guardianPhone, setGuardianPhone] = useState("");
+  const [otpDemo, setOtpDemo] = useState<string | null>(null);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otpErr, setOtpErr] = useState("");
   if (!student) return null;
   const minor = isMinorStudent(student);
-  const by: ConsentMethod = minor ? "paper_form" : method;
-  const methods: ConsentMethod[] = minor ? ["paper_form"] : ["paper_form", "self_18plus"];
+  const by: ConsentMethod = minor && method === "self_18plus" ? "paper_form" : method;
+  const methods: ConsentMethod[] = minor ? ["paper_form", "otp"] : ["paper_form", "otp", "self_18plus"];
 
   const toggle = (s: Scope) => setExtra((cur) => {
     const next = new Set(cur);
@@ -31,12 +39,36 @@ export default function Consent({ go, id }: { go: Go; id: string }) {
     return next;
   });
 
+  const sendGuardianOtp = async () => {
+    setOtpErr("");
+    if (!isOnline()) { setOtpErr(t("offline")); return; }
+    await syncNow();
+    const r = await apiFetch("/v2/consent/guardian-otp", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ student_id: id, phone: guardianPhone }),
+    });
+    const out = await r.json().catch(() => ({}));
+    if (!r.ok) { setOtpErr(out.detail ?? "Error"); return; }
+    setOtpDemo(out.demo_code ?? null);
+  };
+
+  const verifyGuardianOtp = async () => {
+    setOtpErr("");
+    const r = await apiFetch("/v2/consent/guardian-otp/verify", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ student_id: id, code: otpCode }),
+    });
+    const out = await r.json().catch(() => ({}));
+    if (!r.ok) { setOtpErr(out.detail ?? "Wrong code"); return; }
+    setOtpVerified(true);
+  };
+
   const agree = async () => {
     await patchStudent(id, (s) => ({
       ...s,
       consent: {
         at: Date.now(), scopes: ["assess", ...extra], method: by,
-        guardian_name: by === "paper_form" && guardian.trim() ? guardian.trim() : undefined,
+        guardian_name: by !== "self_18plus" && guardian.trim() ? guardian.trim() : undefined,
       },
     }));
     const s = await db.students.get(id);
@@ -76,7 +108,7 @@ export default function Consent({ go, id }: { go: Go; id: string }) {
         {methods.map((m) => (
           <label key={m} className="flex items-start gap-3 rounded-xl border border-line p-3">
             <input type="radio" name="method" checked={by === m} onChange={() => setMethod(m)} className="mt-1 size-6" />
-            <span>{t(m === "paper_form" ? "methodPaper" : "methodSelf")}</span>
+            <span>{t(m === "paper_form" ? "methodPaper" : m === "otp" ? "methodOtp" : "methodSelf")}</span>
           </label>
         ))}
         {by === "paper_form" && (
@@ -85,6 +117,25 @@ export default function Consent({ go, id }: { go: Go; id: string }) {
             <input value={guardian} onChange={(e) => setGuardian(e.target.value)} autoComplete="off"
               className="min-h-12 rounded-xl border border-line bg-surface px-4 text-lg" />
           </label>
+        )}
+        {by === "otp" && (
+          <div className="flex flex-col gap-2 rounded-xl border border-line p-3">
+            <div className="flex gap-2">
+              <input value={guardianPhone} onChange={(e) => setGuardianPhone(e.target.value)} placeholder="9876543210" inputMode="tel"
+                className="min-h-11 flex-1 rounded-lg border border-line px-3" />
+              <Button kind="soft" disabled={guardianPhone.trim().length < 6} onClick={() => void sendGuardianOtp()}>{t("sendOtp")}</Button>
+            </div>
+            {otpDemo && <p className="rounded bg-brand-soft px-2 py-1 font-mono text-xs">{t("otpDemoCode")}: <strong>{otpDemo}</strong></p>}
+            {otpDemo && !otpVerified && (
+              <div className="flex gap-2">
+                <input value={otpCode} onChange={(e) => setOtpCode(e.target.value)} placeholder={t("enterOtp")} inputMode="numeric"
+                  className="min-h-11 flex-1 rounded-lg border border-line px-3 font-mono" />
+                <Button kind="soft" onClick={() => void verifyGuardianOtp()}>{t("check")}</Button>
+              </div>
+            )}
+            {otpVerified && <p className="text-xs text-good"><Icon name="check" className="mr-1 inline size-3.5" />OK</p>}
+            {otpErr && <p className="text-xs text-warn">{otpErr}</p>}
+          </div>
         )}
       </section>
 

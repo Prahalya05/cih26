@@ -131,6 +131,18 @@ def _pieces(events: list[dict], g: dict, opts: dict) -> list[dict]:
     srt = sorted(events, key=lambda e: (e["created_at"], e["id"]))
     pieces: list[dict] = []
     items, rubrics = opts.get("items"), opts.get("rubrics") or {}
+    apply_len = bool(opts.get("applyLeniency", False))
+    leniencies = opts.get("raterLeniency") or {}
+
+    def _len_of(r: str | None) -> float:
+        return max(-1.5, min(1.5, float(leniencies.get(r, 0.0)))) if apply_len and r else 0.0
+
+    def _adj_level(level: int, r: str | None) -> int:
+        val = max(1.0, min(4.0, level - _len_of(r)))
+        return int(math.floor(val + 0.5))
+
+    def _adj_score(score: float, r: str | None) -> float:
+        return max(0.0, min(1.0, score - _len_of(r) * 0.25))
 
     cancelled: set[str] = set()
     open_taps: dict[str, list[str]] = {}
@@ -186,7 +198,7 @@ def _pieces(events: list[dict], g: dict, opts: dict) -> list[dict]:
             w = EVIDENCE_WEIGHTS["work_sample_teacher"] if p.get("scorer") == "teacher" else EVIDENCE_WEIGHTS["work_sample_ai"]
             rater = AI_RATER if p.get("scorer") == "ai" else None
             for units, s in _sample_scores(g, e["skill_id"], p["scores"], rubric):
-                pieces.append({**base, "units": units, "lik": _gauss(s, WORK_MU, SCORE_SD), "weight": w,
+                pieces.append({**base, "units": units, "lik": _gauss(_adj_score(s, rater), WORK_MU, SCORE_SD), "weight": w,
                                "said": False, "shown": True, "rater": rater})
         elif kind == "rating":
             if e.get("refers_to"):
@@ -198,16 +210,23 @@ def _pieces(events: list[dict], g: dict, opts: dict) -> list[dict]:
                     rubric = rubrics.get(str(tp.get("rubric_id")))
                     before = None if tp.get("scorer") == "pending" else _sample_scores(g, target["skill_id"], tp["scores"], rubric)
                     before_w = EVIDENCE_WEIGHTS["work_sample_teacher"] if tp.get("scorer") == "teacher" else EVIDENCE_WEIGHTS["work_sample_ai"]
+                    before_rater = AI_RATER if tp.get("scorer") == "ai" else None
                     for units, s in _sample_scores(g, target["skill_id"], p["scores"], rubric):
                         old = next((x for x in (before or []) if ",".join(x[0]) == ",".join(units)), None)
-                        pieces.append({**base, "kind": "confirmation", "units": units, "lik": _gauss(s, WORK_MU, SCORE_SD),
+                        pieces.append({**base, "kind": "confirmation", "units": units, "lik": _gauss(_adj_score(s, e.get("rater_id")), WORK_MU, SCORE_SD),
                                        "weight": EVIDENCE_WEIGHTS["work_sample_teacher"], "said": False,
                                        "rater": e.get("rater_id"), "shown": True,
-                                       "undo": {"lik": _gauss(old[1], WORK_MU, SCORE_SD), "weight": before_w,
+                                       "undo": {"lik": _gauss(_adj_score(old[1], before_rater), WORK_MU, SCORE_SD), "weight": before_w,
                                                 "at": target["created_at"],
-                                                "rater": AI_RATER if tp.get("scorer") == "ai" else None} if old else None})
+                                                "rater": before_rater} if old else None})
                 elif target["kind"] == "order" and target.get("skill_id"):
                     units = _targets(g, target)
+                    if p.get("unverified") is True:
+                        pieces.append({**base, "kind": "order_unverified", "units": units, "lik": ORDER_UNCONFIRMED,
+                                       "weight": EVIDENCE_WEIGHTS["order_unconfirmed"], "said": False, "shown": False, "paid": False,
+                                       "undo": {"lik": ORDER_UNCONFIRMED, "weight": EVIDENCE_WEIGHTS["order_unconfirmed"],
+                                                "at": target["created_at"]}})
+                        continue
                     key = ",".join(units)
                     n = confirmed_orders.get(key, 0)
                     good = p.get("quality") is True
@@ -222,7 +241,7 @@ def _pieces(events: list[dict], g: dict, opts: dict) -> list[dict]:
             units = _targets(g, e)
             level = p.get("level")
             if isinstance(level, int) and not isinstance(level, bool):
-                pieces.append({**base, "units": units, "lik": _peaked(level), "weight": EVIDENCE_WEIGHTS["rating_level"],
+                pieces.append({**base, "units": units, "lik": _peaked(_adj_level(level, e.get("rater_id"))), "weight": EVIDENCE_WEIGHTS["rating_level"],
                                "said": False, "rater": e.get("rater_id"), "shown": True})
             elif p.get("endorse") is True:
                 pieces.append({**base, "kind": "endorse", "units": units, "lik": ENDORSE, "weight": EVIDENCE_WEIGHTS["endorse"],
@@ -230,7 +249,7 @@ def _pieces(events: list[dict], g: dict, opts: dict) -> list[dict]:
         elif kind == "taster":
             levels = p["levels"]
             for unit in sorted(levels):
-                pieces.append({**base, "units": [unit], "lik": _peaked(levels[unit]), "weight": EVIDENCE_WEIGHTS["taster"],
+                pieces.append({**base, "units": [unit], "lik": _peaked(_adj_level(levels[unit], e.get("rater_id"))), "weight": EVIDENCE_WEIGHTS["taster"],
                                "said": False, "rater": e.get("rater_id"), "shown": True})
         elif kind == "order":
             pieces.append({**base, "units": _targets(g, e), "lik": ORDER_UNCONFIRMED,

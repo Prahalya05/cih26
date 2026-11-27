@@ -5,7 +5,8 @@ import type { Go } from "../App";
 import { Button, Screen, useLive } from "../components/ui";
 import { db, hasScope, patchStudent, scopesOf, type Scope } from "../lib/db";
 import { useT } from "../lib/i18n";
-import { eraseStudent, syncNow } from "../lib/sync";
+import { eraseStudent, isOnline, syncNow } from "../lib/sync";
+import { apiFetch } from "../lib/api";
 import { OPTIONAL_SCOPES } from "./Consent";
 import { Icon } from "../components/Icon";
 
@@ -21,11 +22,15 @@ export default function Privacy({ go, id }: { go: Go; id: string }) {
       const cur = scopesOf(s).filter((x) => x !== scope);
       return { ...s, consent: { ...s.consent!, scopes: on ? [...cur, scope] : cur, photos: undefined } };
     });
+    if (scope === "publish_profile" && !on && isOnline()) {
+      void apiFetch(`/v2/profile/publish/${encodeURIComponent(id)}`, { method: "DELETE" });
+    }
     void syncNow(); // tell the server straight away when online
   };
 
   const withdraw = async () => {
     await patchStudent(id, (s) => ({ ...s, consent: { ...s.consent!, scopes: [], photos: undefined, revoked_at: Date.now() } }));
+    if (isOnline()) void apiFetch(`/v2/profile/publish/${encodeURIComponent(id)}`, { method: "DELETE" });
     void syncNow();
   };
 

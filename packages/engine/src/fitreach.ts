@@ -7,9 +7,67 @@
 
 import { aptitudeNeedsOf, needsOf } from "./graph.ts";
 import { EDUCATION_ORDER } from "./kb.ts";
-import { mmrRerank, occRiasecVec, studentRiasecVec, type ScoredCareer } from "./matcher.ts";
 import { pyRound, pySum } from "./pymath.ts";
 import type { KB, Occupation, Persona } from "./types.ts";
+
+export interface ScoredCareer {
+  occupation_id: string;
+  sector: string;
+  score: number;
+  parts: Record<string, number>;
+  matched_skills: string[];
+}
+
+const RIASEC = "RIASEC";
+
+export function occRiasecVec(code: string): number[] {
+  const weights = [1.0, 0.66, 0.33];
+  const vec = [0, 0, 0, 0, 0, 0];
+  [...code.slice(0, 3)].forEach((letter, i) => { vec[RIASEC.indexOf(letter)] = weights[i]; });
+  return vec;
+}
+
+export function studentRiasecVec(persona: Persona): number[] {
+  const r = (persona.riasec ?? {}) as Record<string, number>;
+  return [...RIASEC].map((letter) => Number(r[letter] ?? 0));
+}
+
+function firstMax<T>(items: T[], key: (item: T) => number): T {
+  let best = items[0];
+  let bestKey = key(best);
+  for (const item of items.slice(1)) {
+    const k = key(item);
+    if (k > bestKey) { best = item; bestKey = k; }
+  }
+  return best;
+}
+
+export function mmrRerank(kb: KB, scored: ScoredCareer[], k = 8, lam = 0.7, minSectors = 4): ScoredCareer[] {
+  const occs = kb.occupations;
+  const pool = [...scored];
+  const picked: ScoredCareer[] = [];
+  while (pool.length && picked.length < k) {
+    const sectors = new Set(picked.map((p) => p.sector));
+    const needNew = minSectors - sectors.size;
+    let cand = pool;
+    if (needNew > 0 && k - picked.length <= needNew) {
+      const fresh = pool.filter((c) => !sectors.has(c.sector));
+      cand = fresh.length ? fresh : pool;
+    }
+    const mmr = (c: ScoredCareer): number => {
+      if (!picked.length) return c.score;
+      const red = Math.max(...picked.map((p) =>
+        p.sector === c.sector ? 1.0 : 0.5 * cosine(
+          occRiasecVec(occs[p.occupation_id].riasec),
+          occRiasecVec(occs[c.occupation_id].riasec))));
+      return lam * c.score - (1 - lam) * red;
+    };
+    const best = firstMax(cand, mmr);
+    picked.push(best);
+    pool.splice(pool.indexOf(best), 1);
+  }
+  return picked;
+}
 
 export const FRW_WEIGHTS = { fit: 0.4, reach: 0.35, worth: 0.25 };
 export const REACH_PARTS = { aptitude: 0.4, closeness: 0.3, education: 0.3 };

@@ -69,6 +69,10 @@ export interface TraceOptions {
   rubrics?: Record<string, Rubric>;
   /** rater id -> weight multiplier (from rater reliability), default 1, floor 0.3 */
   raterWeights?: Record<string, number>;
+  /** rater id -> average level bias (+1 = one level too generous), used only when applyLeniency is true */
+  raterLeniency?: Record<string, number>;
+  /** Off by default. When true, shifts rater level/work-sample scores by their measured leniency. */
+  applyLeniency?: boolean;
 }
 
 export interface Change {
@@ -203,6 +207,10 @@ function sampleScores(g: Graph, skill: string, scores: Record<string, number>, r
 function evidencePieces(events: EvidenceEvent[], g: Graph, opts: TraceOptions): Piece[] {
   const sorted = [...events].sort(byTime);
   const pieces: Piece[] = [];
+  const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
+  const leniencyOf = (r?: string) => (opts.applyLeniency && r ? clamp(opts.raterLeniency?.[r] ?? 0, -1.5, 1.5) : 0);
+  const adjLevel = (level: number, r?: string) => Math.round(clamp(level - leniencyOf(r), 1, 4));
+  const adjScore = (score: number, r?: string) => clamp(score - leniencyOf(r) * 0.25, 0, 1);
 
   // Tap self-reports can be taken back; a later "retracted" cancels the matching earlier one.
   const cancelled = new Set<string>();
@@ -269,7 +277,7 @@ function evidencePieces(events: EvidenceEvent[], g: Graph, opts: TraceOptions): 
         const w = p.scorer === "teacher" ? EVIDENCE_WEIGHTS.work_sample_teacher : EVIDENCE_WEIGHTS.work_sample_ai;
         const rater = p.scorer === "ai" ? AI_RATER : undefined;
         for (const [units, s] of sampleScores(g, e.skill_id, p.scores as Record<string, number>, rubric)) {
-          pieces.push({ ...base, units, lik: gauss(s, WORK_MU, SCORE_SD), weight: w, said: false, shown: true, rater });
+          pieces.push({ ...base, units, lik: gauss(adjScore(s, rater), WORK_MU, SCORE_SD), weight: w, said: false, shown: true, rater });
         }
         break;
       }
@@ -282,15 +290,22 @@ function evidencePieces(events: EvidenceEvent[], g: Graph, opts: TraceOptions): 
             const rubric = opts.rubrics?.[String(tp.rubric_id)];
             const before = tp.scorer === "pending" ? null : sampleScores(g, target.skill_id, tp.scores as Record<string, number>, rubric);
             const beforeW = tp.scorer === "teacher" ? EVIDENCE_WEIGHTS.work_sample_teacher : EVIDENCE_WEIGHTS.work_sample_ai;
+            const beforeRater = tp.scorer === "ai" ? AI_RATER : undefined;
             for (const [units, s] of sampleScores(g, target.skill_id, p.scores as Record<string, number>, rubric)) {
               const old = before?.find(([u]) => u.join() === units.join());
-              pieces.push({ ...base, kind: "confirmation", units, lik: gauss(s, WORK_MU, SCORE_SD), weight: EVIDENCE_WEIGHTS.work_sample_teacher,
+              pieces.push({ ...base, kind: "confirmation", units, lik: gauss(adjScore(s, e.rater_id), WORK_MU, SCORE_SD), weight: EVIDENCE_WEIGHTS.work_sample_teacher,
                 said: false, rater: e.rater_id, shown: true,
-                undo: old ? { lik: gauss(old[1], WORK_MU, SCORE_SD), weight: beforeW, at: target.created_at,
-                  rater: tp.scorer === "ai" ? AI_RATER : undefined } : undefined });
+                undo: old ? { lik: gauss(adjScore(old[1], beforeRater), WORK_MU, SCORE_SD), weight: beforeW, at: target.created_at,
+                  rater: beforeRater } : undefined });
             }
           } else if (target.kind === "order" && target.skill_id) {
             const units = targets(g, target);
+            if (p.unverified === true) {
+              pieces.push({ ...base, kind: "order_unverified", units, lik: ORDER_UNCONFIRMED,
+                weight: EVIDENCE_WEIGHTS.order_unconfirmed, said: false, shown: false, paid: false,
+                undo: { lik: ORDER_UNCONFIRMED, weight: EVIDENCE_WEIGHTS.order_unconfirmed, at: target.created_at } });
+              break;
+            }
             const key = units.join();
             const n = confirmedOrders.get(key) ?? 0;
             const good = p.quality === true;
@@ -304,7 +319,7 @@ function evidencePieces(events: EvidenceEvent[], g: Graph, opts: TraceOptions): 
         }
         const units = targets(g, e);
         if (typeof p.level === "number") {
-          pieces.push({ ...base, units, lik: peaked(p.level), weight: EVIDENCE_WEIGHTS.rating_level, said: false, rater: e.rater_id, shown: true });
+          pieces.push({ ...base, units, lik: peaked(adjLevel(p.level, e.rater_id)), weight: EVIDENCE_WEIGHTS.rating_level, said: false, rater: e.rater_id, shown: true });
         } else if (p.endorse === true) {
           pieces.push({ ...base, kind: "endorse", units, lik: ENDORSE, weight: EVIDENCE_WEIGHTS.endorse, said: false, rater: e.rater_id, shown: false });
         }
@@ -313,7 +328,7 @@ function evidencePieces(events: EvidenceEvent[], g: Graph, opts: TraceOptions): 
       case "taster": {
         const levels = p.levels as Record<string, number>;
         for (const unit of Object.keys(levels).sort()) {
-          pieces.push({ ...base, units: [unit], lik: peaked(levels[unit]), weight: EVIDENCE_WEIGHTS.taster, said: false, rater: e.rater_id, shown: true });
+          pieces.push({ ...base, units: [unit], lik: peaked(adjLevel(levels[unit], e.rater_id)), weight: EVIDENCE_WEIGHTS.taster, said: false, rater: e.rater_id, shown: true });
         }
         break;
       }
