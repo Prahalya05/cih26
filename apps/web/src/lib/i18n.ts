@@ -118,6 +118,10 @@ const en = {
   startFilming: "Start filming",
   stopFilming: "Stop",
   faceBlurOn: "Faces are blurred on this phone",
+  chooseVideo: "Choose a video from the gallery",
+  blurringUpload: "Blurring faces {s} / {max} s",
+  uploadTeacher: "Videos from the gallery are always checked by a teacher. Only the first 20 seconds are used.",
+  videoUnusable: "This video cannot be opened on this phone. Try filming it in Disha instead.",
   livePaused: "Paused: blurring is not working right now. Recording will continue by itself.",
   liveHandsOk: "Hands in view",
   liveNoHands: "Show your hands and the work",
@@ -993,6 +997,10 @@ const ta: Strings = {
   startFilming: "வீடியோ எடுக்கத் தொடங்கு",
   stopFilming: "நிறுத்து",
   faceBlurOn: "முகங்கள் இந்தக் கைபேசியிலேயே மறைக்கப்படுகின்றன",
+  chooseVideo: "கேலரியிலிருந்து வீடியோவைத் தேர்ந்தெடு",
+  blurringUpload: "முகங்கள் மறைக்கப்படுகின்றன {s} / {max} வி",
+  uploadTeacher: "கேலரியிலிருந்து வரும் வீடியோக்களை எப்போதும் ஆசிரியர் சரிபார்ப்பார். முதல் 20 விநாடிகள் மட்டுமே பயன்படுத்தப்படும்.",
+  videoUnusable: "இந்த வீடியோவை இந்தக் கைபேசியில் திறக்க முடியவில்லை. அதற்குப் பதிலாக Disha-வில் படம் எடுத்துப் பாருங்கள்.",
   livePaused: "இடைநிறுத்தம்: முகம் மறைப்பது இப்போது வேலை செய்யவில்லை. பதிவு தானாகத் தொடரும்.",
   liveHandsOk: "கைகள் தெரிகின்றன",
   liveNoHands: "உங்கள் கைகளையும் வேலையையும் காட்டுங்கள்",
@@ -1754,6 +1762,10 @@ const ta: Strings = {
 
 // Hindi: core student screens and everything new. Missing keys fall back to English (see useT).
 const hi: Partial<Strings> = {
+  chooseVideo: "गैलरी से वीडियो चुनें",
+  blurringUpload: "चेहरे धुंधले किए जा रहे हैं {s} / {max} से.",
+  uploadTeacher: "गैलरी के वीडियो हमेशा शिक्षक जाँचते हैं। केवल पहले 20 सेकंड इस्तेमाल होते हैं।",
+  videoUnusable: "यह वीडियो इस फ़ोन पर नहीं खुल सकता। इसके बजाय Disha में फ़िल्म बनाकर देखें।",
   livePaused: "रुका हुआ: चेहरा धुंधला करना अभी काम नहीं कर रहा। रिकॉर्डिंग अपने आप फिर शुरू होगी।",
   liveHandsOk: "हाथ दिख रहे हैं",
   liveNoHands: "अपने हाथ और काम दिखाएँ",
