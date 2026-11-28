@@ -19,6 +19,7 @@ import Game from "./screens/Game";
 import Order from "./screens/Order";
 import Rate from "./screens/Rate";
 import ConfirmJob from "./screens/ConfirmJob";
+import PublicProfile from "./screens/PublicProfile";
 import Privacy from "./screens/Privacy";
 import { scorePending } from "./lib/samples";
 import Situation from "./screens/Situation";
@@ -51,6 +52,7 @@ const CourseScreen = lazy(() => import("./screens/Course"));
 const CourseBuilder = lazy(() => import("./screens/CourseBuilder"));
 const TeacherCourses = lazy(() => import("./screens/TeacherCourses"));
 const TeacherProfile = lazy(() => import("./screens/TeacherProfile"));
+const FindTeacher = lazy(() => import("./screens/FindTeacher"));
 const StudentProfile = lazy(() => import("./screens/StudentProfile"));
 const Roles = lazy(() => import("./screens/Roles"));
 // Online classrooms: teachers make them, students ask to join.
@@ -91,6 +93,7 @@ export type Route =
   | { name: "courseBuilder"; courseId?: string }
   | { name: "teacherCourses" }
   | { name: "teacherProfile"; teacherId?: string }
+  | { name: "findTeacher" }
   | { name: "studentProfile"; id: string }
   | { name: "roles" }
   | { name: "findClass" }
@@ -113,15 +116,18 @@ function savedRoute(): Route | null {
 
 export default function App() {
   // ?funder opens the funder dashboard directly (for a second screen in the demo).
-  const [route, setRoute] = useState<Route>(() => (new URLSearchParams(location.search).has("funder") ? { name: "funder" } : savedRoute() ?? { name: "home" }));
+    const [route, setRoute] = useState<Route>(() => (new URLSearchParams(location.search).has("funder") ? { name: "funder" } : savedRoute() ?? { name: "home" }));
   useEffect(() => { try { sessionStorage.setItem(ROUTE_KEY, JSON.stringify(route)); } catch { /* private mode */ } }, [route]);
   // A saved screen for a student who is no longer on this phone (removed, signed out) goes home instead of a blank page.
   useEffect(() => {
     const id = (route as { id?: string }).id;
     if (id) void db.students.get(id).then((s) => { if (!s) setRoute({ name: "home" }); });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  // A buyer opening a job-confirmation link (?confirm=token) sees only that page.
-  const [confirmToken, setConfirmToken] = useState(() => new URLSearchParams(location.search).get("confirm"));
+  // A buyer opening a job-confirmation link (#confirm=token, never in query/server logs) sees only that page.
+  const [confirmToken, setConfirmToken] = useState(() =>
+    new URLSearchParams(location.hash.replace(/^#/, "")).get("confirm") ?? new URLSearchParams(location.search).get("confirm"));
+  const [publicSlug, setPublicSlug] = useState(() =>
+    new URLSearchParams(location.hash.replace(/^#/, "")).get("public"));
   // A Disha reviewer opening ?review checks online teachers' proofs (needs the admin token, not a sign-in).
   const [reviewing, setReviewing] = useState(() => new URLSearchParams(location.search).has("review"));
   const [lang, setLangState] = useState<LangCode>(() => (read("disha.lang") as LangCode) || "ta");
@@ -201,9 +207,10 @@ export default function App() {
 
   return (
     <LangContext.Provider value={{ lang, setLang }}>
-      <div className={`${xray ? "lg:pr-[440px]" : ""} ${account && !confirmToken ? "pb-20" : ""}`}>
+      <div className={`${xray ? "lg:pr-[440px]" : ""} ${account && !confirmToken && !publicSlug ? "pb-20" : ""}`}>
       {confirmToken && <ConfirmJob token={confirmToken} onClose={() => { history.replaceState(null, "", "/"); setConfirmToken(null); }} />}
-      {!confirmToken && route.name === "home" && <Home go={go} />}
+      {!confirmToken && publicSlug && <PublicProfile slug={publicSlug} onClose={() => { history.replaceState(null, "", "/"); setPublicSlug(null); }} />}
+      {!confirmToken && !publicSlug && route.name === "home" && <Home go={go} />}
       {route.name === "new" && <NewStudent go={go} />}
       {route.name === "situation" && <Situation go={go} id={route.id} />}
       {route.name === "talk" && <Talk go={go} id={route.id} />}
@@ -231,6 +238,7 @@ export default function App() {
         {route.name === "courseBuilder" && <CourseBuilder key={route.courseId ?? "new"} go={go} courseId={route.courseId} />}
         {route.name === "teacherCourses" && <TeacherCourses go={go} />}
         {route.name === "teacherProfile" && <TeacherProfile key={route.teacherId ?? "me"} go={go} teacherId={route.teacherId} />}
+        {route.name === "findTeacher" && <FindTeacher go={go} />}
         {route.name === "studentProfile" && <StudentProfile go={go} id={route.id} />}
         {route.name === "roles" && <Roles go={go} />}
         {route.name === "findClass" && <FindClass go={go} />}
@@ -242,7 +250,7 @@ export default function App() {
       {route.name === "rate" && <Rate go={go} id={route.id} mode={route.mode} />}
       {route.name === "privacy" && <Privacy go={go} id={route.id} />}
       </div>
-      {account && !confirmToken && <BottomNav account={account} route={route} go={go} />}
+      {account && !confirmToken && !publicSlug && <BottomNav account={account} route={route} go={go} />}
       {xray && (
         <Suspense fallback={null}>
           <XRay onClose={() => { setXray(false); setXrayOn(false); }} onHow={() => go({ name: "how", from: route })} />

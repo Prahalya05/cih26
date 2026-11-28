@@ -30,7 +30,7 @@ export interface Answer {
 }
 
 /** What the parent (or a student aged 18+) agreed to. Each scope switches one feature on. */
-export type Scope = "assess" | "photos" | "share_portfolio";
+export type Scope = "assess" | "photos" | "share_portfolio" | "publish_profile";
 export type ConsentMethod = "paper_form" | "otp" | "self_18plus";
 
 export interface Consent {

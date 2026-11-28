@@ -12,7 +12,7 @@ import { kb, opportunityById } from "../lib/kb";
 import { SECTOR } from "../lib/labels";
 import { analyse, isStrongMatch, type Analysis } from "../lib/profile";
 import { pullCohort, syncNow } from "../lib/sync";
-import { deviceRole, register, type Role } from "../lib/api";
+import { deviceRole, register, apiFetch, type Role } from "../lib/api";
 import { linkSchoolCode, useAccount } from "../lib/auth";
 import { TeacherAreaTabs } from "../components/TeacherAreaTabs";
 import { autoConfirmed, rubricFor, samplesToConfirm } from "../lib/samples";
@@ -163,6 +163,7 @@ export default function Teacher({ go }: { go: Go }) {
       {role === "student" && <p className="rounded-xl bg-brand-soft p-3 text-sm">{t("notTeacherPhone")}</p>}
 
       <WorkQueue students={students} />
+      <JobsQueue students={students} online={online} />
 
       {rows.length === 0 && <p className="text-muted">{t("noStudents")}</p>}
 
@@ -250,6 +251,131 @@ function SampleCard({ sample, student }: { sample: StoredEvent; student?: Studen
         ))}
       </ul>
       <Button className="mt-3 w-full" disabled={!complete} onClick={() => void confirm()}><Icon name="check" className="size-5" />{t("confirmScores")}</Button>
+    </article>
+  );
+}
+
+const VERIFY_METHODS = [
+  { id: "phoned buyer", key: "method_phoned" },
+  { id: "visited", key: "method_visited" },
+  { id: "saw the product", key: "method_product" },
+] as const;
+
+/** Paid jobs logged by students that have not yet been verified by a real buyer (or flagged as self-confirmed). */
+function JobsQueue({ students, online }: { students: Student[]; online: boolean }) {
+  const { t, pick } = useT();
+  const events = useLive(() => db.events.toArray(), [], [] as StoredEvent[]);
+  const studentSet = useMemo(() => new Set(students.map((s) => s.id)), [students]);
+  const { awaiting, teacherAudit } = useMemo(() => {
+    const verified = new Set(events.filter((e) => e.kind === "rating" && e.refers_to && e.payload.unverified !== true).map((e) => e.refers_to!));
+    const selfFlagged = new Set(events.filter((e) => e.kind === "rating" && e.refers_to && e.payload.unverified === true).map((e) => e.refers_to!));
+    const ordersById = new Map(events.filter((e) => e.kind === "order").map((e) => [e.id, e]));
+    const audit = events
+      .filter((e) => e.kind === "rating" && e.payload.verified_by === "teacher" && studentSet.has(e.student_id))
+      .sort((a, b) => b.created_at - a.created_at)
+      .map((r) => ({ rating: r, order: r.refers_to ? ordersById.get(r.refers_to) : undefined }));
+    return {
+      awaiting: events
+        .filter((e) => e.kind === "order" && studentSet.has(e.student_id) && !verified.has(e.id))
+        .map((e) => ({ order: e, flagged: selfFlagged.has(e.id) })),
+      teacherAudit: audit,
+    };
+  }, [events, studentSet]);
+  if (!awaiting.length && !teacherAudit.length) return null;
+  return (
+    <section className="flex flex-col gap-3">
+      {awaiting.length > 0 && (
+        <>
+          <h2 className="flex items-center gap-2 text-xl font-extrabold"><Icon name="briefcase" className="size-5 text-accent-dark" />{t("jobsToCheck")} <span className="font-mono text-base text-muted">{awaiting.length}</span></h2>
+          {awaiting.map(({ order, flagged }) => (
+            <JobVerifyCard key={order.id} order={order} flagged={flagged} student={students.find((s) => s.id === order.student_id)} online={online} pick={pick} />
+          ))}
+        </>
+      )}
+      {teacherAudit.length > 0 && (
+        <details className="rounded-2xl border border-line bg-surface p-3">
+          <summary className="cursor-pointer font-bold text-sm flex items-center gap-2">
+            <Icon name="check" className="size-4 text-good" />
+            {t("teacherVerifications")} <span className="font-mono text-muted">{teacherAudit.length}</span>
+          </summary>
+          <ul className="mt-2 flex flex-col gap-2 text-xs">
+            {teacherAudit.map(({ rating, order }) => {
+              const st = students.find((s) => s.id === rating.student_id);
+              const skillName = pick(kb.skills[rating.skill_id ?? order?.skill_id ?? ""]?.name ?? { en: rating.skill_id ?? "Job" });
+              return (
+                <li key={rating.id} className="rounded-xl bg-paper p-2.5 border border-line">
+                  <p className="font-semibold">
+                    {st?.avatar} {st?.name ?? rating.student_id} · {skillName}
+                    {order?.payload.amount_inr != null ? ` · ₹${String(order.payload.amount_inr)}` : ""}
+                  </p>
+                  <p className="text-muted mt-0.5">
+                    <span className="font-semibold text-ink">{String(rating.payload.method ?? "")}</span>
+                    {rating.payload.reason ? ` — ${String(rating.payload.reason)}` : ""}
+                    {" · "}{new Date(rating.created_at).toLocaleDateString()}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        </details>
+      )}
+    </section>
+  );
+}
+
+function JobVerifyCard({ order, flagged, student, online, pick }: { order: StoredEvent; flagged: boolean; student?: Student; online: boolean; pick: (l: { en: string; ta?: string }) => string }) {
+  const { t } = useT();
+  const [method, setMethod] = useState<string>("phoned buyer");
+  const [reason, setReason] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const verify = async () => {
+    if (reason.trim().length < 5) return;
+    setBusy(true); setErr(null);
+    if (online) {
+      try {
+        const res = await apiFetch(`/v2/orders/${order.id}/teacher-verify`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ method, reason: reason.trim(), quality: true, rehire: true }),
+        });
+        if (!res.ok) {
+          const out = await res.json().catch(() => ({}));
+          setErr(typeof out.detail === "string" ? out.detail : "Could not verify");
+          setBusy(false);
+          return;
+        }
+      } catch { /* offline fallback records locally */ }
+    }
+    await recordEvent({
+      student_id: order.student_id, kind: "rating", rater_id: await raterId(), refers_to: order.id,
+      payload: { on_time: true, quality: true, rehire: true, verified_by: "teacher", method, reason: reason.trim() },
+    });
+    setBusy(false);
+  };
+
+  return (
+    <article className="rounded-2xl bg-surface p-4 border border-line flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <p className="flex-1 font-semibold">{student?.avatar} {student?.name} · {pick(kb.skills[order.skill_id!]?.name ?? { en: order.skill_id ?? "Job" })} · ₹{String(order.payload.amount_inr ?? 0)}</p>
+        {flagged && <Pill tone="bad"><Icon name="alert" className="size-3.5" />{t("selfConfirmWarn")}</Pill>}
+      </div>
+      {order.payload.what ? <p className="text-sm text-muted">“{String(order.payload.what)}”</p> : null}
+      <label className="text-xs font-semibold text-muted">{t("verifyMethod")}</label>
+      <div className="flex flex-wrap gap-2">
+        {VERIFY_METHODS.map((m) => (
+          <button key={m.id} onClick={() => setMethod(m.id)} aria-pressed={method === m.id}
+            className={`rounded-xl border px-3 py-1.5 text-sm font-semibold ${method === m.id ? "border-brand bg-brand text-white" : "border-line"}`}>
+            {t(m.key)}
+          </button>
+        ))}
+      </div>
+      <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("verifyReason")}
+        className="min-h-11 rounded-xl border border-line px-3 text-sm" />
+      {err && <p className="text-xs text-warn">{err}</p>}
+      <Button disabled={busy || reason.trim().length < 5} onClick={() => void verify()}>
+        <Icon name="check" className="size-5" />{t("verifyJob")}
+      </Button>
     </article>
   );
 }

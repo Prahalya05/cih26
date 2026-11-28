@@ -7,8 +7,8 @@ from __future__ import annotations
 import math
 
 from .. import kb
-from .matcher import _cos, mmr_rerank, occ_riasec_vec, student_riasec_vec
 
+RIASEC = "RIASEC"
 FRW_WEIGHTS = {"fit": 0.4, "reach": 0.35, "worth": 0.25}
 REACH_PARTS = {"aptitude": 0.4, "closeness": 0.3, "education": 0.3}
 WORTH_PARTS = {"interest": 0.6, "demand": 0.4}
@@ -17,6 +17,51 @@ UNKNOWN_LEVELS = [0.5, 0.3, 0.15, 0.05]
 UNKNOWN_CREDIT = 0.5  # no evidence at all counts half
 MET = 0.6
 COULD_LEARN_APTITUDE = 0.65
+
+
+def _cos(a: list[float], b: list[float]) -> float:
+    na, nb = math.sqrt(sum(x * x for x in a)), math.sqrt(sum(x * x for x in b))
+    return 0.0 if na == 0 or nb == 0 else sum(x * y for x, y in zip(a, b)) / (na * nb)
+
+
+def occ_riasec_vec(code: str) -> list[float]:
+    weights = [1.0, 0.66, 0.33]
+    vec = [0.0] * 6
+    for i, letter in enumerate(code[:3]):
+        vec[RIASEC.index(letter)] = weights[i]
+    return vec
+
+
+def student_riasec_vec(persona: dict) -> list[float]:
+    r = persona.get("riasec") or {}
+    return [float(r.get(letter, 0.0)) for letter in RIASEC]
+
+
+def mmr_rerank(scored: list[dict], k: int = 8, lam: float = 0.7, min_sectors: int = 4) -> list[dict]:
+    occs = kb.occupations()
+    pool, picked = list(scored), []
+    while pool and len(picked) < k:
+        sectors = {p["sector"] for p in picked}
+        need_new = min_sectors - len(sectors)
+        cand = pool
+        if need_new > 0 and k - len(picked) <= need_new:
+            fresh = [c for c in pool if c["sector"] not in sectors]
+            cand = fresh or pool
+
+        def mmr(c: dict) -> float:
+            if not picked:
+                return c["score"]
+            red = max(
+                1.0 if p["sector"] == c["sector"] else 0.5 * _cos(
+                    occ_riasec_vec(occs[p["occupation_id"]]["riasec"]),
+                    occ_riasec_vec(occs[c["occupation_id"]]["riasec"]))
+                for p in picked)
+            return lam * c["score"] - (1 - lam) * red
+
+        best = max(cand, key=mmr)
+        picked.append(best)
+        pool.remove(best)
+    return picked
 
 
 def _at_least(p: list[float], level: int) -> float:

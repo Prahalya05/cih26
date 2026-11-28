@@ -43,10 +43,19 @@ def selector(sig: str) -> bytes:
 
 @lru_cache(maxsize=1)
 def deployment() -> dict:
-    path = os.getenv("CHAIN_DEPLOYMENT", "")
-    if path and Path(path).is_file():
-        return json.loads(Path(path).read_text(encoding="utf-8"))
+    path = os.getenv("CHAIN_DEPLOYMENT", "").strip()
+    if path:
+        p = Path(path)
+        if not p.is_file():
+            p = ROOT / path
+        if p.is_file():
+            return json.loads(p.read_text(encoding="utf-8"))
+        return {}
     folder = ROOT / "contracts" / "deployments"
+    chain_id = os.getenv("CHAIN_ID", "").strip()
+    if chain_id:
+        p = folder / f"{chain_id}.json"
+        return json.loads(p.read_text(encoding="utf-8")) if p.is_file() else {}
     files = sorted(folder.glob("*.json")) if folder.is_dir() else []
     return json.loads(files[0].read_text(encoding="utf-8")) if len(files) == 1 else {}
 

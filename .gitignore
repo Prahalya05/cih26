@@ -7,6 +7,8 @@ __pycache__/
 .env.*
 ~$*
 .pytest_cache/
+.venv/
+*.zip
 .DS_Store
 !.env.example
 apps/api/demo_cache.json

@@ -45,7 +45,7 @@ def test_credential_needs_share_consent(client):
 def test_credential_is_signed_and_counts_only_confirmed_orders(client):
     sync_student(client, ["assess", "share_portfolio"], [order(1), order(2)])
     token = client.post(f"/v2/orders/{order(1)['id']}/link").json()["token"]
-    client.post(f"/v2/confirm/{token}", json={"on_time": True, "quality": True, "rehire": True})
+    client.post("/v2/confirm", json={"token": token, "on_time": True, "quality": True, "rehire": True})
     r = cred(client, family_income_inr=120000, gender="female", category="bc")
     assert r.status_code == 200, r.text
     out = r.json()

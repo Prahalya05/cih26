@@ -35,7 +35,7 @@ export async function syncNow(): Promise<boolean> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        students,
+        students: [],
         actions: actions.map(({ synced: _s, ...a }) => a),
         pull: allIds, // get teacher actions back for every student on this phone
       }),

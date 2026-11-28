@@ -70634,7 +70634,8 @@
      "payload": {
       "on_time": true,
       "quality": true,
-      "rehire": true
+      "rehire": true,
+      "buyer_phone_verified": true
      },
      "created_at": 1763814400010,
      "rater_id": "buyer_0",
@@ -70659,7 +70660,8 @@
      "payload": {
       "on_time": true,
       "quality": true,
-      "rehire": true
+      "rehire": true,
+      "buyer_phone_verified": true
      },
      "created_at": 1764160000012,
      "rater_id": "buyer_1",
@@ -70684,7 +70686,8 @@
      "payload": {
       "on_time": true,
       "quality": true,
-      "rehire": true
+      "rehire": true,
+      "buyer_phone_verified": true
      },
      "created_at": 1764505600014,
      "rater_id": "buyer_2",
@@ -70709,7 +70712,8 @@
      "payload": {
       "on_time": true,
       "quality": true,
-      "rehire": true
+      "rehire": true,
+      "buyer_phone_verified": true
      },
      "created_at": 1764851200016,
      "rater_id": "buyer_3",
@@ -70734,7 +70738,8 @@
      "payload": {
       "on_time": true,
       "quality": true,
-      "rehire": true
+      "rehire": true,
+      "buyer_phone_verified": true
      },
      "created_at": 1765196800018,
      "rater_id": "buyer_4",

@@ -48,7 +48,7 @@ export const STORIES: Record<number, StoryStep[]> = {
     { day: 20, label: { en: "5 paid blouse orders, confirmed by the buyers", ta: "5 பணம் பெற்ற ஆர்டர்கள், வாங்குபவர்கள் உறுதி" },
       events: [0, 1, 2, 3, 4].flatMap((k): NewEv[] => [
         { kind: "order", skill_id: "sk_stitching", key: `order${k}`, payload: { amount_inr: 350, what: "Blouse" } },
-        { kind: "rating", rater_id: `buyer_demo_${k}`, ref: `order${k}`, payload: { on_time: true, quality: true, rehire: true } },
+        { kind: "rating", rater_id: `buyer_demo_${k}`, ref: `order${k}`, payload: { on_time: true, quality: true, rehire: true, buyer_phone_verified: true } },
       ]) },
   ],
   // Karthik, Class 11: claims nothing, but is very good at the machine puzzles -> "could learn" careers.

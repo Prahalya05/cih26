@@ -80,29 +80,31 @@ def now_ms() -> int:
 # ---------- v1 (legacy) ----------
 
 def upsert_student(con, doc: dict, school_id: str) -> bool:
-    """Save if newer than what we have and not another school's. Returns True if stored."""
-    updated = int(doc.get("updated_at") or now_ms())
+    """Save into student + encrypted student_private if not already present. Returns True if stored."""
     cur = con.execute(
-        "insert into legacy_student_doc(id, facilitator_code, doc, updated_at, school_id) values (%s, %s, %s, %s, %s) "
-        "on conflict (id) do update set facilitator_code = excluded.facilitator_code, doc = excluded.doc, "
-        "updated_at = excluded.updated_at, school_id = excluded.school_id "
-        "where legacy_student_doc.updated_at < excluded.updated_at "
-        "and coalesce(legacy_student_doc.school_id, excluded.school_id) = excluded.school_id",
-        (doc["id"], doc.get("facilitator_code"), json.dumps(doc, ensure_ascii=False), updated, school_id),
+        "insert into student(id, school_id, facilitator_code, birth_year) values (%s, %s, %s, %s) "
+        "on conflict (id) do nothing",
+        (doc["id"], school_id, doc.get("facilitator_code"), doc.get("birth_year")),
     )
+    if cur.rowcount == 1 and doc.get("name"):
+        key = settings.pii_key()
+        con.execute(
+            "insert into student_private(student_id, name_enc) values (%s, pgp_sym_encrypt(%s::text, %s::text)) "
+            "on conflict (student_id) do update set name_enc = coalesce(excluded.name_enc, student_private.name_enc)",
+            (doc["id"], doc["name"], key),
+        )
     return cur.rowcount == 1
 
 
 def other_schools_students(con, schools: str | list[str], student_ids: list[str]) -> set[str]:
-    """Which of these students (v1 documents or v2 students) belong to a school other than the caller's."""
+    """Which of these students belong to a school other than the caller's."""
     if not student_ids:
         return set()
     allowed = [schools] if isinstance(schools, str) else list(schools)
     if not allowed:
         return set(student_ids)
-    rows = con.execute("select id from legacy_student_doc where id = any(%s) and school_id <> all(%s) "
-                       "union select id from student where id = any(%s) and school_id <> all(%s)",
-                       (student_ids, allowed, student_ids, allowed)).fetchall()
+    rows = con.execute("select id from student where id = any(%s) and school_id <> all(%s)",
+                       (student_ids, allowed)).fetchall()
     return {r["id"] for r in rows}
 
 
@@ -125,6 +127,4 @@ def actions_for(con, student_ids: list[str]) -> list[dict]:
 
 
 def cohort(con, facilitator_code: str, school_id: str) -> list[dict]:
-    rows = con.execute("select doc from legacy_student_doc where facilitator_code = %s and school_id = %s "
-                       "order by updated_at desc", (facilitator_code, school_id)).fetchall()
-    return [r["doc"] for r in rows]
+    return []

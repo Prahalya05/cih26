@@ -110,8 +110,12 @@ def test_other_school_cannot_read_or_change_a_student(client, school_a, pg):
                                                        "consent": {**CONSENT, "revoked_at": NOW}}]}).json()
     assert out["rejected"] == [{"id": uid(2), "errors": ["student belongs to another school"]}]
     assert school_of(pg, "a1") == "sch_test"
+    from app import settings
     with psycopg.connect(pg) as con:
-        assert con.execute("select name from student_private where student_id = 'a1'").fetchone()[0] == "Meena"
+        assert con.execute(
+            "select pgp_sym_decrypt(name_enc, %s::text) from student_private where student_id = 'a1'",
+            (settings.pii_key(),),
+        ).fetchone()[0] == "Meena"
         assert con.execute("select revoked_at from consent where student_id = 'a1'").fetchone()[0] is None
     # Buyer link, photo scoring and deletion are refused too.
     phone_b = client.as_phone("phoneB")

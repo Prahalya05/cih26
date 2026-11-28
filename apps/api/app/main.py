@@ -17,11 +17,12 @@ from fastapi.staticfiles import StaticFiles
 
 from . import db, settings
 from .adapters import gemini
-from .routers import accounts, classrooms, courses, proof, see, trust, v1, v2
+from .routers import accounts, classrooms, courses, proof, publish, see, trust, v1, v2
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    settings.validate_pii_key()
     db.pool()  # one pool, made before the first request instead of by whichever request comes first
     yield
     db.close_pool()
@@ -47,6 +48,7 @@ app.include_router(see.router)
 app.include_router(proof.router)
 app.include_router(trust.router)
 app.include_router(courses.router)
+app.include_router(publish.router)
 app.include_router(classrooms.router)
 app.include_router(classrooms.review)
 

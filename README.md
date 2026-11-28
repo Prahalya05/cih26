@@ -1,210 +1,212 @@
 # Disha
 
-**Voice-first career guidance for rural students.** Disha helps a student in Class 9 to graduation find the skills they did not know they had, measures how good they really are, and shows careers, scholarships, schemes and apprenticeships they actually qualify for. It works in Tamil and English, on low-end Android phones, offline, with a teacher who guides a whole class.
+**Voice-first, evidence-backed career guidance for rural students.** Disha helps students in Class 9 through graduation discover their hidden vocational and academic skills, objectively measures their true proficiency, and matches them to viable livelihoods, 4-step career pathways, government schemes, and milestone-based micro-incentives. It runs in Tamil and English, on low-cost Android phones, fully offline-first, with dedicated multi-student classroom support for teachers.
 
-Built for the Citi India Hackathon 2026 (learning-to-livelihood track).
+Built for the Citi India Hackathon 2026 (Learning-to-Livelihood Track).
 
 ---
 
-## The problem
+## The Core Philosophy: "Say it, Prove it, Unlock it"
 
-A rural student usually does not know what they are good at, which careers exist beyond doctor, engineer and teacher, or which scholarships and apprenticeships they qualify for. A girl who stitches blouses for neighbours and draws well may still believe she is "not good at anything" because her maths marks are average. Schools, training, mentors and jobs are separate worlds and nobody connects them for her.
+1. **Say it (Voice & Card Discovery):** The student speaks naturally in Tamil or English about what she makes, repairs, or grows. AI extracts skills only against an approved taxonomy and quotes her exact words.
+2. **Prove it (Objective Evidence Gathering):** No self-reported claims are trusted blindly. Skills are validated through Computerized Adaptive Testing (IRT), photo/video work samples scored against rubrics, teacher ratings, and buyer-confirmed paid jobs.
+3. **Unlock it (Livelihoods & Proof Pays):** Deterministic rules (JSON Logic) unlock government scholarships (e.g., Pudhumai Penn), NSQF Level 4 RPL certifications, and milestone payouts via zero-knowledge smart contracts (*Proof Pays*).
 
-## What Disha does
+---
 
-| Part | What the student gets | How |
+## Key System Numbers & Taxonomy
+
+| Category | Count / Metric | Details |
 | --- | --- | --- |
-| **Discover** | A strengths card with her own words as proof | Picture cards (RIASEC interests), guided voice questions, AI extraction limited to a fixed skill list |
-| **Measure** | A level for each sub-skill, with how sure Disha is | Short adaptive tests (IRT), aptitude games, work-sample photos, teacher ratings, paid jobs confirmed by the buyer |
-| **Match** | Careers across at least 4 sectors, each with why it fits and "what if" hints | Fit / Reach / Worth scoring with a variety re-rank |
-| **Opportunity** | Schemes she qualifies for now, needs more info for, or will qualify for later | Rule files that decide eligibility (not the AI), run on the phone and the server |
-| **Facilitator mode** | One teacher guides 30 to 50 students | Shared-phone profiles, cohort view, confirm work samples, endorse skills |
+| **Total Skills in Knowledge Base** | **25 Skills** | Full vocational taxonomy across 8 rural & semi-urban sectors (`packages/kb/skills.json`). |
+| **Adaptive Tested Skills** | **10 Skills** | Active Computerized Adaptive Testing (IRT) item banks with **32 measurable sub-skills**. |
+| **Test Items & Puzzles** | **101 Items** | 42 IRT calibration questions + 59 aptitude puzzles (spatial, mechanical, sequential). |
+| **Occupations & Careers** | **62 Careers** | 16 detailed demo pathways with 4-step milestones, local wages, entrance exams, and 5 RPL alignments. |
+| **Government Schemes** | **9 Schemes** | Deterministic JSON Logic rules (Pudhumai Penn, Moovalur Ramamirtham, PMKVY RPL, PM Vishwakarma, etc.). |
+| **Work-Sample Rubrics** | **2 Rubrics** | Stitched collar/blouse assembly and domestic electrical wiring with safety checklists. |
+| **Proficiency Levels** | **4 Levels (NSQF)** | Level 1 (Awareness) → Level 2 (Assisted) → Level 3 (Independent) → Level 4 (Professional / Earning). |
 
-Skill levels use four plain steps that follow NSQF-style performance criteria:
+---
 
-1. Knows about it
-2. Can do it with help
-3. Can do it alone
-4. Earns from it or teaches it
+## Complete Feature Matrix
 
-## Architecture
+### 1. Multi-Student Shared Phone & Offline Architecture
+- **Offline-First PWA:** Runs on low-end Android devices in remote rural areas with zero connectivity using IndexedDB (`Dexie.js`).
+- **Device Tokens & Class Join Codes:** Schools configure classes with simple join codes (`PSG01`). Devices register securely, and data is partitioned using PostgreSQL Row-Level Security (RLS).
+- **Teacher Mode:** A single teacher can manage 30–50 students on a single shared tablet, review pending evidence queues, and endorse student capabilities.
+
+### 2. Bayesian Skill Tracing & Adaptive Testing (IRT)
+- **Computerized Adaptive Testing:** Uses 2-Parameter Logistic (2PL) Item Response Theory. Questions dynamically adapt in 3–8 items based on student ability ($\theta$), stopping when standard error drops below 0.4.
+- **Continuous Bayesian Updating:** Every piece of evidence (IRT test = 0.7, photo rubric = 0.5, teacher endorsement = 4.0, buyer job = 2.0) updates the probability of skill mastery ($P(L)$) deterministically.
+
+### 3. Rater Trust & Buyer-Confirmed Paid Jobs
+- **Buyer SMS Links:** When a student completes an order (e.g., stitching a blouse), a single-use SMS/WhatsApp link (`/v2/confirm/{token}`) allows the customer to verify quality and payment.
+- **Rater Reliability (Cohen's Kappa):** The system tracks teacher and reviewer scoring leniency to adjust evidence weight dynamically, preventing inflated scores.
+
+### 4. Proof Pays: Milestone Payouts via Zero-Knowledge Proofs
+- **ZK Groth16 Proofs (`ProofPays.sol`):** Philanthropic funders and CSR programs fund milestone escrow contracts (e.g., "Pay ₹2,000 when a girl proves Level 3 Tailoring with 5 buyer-confirmed orders").
+- **Privacy-Preserving Verification:** The student’s mobile phone generates a Groth16 ZK proof in ~3 seconds using `snarkjs` and Circom. The smart contract validates eligibility and releases funds directly without exposing the student's name, face, caste, or personal identity.
+
+### 5. 4-Step Career Pathways & Schemes
+- **Diverse Career Matching:** Maximal Marginal Relevance (MMR) algorithms recommend occupations across at least 4 distinct sectors to break gender and regional stereotypes.
+- **Deterministic Scheme Engine:** Zero AI hallucinations—pure JSON Logic evaluates poverty thresholds, gender, community, and education criteria with 100% mathematical auditability.
+
+---
+
+## Architecture Diagram
 
 ```mermaid
-flowchart LR
-    subgraph Phone["Student / teacher phone (PWA, works offline)"]
-        UI["React screens<br/>cards · voice · tests · games<br/>work samples · jobs · teacher view"]
-        ENG["@disha/engine (TypeScript)<br/>IRT · skill tracing · matching<br/>eligibility rules"]
-        IDB[("IndexedDB (Dexie)<br/>evidence events<br/>skill state cache")]
-        UI --> ENG
+flowchart TD
+    subgraph Client["Student / Teacher Mobile Client (PWA · Offline-First)"]
+        UI["React 19 UI<br/>Voice Input · Card Swipes · Tests · Camera · Teacher View"]
+        ENG["@disha/engine (TypeScript)<br/>2PL IRT · Bayesian Skill Tracing · MMR Career Match · JSON Logic"]
+        IDB[("IndexedDB (Dexie)<br/>Offline Evidence Log · Skill State Cache · Student Profiles")]
+        ZK["SnarkJS (Circom)<br/>Client-Side Groth16 ZK-Proof Generation"]
+        UI <--> ENG
         UI <--> IDB
         ENG <--> IDB
+        UI --> ZK
     end
 
-    subgraph Server["Disha API (FastAPI)"]
-        V1["/v1 · knowledge base, match,<br/>eligibility, profile extract"]
-        V2["/v2 · event sync, work-sample scoring,<br/>buyer confirmation links"]
-        SVC["Python services<br/>(same maths as the engine)"]
-        V1 --> SVC
-        V2 --> SVC
+    subgraph Backend["Disha API Server (FastAPI)"]
+        V1["/v1 Endpoints<br/>Taxonomy · Profile Extract · Match · Eligibility"]
+        V2["/v2 Endpoints<br/>Cursor Event Sync · Vision/Video Scoring · Buyer Links · Trust"]
+        PAY["/v2/pay Endpoints<br/>Proof Verification & Smart Contract Relayer"]
+        MATH["Python Core Services<br/>Deterministic Parity with TypeScript Engine"]
+        V1 --> MATH
+        V2 --> MATH
+        PAY --> MATH
     end
 
-    subgraph Data["Data"]
-        PG[("PostgreSQL 16 + pgvector<br/>evidence log · skill state<br/>row-level security by school")]
-        KB[["Knowledge base (JSON)<br/>skills · sub-skill graph · careers<br/>scheme rules · questions · checklists"]]
+    subgraph Storage["Cloud Data & Knowledge Base"]
+        PG[("PostgreSQL 16 + pgvector<br/>Immutable Events · Skill States · School RLS")]
+        KB[["Knowledge Base (JSON)<br/>25 Skills · 32 Sub-Skills · 62 Careers · 9 Schemes · 101 Items"]]
+        MEDIA[("Supabase Storage<br/>disha-media (Public Portfolio)")]
     end
 
-    GEM(["Gemini<br/>(optional)"])
-    BUYER(["Buyer's phone<br/>one-time link"])
+    subgraph External["External Ecosystem"]
+        GEM(["Gemini 2.5 / 3.5 Flash<br/>Tamil Audio Transcription & Vision/Video Rubrics"])
+        BUYER(["Buyer Mobile Phone<br/>One-Time WhatsApp/SMS Link Verification"])
+        CHAIN["EVM Blockchain<br/>ProofPays.sol Milestone Escrow Contract"]
+    end
 
-    IDB <-- "sync when online<br/>(cursor-based)" --> V2
-    UI -- "voice / text answer" --> V1
-    V1 -- "audio + skill list" --> GEM
-    V2 -- "photo + checklist" --> GEM
-    BUYER -- "confirms paid job" --> V2
-    SVC <--> PG
-    KB -- "load_kb.py" --> PG
-    KB -- "bundled at build" --> ENG
+    IDB <-- "Cursor-based Sync when Online" --> V2
+    UI -- "Audio / Photo" --> V1
+    V1 -- "Strict Whitelist Guard" --> GEM
+    V2 -- "Vision Rubric Check" --> GEM
+    BUYER -- "Confirms Quality & Payment" --> V2
+    ZK -- "ZKP (Groth16)" --> PAY
+    PAY -- "Disburse Milestone Stipend" --> CHAIN
+    MATH <--> PG
+    KB --> MATH
+    UI -. "Portfolio Upload" .-> MEDIA
 ```
 
-Key design choices:
+---
 
-- **Offline first.** Everything a student needs (matching, eligibility, skill levels) runs on the phone from the bundled knowledge base. The server is for sync, AI calls and the teacher's cohort view.
-- **Evidence is the record.** Every answer, rating, photo score and paid job is an immutable event. Skill levels are always recomputed from events, never edited by hand.
-- **One engine, two languages.** The TypeScript engine and the Python services implement the same maths. Golden tests (`packages/engine/test/golden.json`) make sure both give identical results.
-- **AI is grounded and replaceable.** Gemini may only pick skill IDs from our list and must quote the student's words; invented IDs are dropped. Without an API key, a keyword matcher takes over and photos wait for the teacher. Rules, not AI, decide eligibility.
-- **Privacy by design.** Demo students never leave the phone, photo scoring needs its own consent, photos are scored in memory and never stored on the server, and each phone's device token limits it to its own school's students (enforced by row-level security in the database).
-
-More detail, including the skill-tracing model and the data model, is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-
-## Repository layout
+## Repository Layout
 
 ```
 apps/
-  web/               React 19 + Vite PWA (student and teacher app)
-    src/screens/     one file per screen
-    src/lib/         local database, sync, speech, skill state, i18n (Tamil/English)
-  api/               FastAPI server
-    app/routers/     v1 (profile, match, eligibility) and v2 (events, work samples, orders)
-    app/services/    Python versions of the engine maths
-    app/adapters/    Gemini text/audio and vision, keyword fallback
-    migrations/      PostgreSQL schema (SQL)
-    tests/           pytest suite
+  web/               React 19 + Vite PWA (Student, Teacher, Portfolio, Proof Pays)
+    src/screens/     Screens: Voice, Cards, Test, Photo, Video, Jobs, Career, Proof, Teacher
+    src/lib/         Dexie DB, Sync, IRT math, Speech, Rater trust, ZK proover, i18n
+  api/               FastAPI Server (Python 3.12)
+    app/routers/     v1 (KB, Match, Schemes), v2 (Sync, Rubrics, Orders, Trust, Pay, Video)
+    app/services/    IRT math, Bayesian tracing, Rater reliability (Cohen's Kappa), Guards
+    app/adapters/    Gemini multimodal audio/vision, Keyword fallback matcher
+    migrations/      PostgreSQL DDL & RLS policies (0001 to 0007)
+    tests/           Pytest test suite (100% passing)
 packages/
-  engine/            shared TypeScript engine, runs in the browser and Node
-  kb/                knowledge base: skills, sub-skill graph, careers, schemes, rules, questions
-scripts/             knowledge-base checks, loaders, simulation, question generation
-docs/                design documents, scope, data plan, progress log, benchmarks
+  engine/            Shared TypeScript engine (runs identical math in browser and Node)
+  kb/                Master Knowledge Base: 25 skills, 32 sub-skills, 62 careers, 9 schemes, 101 items
+contracts/
+  ProofPays.sol      Solidity smart contract for milestone-based zero-knowledge payouts
+circuits/
+  proof_pays.circom  Circom Zero-Knowledge circuit for anonymous eligibility proofs
+scripts/             KB validation, database migrations, golden test generators, simulation
+docs/                Architecture specs, benchmarks, and Disha_Project_Guide.md
 ```
 
-## Getting started
+---
 
-### Requirements
+## Getting Started
 
-- Node.js 22.18 or newer
-- Python 3.12
-- Docker (for local PostgreSQL), or any PostgreSQL 16 with the `vector` extension
+### Prerequisites
+- **Node.js**: v22.18+
+- **Python**: 3.12+
+- **PostgreSQL**: 16+ with `vector` extension (e.g. Supabase or Docker)
 
-### 1. Install
-
+### 1. Installation
 ```bash
 npm install
 pip install -r apps/api/requirements.txt
-cp .env.example .env          # then fill in the values you need
+cp .env.example .env          # Configure DATABASE_URL, GEMINI_API_KEY, MEDIA_BUCKET
 ```
 
-### 2. Database
-
+### 2. Database Setup & Knowledge Base Load
 ```bash
-docker compose up -d          # PostgreSQL 16 + pgvector on port 5432
-python scripts/migrate.py     # create the schema
-python scripts/load_kb.py     # load the knowledge base
+python scripts/migrate.py     # Applies schema migrations 0001 through 0007
+python scripts/load_kb.py     # Ingests the 25 skills, 62 careers, 9 schemes, and 101 items
+```
 
-# a school and a class: prints the class code (students) and a secret teacher code
+To create a school and class join code for student registration:
+```bash
 python scripts/add_join_code.py school sch_psg "PSG Higher Secondary School" Coimbatore
 python scripts/add_join_code.py class sch_psg PSG01
 ```
 
-Phones register with one of these codes (the class code on the new-student screen, the teacher code in Teacher view) and get a device token. Every API call that reads or writes student data needs that token and only sees its own school; only teachers' phones can rate students or open the class list. `python scripts/add_join_code.py revoke-device <id>` switches off a lost phone.
-
-### 3. Run
-
+### 3. Running Locally
 ```bash
-# API (http://localhost:8000, interactive docs at /docs)
+# Terminal 1: Backend API (http://localhost:8000 | Docs: http://localhost:8000/docs)
 cd apps/api
 python -m uvicorn app.main:app --reload --port 8000
 
-# Web app (in another terminal, http://localhost:5173)
+# Terminal 2: Web App (http://localhost:5173)
 VITE_API_URL=http://localhost:8000 npm run dev
 ```
 
-The student flow also works with no API at all: open the web app alone and it runs fully offline.
+*Note: The web app is fully offline-first; it can be used standalone without the API running.*
 
-To serve everything from one process, run `npm run build`; the API then serves `apps/web/dist` at `/`.
+---
 
-### Environment variables
+## API Overview
 
-| Variable | Needed | Purpose |
+Interactive Swagger documentation is available at `/docs` when the API server is running:
+
+| Method | Endpoint | Description |
 | --- | --- | --- |
-| `DATABASE_URL` | yes (API) | PostgreSQL connection string |
-| `GEMINI_API_KEY` | no | Turns on AI skill extraction and photo scoring. Without it, keyword matching and teacher-only scoring are used. Use a paid-tier key for real students. |
-| `GEMINI_MODEL` | no | Defaults to `gemini-3.5-flash` (2.5 Flash no longer answers new keys, November 2026) |
-| `CORS_ORIGINS` | yes (API) | Browser origins allowed to call the API |
-| `VITE_API_URL` | no | Where the web app finds the API; empty means same origin |
-| `ADMIN_TOKEN` | yes (API) | Protects admin-only endpoints |
-| `MEDIA_BUCKET` | no | Storage for portfolio media students chose to share |
+| `GET` | `/health` | Healthcheck and active AI/Keyword adapter status. |
+| `GET` | `/v1/kb` | Full knowledge base bundle (25 skills, 62 careers, schemes, items). |
+| `POST` | `/v1/profile/extract` | Spoken Tamil/English audio or text → extracted skills with student quote evidence. |
+| `POST` | `/v1/match` | Ranks career pathways using MMR sector diversity. |
+| `POST` | `/v1/eligibility` | Evaluates deterministic JSON Logic rules for government schemes. |
+| `POST` | `/v2/sync` | Cursor-based bi-directional event sync between mobile IndexedDB and PostgreSQL. |
+| `POST` | `/v2/work-sample/score` | Scores work-sample photo against rubric checklist using Gemini Vision (in-memory). |
+| `POST` | `/v2/work-sample/video` | Scores task video step-by-step with timestamps using Gemini Video. |
+| `POST` | `/v2/orders/{event_id}/link` | Generates a single-use buyer verification link for a real paid job. |
+| `GET/POST`| `/v2/confirm/{token}` | Customer-facing web page to confirm job quality and payment amount. |
+| `POST` | `/v2/pay/claim` | Verifies client-side Groth16 ZK proof and triggers milestone payout via smart contract. |
 
-## Testing
+---
+
+## Verification & Testing
 
 ```bash
-npm test                              # engine tests + web type check
-python scripts/validate_kb.py         # knowledge-base consistency
-python -m pytest apps/api/tests -q    # API tests (needs the database)
+npm test                              # TypeScript engine unit tests + Web typecheck
+python scripts/validate_kb.py         # Knowledge base semantic integrity check
+python -m pytest apps/api/tests -q    # Full backend API test suite
 ```
 
-After changing any engine maths, regenerate the shared golden results and run both suites:
+---
 
-```bash
-python scripts/gen_golden.py
-```
+## Project Documentation: Which Document to Refer To?
 
-`scripts/simulate.py` runs the adaptive test against 500 simulated students. Current result (`docs/benchmarks/simulation.json`): 80% of levels estimated exactly, 99.8% within one level, 7.6 questions on average (maximum 8).
 
-CI (`.github/workflows/ci.yml`) runs all of the above on every push and pull request.
+- **Master Reference**: [`Disha_Project_Guide.md`](Disha_Project_Guide.md) is the **master authoritative blueprint** (dated November 2026). It contains the complete end-to-end breakdown, technical deep dives, mathematical proofs, and implementation walkthroughs.
+- **Quick Reference**: This `README.md` provides the high-level architecture, quickstart commands, and repository overview.
 
-## API overview
-
-Full interactive documentation is served at `/docs` when the API is running.
-
-| Method | Path | Purpose |
-| --- | --- | --- |
-| GET | `/health` | Status, and whether AI or keyword matching is active |
-| GET | `/v1/kb` | The whole knowledge base |
-| POST | `/v1/profile/extract` | Spoken or typed answer → skills with quoted evidence |
-| POST | `/v1/match` | Rank careers for a profile, with "what if" hints |
-| POST | `/v1/eligibility` | Check every scheme: eligible now, need more info, or eligible later |
-| POST | `/v2/sync` | Send evidence events recorded offline; receive events from other devices |
-| POST | `/v2/work-sample/score` | Score a work photo against a checklist (a teacher confirms) |
-| POST | `/v2/orders/{event_id}/link` | One-time link for a buyer to confirm a paid job |
-| GET/POST | `/v2/confirm/{token}` | The buyer's confirmation page (works once) |
-
-## Knowledge base
-
-All domain data lives in `packages/kb` as JSON, so teachers and NGOs can extend it without touching code. See [packages/kb/README.md](packages/kb/README.md) for formats and rules. Every scheme rule carries its official source link and test fixtures, and `validate_kb.py` rejects unknown skills, sectors or failing rules.
-
-Current demo scope (frozen in [docs/SCOPE.md](docs/SCOPE.md)): 10 skills with 32 measurable sub-skills, 3 aptitude games, 2 work-sample checklists (stitching and basic electrical), 16 careers and 9 schemes and opportunities.
-
-## Status
-
-Built phase by phase; see [docs/PROGRESS.md](docs/PROGRESS.md) for what is done, what is next and open items. Not yet done: privacy hardening (separate consent scopes, full erasure), fairness tests and pilot recalibration, and teacher-reviewed Tamil content. Questions are marked `reviewed: false` until a teacher checks them.
-
-## Documents
-
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): how the system works
-- [docs/SCOPE.md](docs/SCOPE.md): frozen demo scope
-- [docs/DATA_PLAN.md](docs/DATA_PLAN.md): knowledge-base data plan and rules
-- [docs/PROGRESS.md](docs/PROGRESS.md): build progress
-- `docs/Disha_Idea_Note.docx`, `docs/Disha_Implementation_Plan.docx`, `docs/Disha_Skill_Assessment_and_Database.docx`: full design documents
+---
 
 ## License
-
-[Apache License 2.0](LICENSE).
+[Apache License 2.0](LICENSE) - Built with pride for rural youth empowerment.

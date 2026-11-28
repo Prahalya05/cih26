@@ -149,7 +149,11 @@ async def check_doc(student_id: str = Form(...), kind: str = Form(...), image: U
         raise HTTPException(413, "File too large (max 5 MB)")
     with db.connect(dev.schools) as con:
         auth.check_student_access(con, dev, student_id)
-        name = con.execute("select name from student_private where student_id = %s", (student_id,)).fetchone()
+        name = con.execute(
+            "select case when name_enc is not null then pgp_sym_decrypt(name_enc, %s::text) end as name "
+            "from student_private where student_id = %s",
+            (settings.pii_key(), student_id),
+        ).fetchone()
         if not con.execute("select 1 from student where id = %s", (student_id,)).fetchone():
             raise HTTPException(404, "Sync this student first")
     note: dict | None = None

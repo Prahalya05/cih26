@@ -4,22 +4,16 @@
 // score = w_embed*embed_sim + w_skill*skill_overlap + w_riasec*riasec_fit + w_feas*feasibility
 // If no embedding similarities are supplied, w_embed is shared out over the other terms.
 
+import { mmrRerank, occRiasecVec, studentRiasecVec, type ScoredCareer } from "./fitreach.ts";
 import { EDUCATION_ORDER } from "./kb.ts";
 import { pyRound, pySum } from "./pymath.ts";
 import type { KB, Occupation, Persona } from "./types.ts";
 
+export { mmrRerank, occRiasecVec, studentRiasecVec, type ScoredCareer };
+
 export const WEIGHTS = { embed: 0.35, skill: 0.3, riasec: 0.2, feas: 0.15 };
-const RIASEC = "RIASEC";
 const DEMAND: Record<string, number> = { high: 1.0, medium: 0.7, low: 0.4 };
 const ADJACENT_CREDIT = 0.5; // partial credit for a skill in the same cluster as one the student has
-
-export interface ScoredCareer {
-  occupation_id: string;
-  sector: string;
-  score: number;
-  parts: Record<string, number>;
-  matched_skills: string[];
-}
 
 export interface WhatIf {
   lever: string;
@@ -31,18 +25,6 @@ function cos(a: number[], b: number[]): number {
   const nb = Math.sqrt(pySum(b.map((x) => x * x)));
   const n = Math.min(a.length, b.length);
   return na === 0 || nb === 0 ? 0 : pySum(a.slice(0, n).map((x, i) => x * b[i])) / (na * nb);
-}
-
-export function occRiasecVec(code: string): number[] {
-  const weights = [1.0, 0.66, 0.33];
-  const vec = [0, 0, 0, 0, 0, 0];
-  [...code.slice(0, 3)].forEach((letter, i) => { vec[RIASEC.indexOf(letter)] = weights[i]; });
-  return vec;
-}
-
-export function studentRiasecVec(persona: Persona): number[] {
-  const r = (persona.riasec ?? {}) as Record<string, number>;
-  return [...RIASEC].map((letter) => Number(r[letter] ?? 0));
 }
 
 function skillConf(persona: Persona): Map<string, number> {
@@ -109,44 +91,6 @@ export function scoreAll(kb: KB, persona: Persona, embedSims?: Record<string, nu
   }
   out.sort((a, b) => b.score - a.score); // stable, like Python
   return out;
-}
-
-/** Python max(): the first item with the highest key wins. */
-function firstMax<T>(items: T[], key: (item: T) => number): T {
-  let best = items[0];
-  let bestKey = key(best);
-  for (const item of items.slice(1)) {
-    const k = key(item);
-    if (k > bestKey) { best = item; bestKey = k; }
-  }
-  return best;
-}
-
-export function mmrRerank(kb: KB, scored: ScoredCareer[], k = 8, lam = 0.7, minSectors = 4): ScoredCareer[] {
-  const occs = kb.occupations;
-  const pool = [...scored];
-  const picked: ScoredCareer[] = [];
-  while (pool.length && picked.length < k) {
-    const sectors = new Set(picked.map((p) => p.sector));
-    const needNew = minSectors - sectors.size;
-    let cand = pool;
-    if (needNew > 0 && k - picked.length <= needNew) {
-      const fresh = pool.filter((c) => !sectors.has(c.sector));
-      cand = fresh.length ? fresh : pool;
-    }
-    const mmr = (c: ScoredCareer): number => {
-      if (!picked.length) return c.score;
-      const red = Math.max(...picked.map((p) =>
-        p.sector === c.sector ? 1.0 : 0.5 * cos(
-          occRiasecVec(occs[p.occupation_id].riasec),
-          occRiasecVec(occs[c.occupation_id].riasec))));
-      return lam * c.score - (1 - lam) * red;
-    };
-    const best = firstMax(cand, mmr);
-    picked.push(best);
-    pool.splice(pool.indexOf(best), 1);
-  }
-  return picked;
 }
 
 /** Counterfactual unlocks: which careers enter the top-k if the student adds one skill or one education level. */

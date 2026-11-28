@@ -350,10 +350,12 @@ def cohort(code: str, dev: Device = Depends(auth.teacher)):
         seen_ids = {s["id"] for s in students}
         # Also include v2-only synced students in this class if no legacy doc exists yet.
         extra = con.execute(
-            "select s.id, s.facilitator_code, s.birth_year, sp.name from student s "
+            "select s.id, s.facilitator_code, s.birth_year, "
+            "case when sp.name_enc is not null then pgp_sym_decrypt(sp.name_enc, %s::text) end as name "
+            "from student s "
             "left join student_private sp on sp.student_id = s.id "
             "where s.school_id = %s and upper(coalesce(s.facilitator_code, '')) = %s",
-            (target_school, norm)).fetchall()
+            (settings.pii_key(), target_school, norm)).fetchall()
         for r in extra:
             if r["id"] not in seen_ids:
                 students.append({

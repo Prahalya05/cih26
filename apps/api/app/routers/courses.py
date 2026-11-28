@@ -13,14 +13,16 @@ Disha keeps 10% of paid fees; the teacher earns 90%.
 """
 from __future__ import annotations
 
+import math
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from .. import auth, db, kb
 from ..adapters import razorpay
 from ..auth import Device
+from ..ratelimit import limit
 from ..schemas import new_ulid
 
 router = APIRouter(prefix="/v2", tags=["teachers and courses"])
@@ -66,7 +68,31 @@ class TeacherProfileIn(BaseModel):
     years: int | None = Field(None, ge=0, le=60)
     qualification: str | None = Field(None, max_length=160)
     district: str | None = Field(None, max_length=60)
+    district_code: str | None = Field(None, max_length=40)
+    pincode: str | None = Field(None, pattern=r"^\d{6}$")
+    listed: bool = False
     avatar: str | None = Field(None, max_length=8)
+
+
+def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    r = 6371.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp, dl = math.radians(lat2 - lat1), math.radians(lng2 - lng1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(a))
+
+
+def _resolve_district(key: str | None) -> dict | None:
+    if not key:
+        return None
+    dists = kb.districts()
+    if key in dists:
+        return dists[key]
+    low = key.strip().lower()
+    for d in dists.values():
+        if d["name"]["en"].lower() == low or d["code"].lower() == low:
+            return d
+    return None
 
 
 def _teacher_out(con, account_id: str, viewer: str | None) -> dict:
@@ -81,11 +107,16 @@ def _teacher_out(con, account_id: str, viewer: str | None) -> dict:
                           "from course c where teacher_id = %s order by created_at desc", (account_id,)).fetchall()
     learners = con.execute("select count(distinct p.account_id) from purchase p join course c on c.id = p.course_id "
                            "where c.teacher_id = %s and p.status = 'paid'", (account_id,)).fetchone()["count"]
-    return {"id": acc["id"], "name": acc["name"], "school": school["name"] if school else None,
-            "bio": p.get("bio"), "subjects": p.get("subjects") or [], "languages": p.get("languages") or [],
-            "years": p.get("years"), "qualification": p.get("qualification"), "district": p.get("district"),
-            "avatar": p.get("avatar") or "🧑‍🏫", "learners": learners,
-            "courses": [dict(c) for c in courses if c["published"] or viewer == account_id]}
+    out = {"id": acc["id"], "name": acc["name"], "school": school["name"] if school else None,
+           "bio": p.get("bio"), "subjects": p.get("subjects") or [], "languages": p.get("languages") or [],
+           "years": p.get("years"), "qualification": p.get("qualification"),
+           "district": p.get("district"), "district_code": p.get("district_code"),
+           "listed": bool(p.get("listed", False)),
+           "avatar": p.get("avatar") or "🧑‍🏫", "learners": learners,
+           "courses": [dict(c) for c in courses if c["published"] or viewer == account_id]}
+    if viewer == account_id:
+        out["pincode"] = p.get("pincode")
+    return out
 
 
 @router.get("/teachers/me/profile", summary="My teacher profile")
@@ -96,13 +127,86 @@ def my_teacher_profile(dev: Device = Depends(auth.role_in("teacher"))):
 
 @router.put("/teachers/me/profile", summary="Save my teacher profile")
 def save_teacher_profile(body: TeacherProfileIn, dev: Device = Depends(auth.role_in("teacher"))):
+    d = _resolve_district(body.district_code or body.district)
+    dcode = d["code"] if d else body.district_code
+    dname = body.district or (d["name"]["en"] if d else None)
     with db.connect() as con:
-        con.execute("insert into teacher_profile(account_id, bio, subjects, languages, years, qualification, district, avatar) "
-                    "values (%s, %s, %s, %s, %s, %s, %s, %s) on conflict (account_id) do update set bio = excluded.bio, "
+        con.execute("insert into teacher_profile(account_id, bio, subjects, languages, years, qualification, district, district_code, pincode, listed, avatar) "
+                    "values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) on conflict (account_id) do update set bio = excluded.bio, "
                     "subjects = excluded.subjects, languages = excluded.languages, years = excluded.years, "
-                    "qualification = excluded.qualification, district = excluded.district, avatar = excluded.avatar, updated_at = now()",
-                    (_acc(dev), body.bio, body.subjects, body.languages, body.years, body.qualification, body.district, body.avatar))
+                    "qualification = excluded.qualification, district = excluded.district, district_code = excluded.district_code, "
+                    "pincode = excluded.pincode, listed = excluded.listed, avatar = excluded.avatar, updated_at = now()",
+                    (_acc(dev), body.bio, body.subjects, body.languages, body.years, body.qualification,
+                     dname, dcode, body.pincode, body.listed, body.avatar))
         return _teacher_out(con, _acc(dev), dev.account_id)
+
+
+@router.get("/teachers/search", summary="Search opted-in teachers across all schools by coarse district (no GPS)",
+            dependencies=[Depends(limit("teacher_search", per_minute=30))])
+def search_teachers(
+    request: Request,
+    district: str | None = None,
+    subject: str | None = None,
+    language: str | None = None,
+    q: str | None = None,
+    limit_n: int = Query(20, alias="limit", ge=1, le=50),
+    offset: int = Query(0, ge=0),
+    dev: Device = Depends(auth.device),
+):
+    if any(k in request.query_params for k in ("lat", "lng", "lon", "latitude", "longitude", "gps")):
+        raise HTTPException(400, "Exact coordinates are never accepted; send a district code instead")
+    target = _resolve_district(district)
+    with db.connect() as con:
+        rows = con.execute(
+            "select a.id, a.name, p.bio, p.subjects, p.languages, p.years, p.qualification, "
+            "p.district, p.district_code, p.avatar, "
+            "(select count(*) from course c where c.teacher_id = a.id and c.published) as courses "
+            "from account a join teacher_profile p on p.account_id = a.id "
+            "where a.role = 'teacher' and a.disabled_at is null and p.listed is true"
+        ).fetchall()
+
+    subj_q = subject.strip().lower() if subject else ""
+    lang_q = language.strip().lower() if language else ""
+    text_q = q.strip().lower() if q else ""
+
+    matched = []
+    for r in rows:
+        subjects = r["subjects"] or []
+        languages = r["languages"] or []
+        if subj_q and not any(subj_q in s.lower() for s in subjects):
+            continue
+        if lang_q and not any(lang_q == l.lower() or lang_q in l.lower() for l in languages):
+            continue
+        if text_q:
+            hay = " ".join([
+                r["name"] or "", r["bio"] or "", r["qualification"] or "",
+                r["district"] or "", *subjects,
+            ]).lower()
+            if text_q not in hay:
+                continue
+        td = _resolve_district(r["district_code"] or r["district"])
+        dist_km = round(_haversine_km(target["lat"], target["lng"], td["lat"], td["lng"]), 1) if (target and td) else None
+        matched.append({
+            "id": r["id"],
+            "name": r["name"],
+            "avatar": r["avatar"] or "🧑‍🏫",
+            "subjects": subjects,
+            "languages": languages,
+            "district": r["district"] or (td["name"]["en"] if td else None),
+            "district_code": r["district_code"] or (td["code"] if td else None),
+            "qualification": r["qualification"],
+            "years": r["years"],
+            "bio": r["bio"],
+            "courses": r["courses"],
+            "distance_km": dist_km,
+        })
+
+    if target:
+        matched.sort(key=lambda x: (x["distance_km"] is None, x["distance_km"] or 0.0, -x["courses"], x["name"]))
+    else:
+        matched.sort(key=lambda x: (-x["courses"], x["name"]))
+
+    return {"total": len(matched), "teachers": matched[offset:offset + limit_n]}
 
 
 @router.get("/teachers/{account_id}", summary="A teacher's public profile and published courses")

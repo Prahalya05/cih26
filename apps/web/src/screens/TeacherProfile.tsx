@@ -1,6 +1,7 @@
 // A teacher's profile. Students see it (bio, subjects, experience, courses); the teacher edits her own here.
 
 import { useEffect, useState } from "react";
+import districtsData from "@kb/districts.json";
 import type { Go } from "../App";
 import { Button, Card, Pill, Screen } from "../components/ui";
 import { Icon } from "../components/Icon";
@@ -10,8 +11,11 @@ import { PlanPill, unitName } from "./Courses";
 import type { Plan } from "../lib/courses";
 
 interface TP { id: string; name: string; school?: string | null; bio?: string | null; subjects: string[]; languages: string[]; years?: number | null;
-  qualification?: string | null; district?: string | null; avatar: string; learners: number;
+  qualification?: string | null; district?: string | null; district_code?: string | null; pincode?: string | null; listed?: boolean;
+  avatar: string; learners: number;
   courses: { id: string; title: string; plan: Plan; price_inr: number; skill_id: string; modules: number; published: boolean; period_days?: number }[] }
+
+const DISTRICTS = districtsData as { code: string; name: { en: string; ta: string; hi: string } }[];
 
 const AVATARS = ["🧑‍🏫", "👩‍🏫", "👨‍🏫", "🧕", "👳", "🧑‍🔧", "🧑‍🌾", "🧑‍🍳", "🧑‍💻", "🧑‍⚕️"];
 
@@ -68,20 +72,27 @@ export default function TeacherProfile({ go, teacherId }: { go: Go; teacherId?: 
 }
 
 function EditForm({ p, onSaved }: { p: TP; onSaved: (p: TP) => void }) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const [bio, setBio] = useState(p.bio ?? "");
   const [subjects, setSubjects] = useState(p.subjects.join(", "));
   const [languages, setLanguages] = useState(p.languages.join(", "));
   const [years, setYears] = useState(p.years != null ? String(p.years) : "");
   const [qual, setQual] = useState(p.qualification ?? "");
-  const [district, setDistrict] = useState(p.district ?? "");
+  const [districtCode, setDistrictCode] = useState(p.district_code ?? "");
+  const [pincode, setPincode] = useState(p.pincode ?? "");
+  const [listed, setListed] = useState(Boolean(p.listed));
   const [avatar, setAvatar] = useState(p.avatar);
   const [error, setError] = useState("");
   const split = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean);
   const field = "min-h-12 rounded-xl border border-line bg-surface px-3 text-base";
   const save = async () => {
-    const r = await call<TP>("/v2/teachers/me/profile", { method: "PUT", body: JSON.stringify({ bio: bio || null, subjects: split(subjects), languages: split(languages),
-      years: years ? Number(years) : null, qualification: qual || null, district: district || null, avatar }) });
+    const chosen = DISTRICTS.find((d) => d.code === districtCode);
+    const r = await call<TP>("/v2/teachers/me/profile", { method: "PUT", body: JSON.stringify({
+      bio: bio || null, subjects: split(subjects), languages: split(languages),
+      years: years ? Number(years) : null, qualification: qual || null,
+      district: chosen?.name.en ?? p.district ?? null, district_code: districtCode || null,
+      pincode: pincode.trim() || null, listed, avatar,
+    }) });
     if (isError(r)) setError(r.error); else onSaved(r);
   };
   return (
@@ -92,9 +103,17 @@ function EditForm({ p, onSaved }: { p: TP; onSaved: (p: TP) => void }) {
       <input className={field} placeholder={t("languagesHint")} value={languages} onChange={(e) => setLanguages(e.target.value)} />
       <div className="grid grid-cols-2 gap-2">
         <input className={field} placeholder={t("yearsHint")} inputMode="numeric" value={years} onChange={(e) => setYears(e.target.value.replace(/\D/g, ""))} />
-        <input className={field} placeholder={t("district")} value={district} onChange={(e) => setDistrict(e.target.value)} />
+        <select className={field} value={districtCode} onChange={(e) => setDistrictCode(e.target.value)}>
+          <option value="">{t("district")}</option>
+          {DISTRICTS.map((d) => <option key={d.code} value={d.code}>{d.name[lang] ?? d.name.en}</option>)}
+        </select>
       </div>
+      <input className={field} placeholder={t("pincodeOptional")} inputMode="numeric" maxLength={6} value={pincode} onChange={(e) => setPincode(e.target.value.replace(/\D/g, "").slice(0, 6))} />
       <input className={field} placeholder={t("qualification")} value={qual} onChange={(e) => setQual(e.target.value)} />
+      <label className="flex items-center gap-2 text-sm font-medium">
+        <input type="checkbox" className="size-5" checked={listed} onChange={(e) => setListed(e.target.checked)} />
+        <span>{t("listInSearch")}</span>
+      </label>
       {error && <p className="rounded-lg bg-bad-soft p-2 text-sm text-bad">{error}</p>}
       <Button onClick={() => void save()}>{t("save")}</Button>
     </Card>
