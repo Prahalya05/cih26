@@ -10,6 +10,9 @@
     "en": "Short video explaining one small topic to a younger child (for example, telling time).",
     "ta": "சிறிய குழந்தைக்கு ஒரு சிறு தலைப்பை விளக்கும் வீடியோ (எ.கா. நேரம் பார்த்தல்)."
   },
+  "video_allows": [
+    "second_person"
+  ],
   "criteria": [
     {
       "id": "steps",

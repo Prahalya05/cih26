@@ -160,7 +160,10 @@ def _public(acc: dict, con=None) -> dict:
             school_kind, school_name = sc["kind"], sc["name"]
     return {"id": acc["id"], "role": acc["role"], "name": acc["name"], "org": acc.get("org"), "login": acc["login_masked"],
             "school_id": acc.get("school_id"), "school_kind": school_kind, "school_name": school_name,
-            "class_code": acc.get("class_code"), "student_id": acc.get("student_id")}
+            "class_code": acc.get("class_code"), "student_id": acc.get("student_id"),
+            "student_ids": sorted(auth.linked_students(con, acc["id"])) if acc["role"] == "student" and con is not None
+            else [acc["student_id"]] if acc.get("student_id") else [],
+            "student_profiles_max": settings.STUDENT_PROFILES_MAX}
 
 
 @router.post("/verify", summary="Check the code; sign in, or create the account on first sign-in",
@@ -259,15 +262,15 @@ class LinkIn(BaseModel):
     student_id: str = Field(min_length=4, max_length=100)
 
 
-@router.post("/me/student", summary="A student account remembers its own profile (so another phone can find it)")
+@router.post("/me/student", summary="A student account remembers one of its profiles (up to STUDENT_PROFILES_MAX)")
 def link_student(body: LinkIn, dev: Device = Depends(auth.role_in("student"))):
     acc = _account(dev)
     with db.connect() as con:
-        taken = con.execute("select id from account where student_id = %s and id <> %s",
-                            (body.student_id, acc["id"])).fetchone()
-        if taken:
-            raise HTTPException(409, "That student profile belongs to another account")
-        con.execute("update account set student_id = %s where id = %s", (body.student_id, acc["id"]))
+        result = auth.link_student(con, acc["id"], body.student_id)
+    if result == "taken":
+        raise HTTPException(409, "That student profile belongs to another account")
+    if result == "full":
+        raise HTTPException(409, f"This account already has {settings.STUDENT_PROFILES_MAX} student profiles")
     return {"ok": True}
 
 
@@ -300,9 +303,12 @@ def link_school(body: SchoolLinkIn, dev: Device = Depends(auth.role_in("student"
 
 
 @router.get("/me/profile", summary="A signed-in student's own synced profile and events (for signing in on another device)")
-def my_profile(dev: Device = Depends(auth.role_in("student"))):
+def my_profile(student_id: str | None = None, dev: Device = Depends(auth.role_in("student"))):
     acc = _account(dev)
-    sid = acc.get("student_id")
+    with db.connect() as con:
+        mine = auth.linked_students(con, acc["id"])
+    # one of her own profiles (?student_id=...), or her first one
+    sid = student_id if student_id in mine else (None if student_id else acc.get("student_id"))
     if not sid or not dev.schools:
         return {"student": None, "actions": [], "events": []}
     from .v2 import _row_to_event

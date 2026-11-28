@@ -33,6 +33,8 @@ DB_POOL_TIMEOUT = float(os.getenv("DB_POOL_TIMEOUT", "10"))
 # value in production. Without SMTP settings, codes are shown on screen (demo mode) instead of being emailed.
 AUTH_SECRET = os.getenv("AUTH_SECRET", "dev-only-auth-secret-change-me")
 OTP_DEMO = os.getenv("OTP_DEMO", "1") == "1"
+# How many student profiles one student account may hold (app/auth.py, migration 0016).
+STUDENT_PROFILES_MAX = int(os.getenv("STUDENT_PROFILES_MAX", "3"))
 SMTP_HOST = os.getenv("SMTP_HOST", "")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")

@@ -88,6 +88,11 @@ export function xrayInitiallyOn(): boolean {
   try { return localStorage.getItem(ON_KEY) === "1"; } catch { return false; }
 }
 
+/** Whether X-ray (demo) mode is on right now, without changing it. */
+export function xrayIsOn(): boolean {
+  try { return localStorage.getItem(ON_KEY) === "1"; } catch { return false; }
+}
+
 export function setXrayOn(on: boolean) {
   try { if (on) localStorage.setItem(ON_KEY, "1"); else localStorage.removeItem(ON_KEY); } catch { /* ignore */ }
 }

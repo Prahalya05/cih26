@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "apps" / "api"))
 
 from app import kb  # noqa: E402
-from app.services import eligibility, fitreach, irt, matcher, tracing  # noqa: E402
+from app.services import eligibility, fitreach, irt, matcher, tracing, trust  # noqa: E402
 
 sys.path.insert(0, str(ROOT / "scripts"))
 import scenarios  # noqa: E402
@@ -153,6 +153,27 @@ def recommend_v2_cases(rng: random.Random) -> list[dict]:
     return [{"persona": p, "result": fitreach.recommend_v2(p)} for p in personas]
 
 
+def trust_cases() -> list[dict]:
+    """Warning counts for the video trust score (services/trust.py trust_score, engine trustScore)."""
+    kinds = list(trust.TRUST_RULE["penalty"])
+    cases: list[dict] = [{}, {"screen": 1}, {"screen": 3}, {"no_hands": 2, "dark": 1}, {"uploaded": 1},
+                         {"multi_face": 1, "tab_away": 1, "ai_noticed": 1}, {"no_hands": 99, "dark": 99},
+                         {"screen": 0, "unknown_kind": 5}, {"dark": -3, "no_hands": 2.7}, {"screen": "2"}]
+    rng = random.Random(77)  # its own generator, so the other golden cases do not change
+    for _ in range(40):
+        cases.append({k: rng.randint(0, 4) for k in rng.sample(kinds, rng.randint(1, len(kinds)))})
+    out = [{"counts": c, "seconds": None, "result": trust.trust_score(c)} for c in cases]
+    # long videos: small warnings count per 10 minutes (and 600 s or less, or a bad length, changes nothing)
+    timed = [({"no_hands": 6}, 3600), ({"no_hands": 7, "dark": 3}, 1800), ({"no_hands": 4}, 300), ({"no_hands": 4}, 600),
+             ({"screen": 2, "no_hands": 12, "dark": 9}, 3600), ({"no_hands": 3}, 601), ({"dark": 2}, -60), ({"dark": 2}, True),
+             ({"no_hands": 99, "dark": 99}, 3600)]
+    for _ in range(20):
+        timed.append(({k: rng.randint(0, 12) for k in rng.sample(kinds, rng.randint(1, len(kinds)))},
+                      rng.choice([120, 900, 2400, 3600, 754.5])))
+    out += [{"counts": c, "seconds": s, "result": trust.trust_score(c, s)} for c, s in timed]
+    return out
+
+
 def main() -> None:
     rng = random.Random(2026)
     personas = [MEENA, {}, {"education": "graduate", "skills": [{"id": "sk_coding"}]}]
@@ -172,6 +193,7 @@ def main() -> None:
         "irt": irt_cases(),
         "fold": fold_cases(),
         "recommend_v2": recommend_v2_cases(rng),
+        "trust_score": trust_cases(),
     }
     OUT.write_text(json.dumps(golden, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"wrote {OUT.relative_to(ROOT)}: {len(personas)} students, {len(facts_list)} fact sets")

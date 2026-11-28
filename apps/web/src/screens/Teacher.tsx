@@ -17,7 +17,7 @@ import { linkSchoolCode, useAccount } from "../lib/auth";
 import { TeacherAreaTabs } from "../components/TeacherAreaTabs";
 import { autoConfirmed, rubricFor, samplesToConfirm } from "../lib/samples";
 import { DocsPanel, OverridePanel, SuggestPanel } from "../components/TeacherTools";
-import type { StoredEvent } from "../lib/db";
+import type { MediaRow, StoredEvent } from "../lib/db";
 import { Icon } from "../components/Icon";
 import { integrityOf, SERIOUS, type Flag, type IntegritySummary } from "../lib/integrity";
 
@@ -228,6 +228,7 @@ function SampleCard({ sample, student }: { sample: StoredEvent; student?: Studen
         ? <video ref={player} src={url} controls playsInline className="mt-2 max-h-56 w-full rounded-xl bg-black" />
         : url ? <img src={url} alt="" className="mt-2 max-h-56 w-full rounded-xl object-contain" />
         : <p className="mt-1 text-sm text-muted">{t("noPhotoHere")}</p>}
+      <LongClips sample={sample} />
       <SystemChecks sample={sample} />
       {safetyNotes.map((n, i) => <p key={i} className="mt-1 flex gap-1.5 text-sm text-warn"><Icon name="alert" className="mt-0.5 size-4" /><span><span className="font-mono">{n.time}</span> {n.note}</span></p>)}
       <ul className="mt-3 flex flex-col gap-2">
@@ -258,14 +259,19 @@ function SystemChecks({ sample }: { sample: StoredEvent }) {
   const { t } = useT();
   const id = sample.payload.identity as { status: string; why: string[] } | undefined;
   const auto = sample.payload.autoconfirm as { decision: string; why: string[] } | undefined;
-  if (!id && !auto) return null;
+  // trust score: a fixed rule over the warnings while filming (not the AI); separate from the skill score
+  const trust = sample.payload.trust as { score: number; band: "high" | "medium" | "low"; why: string[] } | undefined;
+  const odd = (sample.payload.suspicious ?? []) as { time: string; note: string }[];
+  if (!id && !auto && !trust) return null;
   return (
     <details className="mt-2 rounded-lg bg-paper p-2 text-xs">
       <summary className="flex cursor-pointer flex-wrap items-center gap-1">
         {id && <Pill tone={id.status === "verified" ? "good" : id.status === "mismatch" ? "bad" : "sun"}><Icon name="scan" className="size-3.5" />{t(`identity_${id.status}` as "identity_verified")}</Pill>}
         {auto && <Pill tone={auto.decision === "auto_confirm" ? "good" : "neutral"}>{auto.decision === "auto_confirm" ? t("systemConfirmed") : t("needsTeacher")}</Pill>}
+        {trust && <Pill tone={trust.band === "high" ? "good" : trust.band === "medium" ? "sun" : "bad"}><Icon name="shield" className="size-3.5" />{t("trustScore", { n: trust.score })}</Pill>}
       </summary>
-      <ul className="mt-1 font-mono">{[...(id?.why ?? []), ...(auto?.why ?? [])].map((w, i) => <li key={i}>{w}</li>)}</ul>
+      {odd.length > 0 && <ul className="mt-1">{odd.map((x, i) => <li key={i}><span className="font-mono">{x.time}</span> {x.note}</li>)}</ul>}
+      <ul className="mt-1 font-mono">{[...(trust?.why ?? []), ...(id?.why ?? []), ...(auto?.why ?? [])].map((w, i) => <li key={i}>{w}</li>)}</ul>
     </details>
   );
 }
@@ -428,6 +434,28 @@ function FairCheck({ rows }: { rows: IntegritySummary[] }) {
         ))}
       </ul>
       {rows.some((r) => r.flagged) && <p className="mt-2 text-xs text-muted">{t("integrityHint")}</p>}
+    </div>
+  );
+}
+
+/** A long task's full-speed clips (busiest moments and the finished work), if they are on this phone. */
+function LongClips({ sample }: { sample: StoredEvent }) {
+  const { t } = useT();
+  const refs = (sample.payload.clip_refs ?? []) as { ref: string; at: number; why: "active" | "final" }[];
+  const rows = useLive(() => db.media.bulkGet(refs.map((r) => r.ref)), [sample.id], [] as (MediaRow | undefined)[]);
+  const urls = useMemo(() => rows.map((m) => (m ? URL.createObjectURL(m.blob) : null)), [rows]);
+  if (sample.payload.mode !== "long") return null;
+  return (
+    <div className="mt-2 flex flex-col gap-1 text-sm">
+      <p className="text-muted">{t("longTaskNote")}</p>
+      {refs.map((r, i) => urls[i] && (
+        <figure key={r.ref}>
+          <figcaption className="font-mono text-xs text-muted">
+            {Math.floor(r.at / 60)}:{String(r.at % 60).padStart(2, "0")} · {r.why === "final" ? t("clipFinal") : t("clipBusy")}
+          </figcaption>
+          <video src={urls[i]!} controls playsInline className="max-h-40 w-full rounded-lg bg-black" />
+        </figure>
+      ))}
     </div>
   );
 }

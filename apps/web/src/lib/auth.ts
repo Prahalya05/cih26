@@ -22,7 +22,13 @@ export interface Account {
   school_name?: string | null;
   class_code?: string | null;
   student_id?: string | null;
+  /** all her profiles (up to 3, server setting STUDENT_PROFILES_MAX); student_id is the first */
+  student_ids?: string[];
+  student_profiles_max?: number;
 }
+
+/** A student account's profiles: the list from the server, or the single id from an older server. */
+export const profileIds = (a: Account): string[] => a.student_ids?.length ? a.student_ids : a.student_id ? [a.student_id] : [];
 
 const SESSION = "session";
 const TOKEN = "device_token";
@@ -55,7 +61,8 @@ export async function clearLocalUserData(): Promise<void> {
 
 async function hydrateMyProfile(studentId: string): Promise<void> {
   if (await db.students.get(studentId)) return;
-  const r = await call<{ student: Student | null; actions: Omit<Action, "synced">[]; events: StoredEvent[] }>("/v2/auth/me/profile");
+  const r = await call<{ student: Student | null; actions: Omit<Action, "synced">[]; events: StoredEvent[] }>(
+    `/v2/auth/me/profile?student_id=${encodeURIComponent(studentId)}`);
   if (isError(r) || !r.student) return;
   await db.transaction("rw", db.students, db.actions, db.events, async () => {
     await db.students.put({ ...r.student!, synced_at: r.student!.updated_at });
@@ -99,8 +106,8 @@ export async function verifyOtp(login: string, code: string, extra?: NewAccount)
       if (out.account.class_code) localStorage.setItem("disha.code", out.account.class_code);
       else localStorage.removeItem("disha.code");
     } catch { /* private mode */ }
-    if (out.account.role === "student" && out.account.student_id) {
-      await hydrateMyProfile(out.account.student_id).catch(() => undefined);
+    if (out.account.role === "student") {
+      for (const sid of profileIds(out.account)) await hydrateMyProfile(sid).catch(() => undefined);
     }
     window.dispatchEvent(new Event(EVENT));
     return out.account;
@@ -134,22 +141,24 @@ export async function refreshAccount(): Promise<Account | null> {
     fresh.class_code !== cur.class_code ||
     fresh.school_kind !== cur.school_kind ||
     fresh.school_name !== cur.school_name ||
-    fresh.student_id !== cur.student_id;
+    fresh.student_id !== cur.student_id ||
+    profileIds(fresh).join() !== profileIds(cur).join();
   if (changed) {
     await saveAccount(fresh);
     try {
       if (fresh.class_code) localStorage.setItem("disha.code", fresh.class_code);
       else if (fresh.role === "student") localStorage.removeItem("disha.code");
     } catch { /* private mode */ }
-    if (fresh.role === "student" && fresh.student_id) {
-      const existing = await db.students.get(fresh.student_id);
-      if (existing) {
-        await db.students.update(fresh.student_id, { facilitator_code: fresh.class_code ?? undefined, updated_at: Date.now() });
+    if (fresh.role === "student") {
+      for (const sid of profileIds(fresh)) {
+        if (await db.students.get(sid)) {
+          await db.students.update(sid, { facilitator_code: fresh.class_code ?? undefined, updated_at: Date.now() });
+        }
       }
     }
   }
-  if (fresh.role === "student" && fresh.student_id) {
-    await hydrateMyProfile(fresh.student_id).catch(() => undefined);
+  if (fresh.role === "student") {
+    for (const sid of profileIds(fresh)) await hydrateMyProfile(sid).catch(() => undefined);
   }
   return fresh;
 }

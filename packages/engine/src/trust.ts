@@ -117,6 +117,70 @@ export function identityCheck(x: IdentityInput): IdentityResult {
   return { status, matched_share: Math.round(share * 1000) / 1000, best_distance: best, liveness_ok: live, why };
 }
 
+// ---------- trust score: how far can we trust that this video is her own, live work? ----------
+// A fixed rule over the warning counts from her phone (lib/video.ts) and the AI's "suspicious" notes. It is
+// separate from the skill score: it never changes what the AI or the teacher scored for the work. Twin of
+// trust_score in apps/api/app/services/trust.py; golden.json checks both give the same answer.
+
+export const TRUST_RULE = {
+  start: 100,
+  /** at or above this the score is "high", and auto-confirm may go ahead */
+  high: 80,
+  /** below this the score is "low" */
+  medium: 50,
+  /** points off each time a warning happened, and the most one kind of warning can take off */
+  penalty: {
+    screen: { each: 25, max: 50, label: "another phone or screen in view" },
+    multi_face: { each: 25, max: 50, label: "another person in view" },
+    ai_noticed: { each: 25, max: 50, label: "the AI noticed something" },
+    uploaded: { each: 25, max: 25, label: "chosen from the gallery, not filmed live" },
+    tab_away: { each: 15, max: 30, label: "left Disha while filming" },
+    camera_lost: { each: 10, max: 20, label: "camera stopped" },
+    no_hands: { each: 5, max: 20, label: "hands not seen for a while", per10min: true },
+    dark: { each: 5, max: 15, label: "too dark", per10min: true },
+  },
+} as const;
+
+export type TrustKind = keyof typeof TRUST_RULE.penalty;
+
+export interface TrustScore {
+  score: number;
+  band: "high" | "medium" | "low";
+  /** points taken off per kind of warning */
+  minus: Partial<Record<TrustKind, number>>;
+  why: string[];
+}
+
+/**
+ * Trust score from warning counts. Unknown kinds are ignored; counts are whole numbers from 0 to 99.
+ * seconds: how long the video is. For a video longer than 10 minutes, small warnings (per10min) are counted per
+ * 10 minutes, so a long session is not marked down just for being long.
+ */
+export function trustScore(counts: Record<string, unknown>, seconds?: unknown): TrustScore {
+  const secs = typeof seconds === "number" && Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
+  const minus: Partial<Record<TrustKind, number>> = {};
+  const why: string[] = [`start at ${TRUST_RULE.start}`];
+  let score: number = TRUST_RULE.start;
+  for (const kind of Object.keys(TRUST_RULE.penalty) as TrustKind[]) {
+    const raw = counts[kind];
+    const n = typeof raw === "number" && Number.isFinite(raw) ? Math.max(0, Math.min(99, Math.floor(raw))) : 0;
+    if (n === 0) continue;
+    const p: { each: number; max: number; label: string; per10min?: boolean } = TRUST_RULE.penalty[kind];
+    const spread = p.per10min === true && secs > 600;
+    const k = spread ? Math.ceil(n / (secs / 600)) : n;
+    const off = Math.min(p.max, k * p.each);
+    minus[kind] = off;
+    score -= off;
+    const times = `${n} ${n === 1 ? "time" : "times"}`;
+    const how = spread ? `${times} in ${Math.floor(secs / 60)} min, ${k} per 10 min` : times;
+    why.push(`− ${off}: ${p.label} (${how} × ${p.each}${k * p.each > p.max ? `, at most ${p.max}` : ""})`);
+  }
+  score = Math.max(0, score);
+  const band = score >= TRUST_RULE.high ? "high" : score >= TRUST_RULE.medium ? "medium" : "low";
+  why.push(`= ${score} (${band})`);
+  return { score, band, minus, why };
+}
+
 // ---------- auto-confirm: can the system confirm the AI's score itself? ----------
 
 export const AUTOCONFIRM_RULE = {
@@ -138,6 +202,8 @@ export interface AutoConfirmInput {
   /** 0-1, deterministic from the sample id so the audit pick is reproducible */
   audit_draw: number;
   minor_hazard?: boolean;
+  /** the video's trust score (trustScore); when given, it must be "high" for the system to confirm */
+  trust_score?: number | null;
 }
 
 export interface AutoConfirmResult {
@@ -153,6 +219,8 @@ export function autoConfirm(x: AutoConfirmInput): AutoConfirmResult {
     [`"cannot see" ${x.cannot_see}/${x.criteria} ≤ ${AUTOCONFIRM_RULE.maxCannotSee * 100}%`, x.criteria > 0 && x.cannot_see / x.criteria <= AUTOCONFIRM_RULE.maxCannotSee],
     [`AI agreement with teachers κ ${x.ai_kappa === null ? "unknown" : x.ai_kappa.toFixed(2)} ≥ ${AUTOCONFIRM_RULE.minKappa}`, x.ai_kappa !== null && x.ai_kappa >= AUTOCONFIRM_RULE.minKappa],
     [`not a hazardous task for a minor`, !x.minor_hazard],
+    ...(x.trust_score === undefined || x.trust_score === null ? []
+      : [[`trust score ${x.trust_score} ≥ ${TRUST_RULE.high}`, x.trust_score >= TRUST_RULE.high] as [string, boolean]]),
   ];
   const why = checks.map(([t, ok]) => `${t} ${ok ? "✓" : "✗"}`);
   const allOk = checks.every(([, ok]) => ok);

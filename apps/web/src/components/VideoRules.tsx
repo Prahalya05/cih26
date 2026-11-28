@@ -19,12 +19,14 @@ const RULES: { icon: "video" | "bulb" | "users" | "phone" | "eyeOff" | "shield";
 
 export function VideoRules({ next, onFilm, onFile, onCancel }: {
   next: Next;
-  onFilm: () => void;
+  /** short: a normal video up to 3 min; long: up to an hour, kept as one picture a second plus full-speed clips */
+  onFilm: (mode: "short" | "long") => void;
   onFile: (file: File | undefined) => void;
   onCancel: () => void;
 }) {
   const { t } = useT();
   const [agreed, setAgreed] = useState(false);
+  const [mode, setMode] = useState<"short" | "long">("short");
   return (
     <section className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4">
       <p className="flex items-center gap-2 text-lg font-extrabold"><Icon name="info" className="size-5 text-accent-dark" />{t("rulesTitle")}</p>
@@ -41,7 +43,19 @@ export function VideoRules({ next, onFilm, onFile, onCancel }: {
         {t("rulesAgree")}
       </label>
       {next === "film" && (
-        <Button disabled={!agreed} onClick={onFilm}><Icon name="video" className="size-5" />{t("rulesStart")}</Button>
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-1 font-bold">{t("modeTitle")}</legend>
+          {(["short", "long"] as const).map((m) => (
+            <label key={m} className={`flex gap-3 rounded-xl border p-3 ${mode === m ? "border-accent bg-brand-soft/60" : "border-line"}`}>
+              <input type="radio" name="mode" className="mt-1 size-5" checked={mode === m} onChange={() => setMode(m)} />
+              <span><span className="font-bold">{t(m === "short" ? "modeShort" : "modeLong")}</span><br />
+                <span className="text-sm text-muted">{t(m === "short" ? "modeShortHint" : "modeLongHint")}</span></span>
+            </label>
+          ))}
+        </fieldset>
+      )}
+      {next === "film" && (
+        <Button disabled={!agreed} onClick={() => onFilm(mode)}><Icon name="video" className="size-5" />{t("rulesStart")}</Button>
       )}
       {next === "upload" && (
         <label className={`flex min-h-13 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-base font-bold text-white ${agreed ? "cursor-pointer" : "pointer-events-none opacity-40"}`}>

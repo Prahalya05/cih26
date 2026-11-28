@@ -84479,5 +84479,1913 @@
     ]
    }
   }
+ ],
+ "trust_score": [
+  {
+   "counts": {},
+   "seconds": null,
+   "result": {
+    "score": 100,
+    "band": "high",
+    "minus": {},
+    "why": [
+     "start at 100",
+     "= 100 (high)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "screen": 1
+   },
+   "seconds": null,
+   "result": {
+    "score": 75,
+    "band": "medium",
+    "minus": {
+     "screen": 25
+    },
+    "why": [
+     "start at 100",
+     "− 25: another phone or screen in view (1 time × 25)",
+     "= 75 (medium)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "screen": 3
+   },
+   "seconds": null,
+   "result": {
+    "score": 50,
+    "band": "medium",
+    "minus": {
+     "screen": 50
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (3 times × 25, at most 50)",
+     "= 50 (medium)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "no_hands": 2,
+    "dark": 1
+   },
+   "seconds": null,
+   "result": {
+    "score": 85,
+    "band": "high",
+    "minus": {
+     "no_hands": 10,
+     "dark": 5
+    },
+    "why": [
+     "start at 100",
+     "− 10: hands not seen for a while (2 times × 5)",
+     "− 5: too dark (1 time × 5)",
+     "= 85 (high)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "uploaded": 1
+   },
+   "seconds": null,
+   "result": {
+    "score": 75,
+    "band": "medium",
+    "minus": {
+     "uploaded": 25
+    },
+    "why": [
+     "start at 100",
+     "− 25: chosen from the gallery, not filmed live (1 time × 25)",
+     "= 75 (medium)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "multi_face": 1,
+    "tab_away": 1,
+    "ai_noticed": 1
+   },
+   "seconds": null,
+   "result": {
+    "score": 35,
+    "band": "low",
+    "minus": {
+     "multi_face": 25,
+     "ai_noticed": 25,
+     "tab_away": 15
+    },
+    "why": [
+     "start at 100",
+     "− 25: another person in view (1 time × 25)",
+     "− 25: the AI noticed something (1 time × 25)",
+     "− 15: left Disha while filming (1 time × 15)",
+     "= 35 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "no_hands": 99,
+    "dark": 99
+   },
+   "seconds": null,
+   "result": {
+    "score": 65,
+    "band": "medium",
+    "minus": {
+     "no_hands": 20,
+     "dark": 15
+    },
+    "why": [
+     "start at 100",
+     "− 20: hands not seen for a while (99 times × 5, at most 20)",
+     "− 15: too dark (99 times × 5, at most 15)",
+     "= 65 (medium)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "screen": 0,
+    "unknown_kind": 5
+   },
+   "seconds": null,
+   "result": {
+    "score": 100,
+    "band": "high",
+    "minus": {},
+    "why": [
+     "start at 100",
+     "= 100 (high)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "dark": -3,
+    "no_hands": 2.7
+   },
+   "seconds": null,
+   "result": {
+    "score": 90,
+    "band": "high",
+    "minus": {
+     "no_hands": 10
+    },
+    "why": [
+     "start at 100",
+     "− 10: hands not seen for a while (2 times × 5)",
+     "= 90 (high)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "screen": "2"
+   },
+   "seconds": null,
+   "result": {
+    "score": 100,
+    "band": "high",
+    "minus": {},
+    "why": [
+     "start at 100",
+     "= 100 (high)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "camera_lost": 2,
+    "multi_face": 3,
+    "no_hands": 4,
+    "dark": 4,
+    "screen": 1
+   },
+   "seconds": null,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 25,
+     "multi_face": 50,
+     "camera_lost": 20,
+     "no_hands": 20,
+     "dark": 15
+    },
+    "why": [
+     "start at 100",
+     "− 25: another phone or screen in view (1 time × 25)",
+     "− 50: another person in view (3 times × 25, at most 50)",
+     "− 20: camera stopped (2 times × 10)",
+     "− 20: hands not seen for a while (4 times × 5)",
+     "− 15: too dark (4 times × 5, at most 15)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "screen": 0,
+    "no_hands": 3,
+    "ai_noticed": 1
+   },
+   "seconds": null,
+   "result": {
+    "score": 60,
+    "band": "medium",
+    "minus": {
+     "ai_noticed": 25,
+     "no_hands": 15
+    },
+    "why": [
+     "start at 100",
+     "− 25: the AI noticed something (1 time × 25)",
+     "− 15: hands not seen for a while (3 times × 5)",
+     "= 60 (medium)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "no_hands": 0,
+    "multi_face": 0,
+    "ai_noticed": 4,
+    "camera_lost": 2
+   },
+   "seconds": null,
+   "result": {
+    "score": 30,
+    "band": "low",
+    "minus": {
+     "ai_noticed": 50,
+     "camera_lost": 20
+    },
+    "why": [
+     "start at 100",
+     "− 50: the AI noticed something (4 times × 25, at most 50)",
+     "− 20: camera stopped (2 times × 10)",
+     "= 30 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "uploaded": 0,
+    "multi_face": 1,
+    "no_hands": 2,
+    "screen": 0,
+    "tab_away": 0,
+    "dark": 4,
+    "camera_lost": 3,
+    "ai_noticed": 0
+   },
+   "seconds": null,
+   "result": {
+    "score": 30,
+    "band": "low",
+    "minus": {
+     "multi_face": 25,
+     "camera_lost": 20,
+     "no_hands": 10,
+     "dark": 15
+    },
+    "why": [
+     "start at 100",
+     "− 25: another person in view (1 time × 25)",
+     "− 20: camera stopped (3 times × 10, at most 20)",
+     "− 10: hands not seen for a while (2 times × 5)",
+     "− 15: too dark (4 times × 5, at most 15)",
+     "= 30 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "tab_away": 4,
+    "uploaded": 0
+   },
+   "seconds": null,
+   "result": {
+    "score": 70,
+    "band": "medium",
+    "minus": {
+     "tab_away": 30
+    },
+    "why": [
+     "start at 100",
+     "− 30: left Disha while filming (4 times × 15, at most 30)",
+     "= 70 (medium)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "screen": 4,
+    "no_hands": 3,
+    "uploaded": 3,
+    "tab_away": 1,
+    "multi_face": 3,
+    "dark": 0
+   },
+   "seconds": null,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "multi_face": 50,
+     "uploaded": 25,
+     "tab_away": 15,
+     "no_hands": 15
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (4 times × 25, at most 50)",
+     "− 50: another person in view (3 times × 25, at most 50)",
+     "− 25: chosen from the gallery, not filmed live (3 times × 25, at most 25)",
+     "− 15: left Disha while filming (1 time × 15)",
+     "− 15: hands not seen for a while (3 times × 5)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "screen": 3
+   },
+   "seconds": null,
+   "result": {
+    "score": 50,
+    "band": "medium",
+    "minus": {
+     "screen": 50
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (3 times × 25, at most 50)",
+     "= 50 (medium)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "camera_lost": 3
+   },
+   "seconds": null,
+   "result": {
+    "score": 80,
+    "band": "high",
+    "minus": {
+     "camera_lost": 20
+    },
+    "why": [
+     "start at 100",
+     "− 20: camera stopped (3 times × 10, at most 20)",
+     "= 80 (high)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "tab_away": 4,
+    "dark": 3
+   },
+   "seconds": null,
+   "result": {
+    "score": 55,
+    "band": "medium",
+    "minus": {
+     "tab_away": 30,
+     "dark": 15
+    },
+    "why": [
+     "start at 100",
+     "− 30: left Disha while filming (4 times × 15, at most 30)",
+     "− 15: too dark (3 times × 5)",
+     "= 55 (medium)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "dark": 0
+   },
+   "seconds": null,
+   "result": {
+    "score": 100,
+    "band": "high",
+    "minus": {},
+    "why": [
+     "start at 100",
+     "= 100 (high)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "tab_away": 0,
+    "dark": 3,
+    "screen": 2
+   },
+   "seconds": null,
+   "result": {
+    "score": 35,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "dark": 15
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (2 times × 25)",
+     "− 15: too dark (3 times × 5)",
+     "= 35 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "screen": 1,
+    "dark": 0,
+    "uploaded": 3,
+    "multi_face": 0,
+    "no_hands": 3,
+    "ai_noticed": 3,
+    "camera_lost": 0
+   },
+   "seconds": null,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 25,
+     "ai_noticed": 50,
+     "uploaded": 25,
+     "no_hands": 15
+    },
+    "why": [
+     "start at 100",
+     "− 25: another phone or screen in view (1 time × 25)",
+     "− 50: the AI noticed something (3 times × 25, at most 50)",
+     "− 25: chosen from the gallery, not filmed live (3 times × 25, at most 25)",
+     "− 15: hands not seen for a while (3 times × 5)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "uploaded": 0,
+    "ai_noticed": 1,
+    "multi_face": 1
+   },
+   "seconds": null,
+   "result": {
+    "score": 50,
+    "band": "medium",
+    "minus": {
+     "multi_face": 25,
+     "ai_noticed": 25
+    },
+    "why": [
+     "start at 100",
+     "− 25: another person in view (1 time × 25)",
+     "− 25: the AI noticed something (1 time × 25)",
+     "= 50 (medium)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "screen": 4,
+    "dark": 3,
+    "multi_face": 4
+   },
+   "seconds": null,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "multi_face": 50,
+     "dark": 15
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (4 times × 25, at most 50)",
+     "− 50: another person in view (4 times × 25, at most 50)",
+     "− 15: too dark (3 times × 5)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "dark": 2,
+    "tab_away": 4,
+    "ai_noticed": 2,
+    "no_hands": 2,
+    "screen": 3,
+    "multi_face": 1,
+    "camera_lost": 0
+   },
+   "seconds": null,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "multi_face": 25,
+     "ai_noticed": 50,
+     "tab_away": 30,
+     "no_hands": 10,
+     "dark": 10
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (3 times × 25, at most 50)",
+     "− 25: another person in view (1 time × 25)",
+     "− 50: the AI noticed something (2 times × 25)",
+     "− 30: left Disha while filming (4 times × 15, at most 30)",
+     "− 10: hands not seen for a while (2 times × 5)",
+     "− 10: too dark (2 times × 5)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "multi_face": 0,
+    "screen": 3,
+    "no_hands": 1,
+    "dark": 0,
+    "camera_lost": 3,
+    "uploaded": 2,
+    "ai_noticed": 3,
+    "tab_away": 3
+   },
+   "seconds": null,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "ai_noticed": 50,
+     "uploaded": 25,
+     "tab_away": 30,
+     "camera_lost": 20,
+     "no_hands": 5
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (3 times × 25, at most 50)",
+     "− 50: the AI noticed something (3 times × 25, at most 50)",
+     "− 25: chosen from the gallery, not filmed live (2 times × 25, at most 25)",
+     "− 30: left Disha while filming (3 times × 15, at most 30)",
+     "− 20: camera stopped (3 times × 10, at most 20)",
+     "− 5: hands not seen for a while (1 time × 5)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "uploaded": 4,
+    "no_hands": 2,
+    "camera_lost": 2,
+    "dark": 1,
+    "ai_noticed": 2,
+    "multi_face": 2,
+    "screen": 3
+   },
+   "seconds": null,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "multi_face": 50,
+     "ai_noticed": 50,
+     "uploaded": 25,
+     "camera_lost": 20,
+     "no_hands": 10,
+     "dark": 5
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (3 times × 25, at most 50)",
+     "− 50: another person in view (2 times × 25)",
+     "− 50: the AI noticed something (2 times × 25)",
+     "− 25: chosen from the gallery, not filmed live (4 times × 25, at most 25)",
+     "− 20: camera stopped (2 times × 10)",
+     "− 10: hands not seen for a while (2 times × 5)",
+     "− 5: too dark (1 time × 5)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "no_hands": 0,
+    "dark": 1,
+    "ai_noticed": 1,
+    "uploaded": 2,
+    "camera_lost": 0,
+    "screen": 1,
+    "multi_face": 4
+   },
+   "seconds": null,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 25,
+     "multi_face": 50,
+     "ai_noticed": 25,
+     "uploaded": 25,
+     "dark": 5
+    },
+    "why": [
+     "start at 100",
+     "− 25: another phone or screen in view (1 time × 25)",
+     "− 50: another person in view (4 times × 25, at most 50)",
+     "− 25: the AI noticed something (1 time × 25)",
+     "− 25: chosen from the gallery, not filmed live (2 times × 25, at most 25)",
+     "− 5: too dark (1 time × 5)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "screen": 4
+   },
+   "seconds": null,
+   "result": {
+    "score": 50,
+    "band": "medium",
+    "minus": {
+     "screen": 50
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (4 times × 25, at most 50)",
+     "= 50 (medium)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "ai_noticed": 1,
+    "dark": 2
+   },
+   "seconds": null,
+   "result": {
+    "score": 65,
+    "band": "medium",
+    "minus": {
+     "ai_noticed": 25,
+     "dark": 10
+    },
+    "why": [
+     "start at 100",
+     "− 25: the AI noticed something (1 time × 25)",
+     "− 10: too dark (2 times × 5)",
+     "= 65 (medium)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "no_hands": 0
+   },
+   "seconds": null,
+   "result": {
+    "score": 100,
+    "band": "high",
+    "minus": {},
+    "why": [
+     "start at 100",
+     "= 100 (high)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "multi_face": 0,
+    "ai_noticed": 3,
+    "uploaded": 1,
+    "tab_away": 3,
+    "screen": 3
+   },
+   "seconds": null,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "ai_noticed": 50,
+     "uploaded": 25,
+     "tab_away": 30
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (3 times × 25, at most 50)",
+     "− 50: the AI noticed something (3 times × 25, at most 50)",
+     "− 25: chosen from the gallery, not filmed live (1 time × 25)",
+     "− 30: left Disha while filming (3 times × 15, at most 30)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "no_hands": 0,
+    "screen": 0
+   },
+   "seconds": null,
+   "result": {
+    "score": 100,
+    "band": "high",
+    "minus": {},
+    "why": [
+     "start at 100",
+     "= 100 (high)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "ai_noticed": 4,
+    "screen": 0,
+    "camera_lost": 0,
+    "dark": 0,
+    "tab_away": 4,
+    "uploaded": 3,
+    "no_hands": 4
+   },
+   "seconds": null,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "ai_noticed": 50,
+     "uploaded": 25,
+     "tab_away": 30,
+     "no_hands": 20
+    },
+    "why": [
+     "start at 100",
+     "− 50: the AI noticed something (4 times × 25, at most 50)",
+     "− 25: chosen from the gallery, not filmed live (3 times × 25, at most 25)",
+     "− 30: left Disha while filming (4 times × 15, at most 30)",
+     "− 20: hands not seen for a while (4 times × 5)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "ai_noticed": 3,
+    "camera_lost": 1
+   },
+   "seconds": null,
+   "result": {
+    "score": 40,
+    "band": "low",
+    "minus": {
+     "ai_noticed": 50,
+     "camera_lost": 10
+    },
+    "why": [
+     "start at 100",
+     "− 50: the AI noticed something (3 times × 25, at most 50)",
+     "− 10: camera stopped (1 time × 10)",
+     "= 40 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "camera_lost": 3,
+    "uploaded": 4,
+    "multi_face": 3,
+    "dark": 4,
+    "no_hands": 1,
+    "ai_noticed": 3
+   },
+   "seconds": null,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "multi_face": 50,
+     "ai_noticed": 50,
+     "uploaded": 25,
+     "camera_lost": 20,
+     "no_hands": 5,
+     "dark": 15
+    },
+    "why": [
+     "start at 100",
+     "− 50: another person in view (3 times × 25, at most 50)",
+     "− 50: the AI noticed something (3 times × 25, at most 50)",
+     "− 25: chosen from the gallery, not filmed live (4 times × 25, at most 25)",
+     "− 20: camera stopped (3 times × 10, at most 20)",
+     "− 5: hands not seen for a while (1 time × 5)",
+     "− 15: too dark (4 times × 5, at most 15)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "uploaded": 4,
+    "no_hands": 2
+   },
+   "seconds": null,
+   "result": {
+    "score": 65,
+    "band": "medium",
+    "minus": {
+     "uploaded": 25,
+     "no_hands": 10
+    },
+    "why": [
+     "start at 100",
+     "− 25: chosen from the gallery, not filmed live (4 times × 25, at most 25)",
+     "− 10: hands not seen for a while (2 times × 5)",
+     "= 65 (medium)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "camera_lost": 1,
+    "dark": 2,
+    "uploaded": 2,
+    "multi_face": 1,
+    "ai_noticed": 1,
+    "no_hands": 2
+   },
+   "seconds": null,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "multi_face": 25,
+     "ai_noticed": 25,
+     "uploaded": 25,
+     "camera_lost": 10,
+     "no_hands": 10,
+     "dark": 10
+    },
+    "why": [
+     "start at 100",
+     "− 25: another person in view (1 time × 25)",
+     "− 25: the AI noticed something (1 time × 25)",
+     "− 25: chosen from the gallery, not filmed live (2 times × 25, at most 25)",
+     "− 10: camera stopped (1 time × 10)",
+     "− 10: hands not seen for a while (2 times × 5)",
+     "− 10: too dark (2 times × 5)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "tab_away": 2,
+    "dark": 2,
+    "uploaded": 3
+   },
+   "seconds": null,
+   "result": {
+    "score": 35,
+    "band": "low",
+    "minus": {
+     "uploaded": 25,
+     "tab_away": 30,
+     "dark": 10
+    },
+    "why": [
+     "start at 100",
+     "− 25: chosen from the gallery, not filmed live (3 times × 25, at most 25)",
+     "− 30: left Disha while filming (2 times × 15)",
+     "− 10: too dark (2 times × 5)",
+     "= 35 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "multi_face": 2,
+    "uploaded": 2,
+    "tab_away": 1,
+    "screen": 0
+   },
+   "seconds": null,
+   "result": {
+    "score": 10,
+    "band": "low",
+    "minus": {
+     "multi_face": 50,
+     "uploaded": 25,
+     "tab_away": 15
+    },
+    "why": [
+     "start at 100",
+     "− 50: another person in view (2 times × 25)",
+     "− 25: chosen from the gallery, not filmed live (2 times × 25, at most 25)",
+     "− 15: left Disha while filming (1 time × 15)",
+     "= 10 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "no_hands": 3,
+    "uploaded": 0,
+    "tab_away": 3,
+    "camera_lost": 4,
+    "dark": 2
+   },
+   "seconds": null,
+   "result": {
+    "score": 25,
+    "band": "low",
+    "minus": {
+     "tab_away": 30,
+     "camera_lost": 20,
+     "no_hands": 15,
+     "dark": 10
+    },
+    "why": [
+     "start at 100",
+     "− 30: left Disha while filming (3 times × 15, at most 30)",
+     "− 20: camera stopped (4 times × 10, at most 20)",
+     "− 15: hands not seen for a while (3 times × 5)",
+     "− 10: too dark (2 times × 5)",
+     "= 25 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "dark": 0,
+    "uploaded": 4,
+    "multi_face": 2,
+    "no_hands": 2,
+    "tab_away": 3,
+    "ai_noticed": 4,
+    "camera_lost": 3,
+    "screen": 4
+   },
+   "seconds": null,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "multi_face": 50,
+     "ai_noticed": 50,
+     "uploaded": 25,
+     "tab_away": 30,
+     "camera_lost": 20,
+     "no_hands": 10
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (4 times × 25, at most 50)",
+     "− 50: another person in view (2 times × 25)",
+     "− 50: the AI noticed something (4 times × 25, at most 50)",
+     "− 25: chosen from the gallery, not filmed live (4 times × 25, at most 25)",
+     "− 30: left Disha while filming (3 times × 15, at most 30)",
+     "− 20: camera stopped (3 times × 10, at most 20)",
+     "− 10: hands not seen for a while (2 times × 5)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "multi_face": 3
+   },
+   "seconds": null,
+   "result": {
+    "score": 50,
+    "band": "medium",
+    "minus": {
+     "multi_face": 50
+    },
+    "why": [
+     "start at 100",
+     "− 50: another person in view (3 times × 25, at most 50)",
+     "= 50 (medium)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "camera_lost": 2,
+    "dark": 1,
+    "ai_noticed": 0,
+    "tab_away": 3,
+    "screen": 1,
+    "multi_face": 1
+   },
+   "seconds": null,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 25,
+     "multi_face": 25,
+     "tab_away": 30,
+     "camera_lost": 20,
+     "dark": 5
+    },
+    "why": [
+     "start at 100",
+     "− 25: another phone or screen in view (1 time × 25)",
+     "− 25: another person in view (1 time × 25)",
+     "− 30: left Disha while filming (3 times × 15, at most 30)",
+     "− 20: camera stopped (2 times × 10)",
+     "− 5: too dark (1 time × 5)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "dark": 4
+   },
+   "seconds": null,
+   "result": {
+    "score": 85,
+    "band": "high",
+    "minus": {
+     "dark": 15
+    },
+    "why": [
+     "start at 100",
+     "− 15: too dark (4 times × 5, at most 15)",
+     "= 85 (high)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "camera_lost": 1,
+    "ai_noticed": 2,
+    "screen": 3,
+    "no_hands": 0,
+    "multi_face": 3
+   },
+   "seconds": null,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "multi_face": 50,
+     "ai_noticed": 50,
+     "camera_lost": 10
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (3 times × 25, at most 50)",
+     "− 50: another person in view (3 times × 25, at most 50)",
+     "− 50: the AI noticed something (2 times × 25)",
+     "− 10: camera stopped (1 time × 10)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "no_hands": 1,
+    "multi_face": 4
+   },
+   "seconds": null,
+   "result": {
+    "score": 45,
+    "band": "low",
+    "minus": {
+     "multi_face": 50,
+     "no_hands": 5
+    },
+    "why": [
+     "start at 100",
+     "− 50: another person in view (4 times × 25, at most 50)",
+     "− 5: hands not seen for a while (1 time × 5)",
+     "= 45 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "dark": 0
+   },
+   "seconds": null,
+   "result": {
+    "score": 100,
+    "band": "high",
+    "minus": {},
+    "why": [
+     "start at 100",
+     "= 100 (high)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "screen": 2,
+    "dark": 3,
+    "no_hands": 4,
+    "camera_lost": 0,
+    "ai_noticed": 1,
+    "multi_face": 4,
+    "uploaded": 2
+   },
+   "seconds": null,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "multi_face": 50,
+     "ai_noticed": 25,
+     "uploaded": 25,
+     "no_hands": 20,
+     "dark": 15
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (2 times × 25)",
+     "− 50: another person in view (4 times × 25, at most 50)",
+     "− 25: the AI noticed something (1 time × 25)",
+     "− 25: chosen from the gallery, not filmed live (2 times × 25, at most 25)",
+     "− 20: hands not seen for a while (4 times × 5)",
+     "− 15: too dark (3 times × 5)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "screen": 1,
+    "camera_lost": 1,
+    "no_hands": 4,
+    "tab_away": 1
+   },
+   "seconds": null,
+   "result": {
+    "score": 30,
+    "band": "low",
+    "minus": {
+     "screen": 25,
+     "tab_away": 15,
+     "camera_lost": 10,
+     "no_hands": 20
+    },
+    "why": [
+     "start at 100",
+     "− 25: another phone or screen in view (1 time × 25)",
+     "− 15: left Disha while filming (1 time × 15)",
+     "− 10: camera stopped (1 time × 10)",
+     "− 20: hands not seen for a while (4 times × 5)",
+     "= 30 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "no_hands": 6
+   },
+   "seconds": 3600,
+   "result": {
+    "score": 95,
+    "band": "high",
+    "minus": {
+     "no_hands": 5
+    },
+    "why": [
+     "start at 100",
+     "− 5: hands not seen for a while (6 times in 60 min, 1 per 10 min × 5)",
+     "= 95 (high)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "no_hands": 7,
+    "dark": 3
+   },
+   "seconds": 1800,
+   "result": {
+    "score": 80,
+    "band": "high",
+    "minus": {
+     "no_hands": 15,
+     "dark": 5
+    },
+    "why": [
+     "start at 100",
+     "− 15: hands not seen for a while (7 times in 30 min, 3 per 10 min × 5)",
+     "− 5: too dark (3 times in 30 min, 1 per 10 min × 5)",
+     "= 80 (high)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "no_hands": 4
+   },
+   "seconds": 300,
+   "result": {
+    "score": 80,
+    "band": "high",
+    "minus": {
+     "no_hands": 20
+    },
+    "why": [
+     "start at 100",
+     "− 20: hands not seen for a while (4 times × 5)",
+     "= 80 (high)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "no_hands": 4
+   },
+   "seconds": 600,
+   "result": {
+    "score": 80,
+    "band": "high",
+    "minus": {
+     "no_hands": 20
+    },
+    "why": [
+     "start at 100",
+     "− 20: hands not seen for a while (4 times × 5)",
+     "= 80 (high)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "screen": 2,
+    "no_hands": 12,
+    "dark": 9
+   },
+   "seconds": 3600,
+   "result": {
+    "score": 30,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "no_hands": 10,
+     "dark": 10
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (2 times × 25)",
+     "− 10: hands not seen for a while (12 times in 60 min, 2 per 10 min × 5)",
+     "− 10: too dark (9 times in 60 min, 2 per 10 min × 5)",
+     "= 30 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "no_hands": 3
+   },
+   "seconds": 601,
+   "result": {
+    "score": 85,
+    "band": "high",
+    "minus": {
+     "no_hands": 15
+    },
+    "why": [
+     "start at 100",
+     "− 15: hands not seen for a while (3 times in 10 min, 3 per 10 min × 5)",
+     "= 85 (high)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "dark": 2
+   },
+   "seconds": -60,
+   "result": {
+    "score": 90,
+    "band": "high",
+    "minus": {
+     "dark": 10
+    },
+    "why": [
+     "start at 100",
+     "− 10: too dark (2 times × 5)",
+     "= 90 (high)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "dark": 2
+   },
+   "seconds": true,
+   "result": {
+    "score": 90,
+    "band": "high",
+    "minus": {
+     "dark": 10
+    },
+    "why": [
+     "start at 100",
+     "− 10: too dark (2 times × 5)",
+     "= 90 (high)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "no_hands": 99,
+    "dark": 99
+   },
+   "seconds": 3600,
+   "result": {
+    "score": 65,
+    "band": "medium",
+    "minus": {
+     "no_hands": 20,
+     "dark": 15
+    },
+    "why": [
+     "start at 100",
+     "− 20: hands not seen for a while (99 times in 60 min, 17 per 10 min × 5, at most 20)",
+     "− 15: too dark (99 times in 60 min, 17 per 10 min × 5, at most 15)",
+     "= 65 (medium)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "camera_lost": 8,
+    "ai_noticed": 3,
+    "screen": 5,
+    "tab_away": 10,
+    "dark": 7
+   },
+   "seconds": 3600,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "ai_noticed": 50,
+     "tab_away": 30,
+     "camera_lost": 20,
+     "dark": 10
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (5 times × 25, at most 50)",
+     "− 50: the AI noticed something (3 times × 25, at most 50)",
+     "− 30: left Disha while filming (10 times × 15, at most 30)",
+     "− 20: camera stopped (8 times × 10, at most 20)",
+     "− 10: too dark (7 times in 60 min, 2 per 10 min × 5)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "multi_face": 11,
+    "tab_away": 6,
+    "uploaded": 11,
+    "camera_lost": 6
+   },
+   "seconds": 754.5,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "multi_face": 50,
+     "uploaded": 25,
+     "tab_away": 30,
+     "camera_lost": 20
+    },
+    "why": [
+     "start at 100",
+     "− 50: another person in view (11 times × 25, at most 50)",
+     "− 25: chosen from the gallery, not filmed live (11 times × 25, at most 25)",
+     "− 30: left Disha while filming (6 times × 15, at most 30)",
+     "− 20: camera stopped (6 times × 10, at most 20)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "multi_face": 11,
+    "ai_noticed": 4,
+    "dark": 5,
+    "screen": 7,
+    "uploaded": 5,
+    "tab_away": 11,
+    "camera_lost": 5,
+    "no_hands": 3
+   },
+   "seconds": 120,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "multi_face": 50,
+     "ai_noticed": 50,
+     "uploaded": 25,
+     "tab_away": 30,
+     "camera_lost": 20,
+     "no_hands": 15,
+     "dark": 15
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (7 times × 25, at most 50)",
+     "− 50: another person in view (11 times × 25, at most 50)",
+     "− 50: the AI noticed something (4 times × 25, at most 50)",
+     "− 25: chosen from the gallery, not filmed live (5 times × 25, at most 25)",
+     "− 30: left Disha while filming (11 times × 15, at most 30)",
+     "− 20: camera stopped (5 times × 10, at most 20)",
+     "− 15: hands not seen for a while (3 times × 5)",
+     "− 15: too dark (5 times × 5, at most 15)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "screen": 8
+   },
+   "seconds": 900,
+   "result": {
+    "score": 50,
+    "band": "medium",
+    "minus": {
+     "screen": 50
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (8 times × 25, at most 50)",
+     "= 50 (medium)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "no_hands": 1
+   },
+   "seconds": 900,
+   "result": {
+    "score": 95,
+    "band": "high",
+    "minus": {
+     "no_hands": 5
+    },
+    "why": [
+     "start at 100",
+     "− 5: hands not seen for a while (1 time in 15 min, 1 per 10 min × 5)",
+     "= 95 (high)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "uploaded": 12,
+    "tab_away": 1,
+    "dark": 10,
+    "multi_face": 5,
+    "ai_noticed": 7,
+    "no_hands": 9,
+    "screen": 9
+   },
+   "seconds": 3600,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "multi_face": 50,
+     "ai_noticed": 50,
+     "uploaded": 25,
+     "tab_away": 15,
+     "no_hands": 10,
+     "dark": 10
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (9 times × 25, at most 50)",
+     "− 50: another person in view (5 times × 25, at most 50)",
+     "− 50: the AI noticed something (7 times × 25, at most 50)",
+     "− 25: chosen from the gallery, not filmed live (12 times × 25, at most 25)",
+     "− 15: left Disha while filming (1 time × 15)",
+     "− 10: hands not seen for a while (9 times in 60 min, 2 per 10 min × 5)",
+     "− 10: too dark (10 times in 60 min, 2 per 10 min × 5)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "no_hands": 2,
+    "uploaded": 2,
+    "dark": 0
+   },
+   "seconds": 120,
+   "result": {
+    "score": 65,
+    "band": "medium",
+    "minus": {
+     "uploaded": 25,
+     "no_hands": 10
+    },
+    "why": [
+     "start at 100",
+     "− 25: chosen from the gallery, not filmed live (2 times × 25, at most 25)",
+     "− 10: hands not seen for a while (2 times × 5)",
+     "= 65 (medium)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "ai_noticed": 0
+   },
+   "seconds": 2400,
+   "result": {
+    "score": 100,
+    "band": "high",
+    "minus": {},
+    "why": [
+     "start at 100",
+     "= 100 (high)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "tab_away": 9,
+    "dark": 7,
+    "uploaded": 0,
+    "no_hands": 2,
+    "screen": 5,
+    "multi_face": 7,
+    "ai_noticed": 2,
+    "camera_lost": 1
+   },
+   "seconds": 900,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "multi_face": 50,
+     "ai_noticed": 50,
+     "tab_away": 30,
+     "camera_lost": 10,
+     "no_hands": 10,
+     "dark": 15
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (5 times × 25, at most 50)",
+     "− 50: another person in view (7 times × 25, at most 50)",
+     "− 50: the AI noticed something (2 times × 25)",
+     "− 30: left Disha while filming (9 times × 15, at most 30)",
+     "− 10: camera stopped (1 time × 10)",
+     "− 10: hands not seen for a while (2 times in 15 min, 2 per 10 min × 5)",
+     "− 15: too dark (7 times in 15 min, 5 per 10 min × 5, at most 15)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "tab_away": 0,
+    "screen": 2,
+    "camera_lost": 4,
+    "ai_noticed": 4,
+    "dark": 7
+   },
+   "seconds": 900,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "ai_noticed": 50,
+     "camera_lost": 20,
+     "dark": 15
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (2 times × 25)",
+     "− 50: the AI noticed something (4 times × 25, at most 50)",
+     "− 20: camera stopped (4 times × 10, at most 20)",
+     "− 15: too dark (7 times in 15 min, 5 per 10 min × 5, at most 15)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "tab_away": 10,
+    "camera_lost": 2,
+    "ai_noticed": 11,
+    "multi_face": 12,
+    "screen": 10,
+    "no_hands": 0,
+    "dark": 12
+   },
+   "seconds": 120,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "multi_face": 50,
+     "ai_noticed": 50,
+     "tab_away": 30,
+     "camera_lost": 20,
+     "dark": 15
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (10 times × 25, at most 50)",
+     "− 50: another person in view (12 times × 25, at most 50)",
+     "− 50: the AI noticed something (11 times × 25, at most 50)",
+     "− 30: left Disha while filming (10 times × 15, at most 30)",
+     "− 20: camera stopped (2 times × 10)",
+     "− 15: too dark (12 times × 5, at most 15)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "no_hands": 5,
+    "multi_face": 4,
+    "uploaded": 3,
+    "dark": 10,
+    "screen": 9,
+    "tab_away": 7,
+    "camera_lost": 3
+   },
+   "seconds": 754.5,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "multi_face": 50,
+     "uploaded": 25,
+     "tab_away": 30,
+     "camera_lost": 20,
+     "no_hands": 20,
+     "dark": 15
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (9 times × 25, at most 50)",
+     "− 50: another person in view (4 times × 25, at most 50)",
+     "− 25: chosen from the gallery, not filmed live (3 times × 25, at most 25)",
+     "− 30: left Disha while filming (7 times × 15, at most 30)",
+     "− 20: camera stopped (3 times × 10, at most 20)",
+     "− 20: hands not seen for a while (5 times in 12 min, 4 per 10 min × 5)",
+     "− 15: too dark (10 times in 12 min, 8 per 10 min × 5, at most 15)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "no_hands": 8,
+    "screen": 9,
+    "multi_face": 0,
+    "dark": 2,
+    "tab_away": 4
+   },
+   "seconds": 3600,
+   "result": {
+    "score": 5,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "tab_away": 30,
+     "no_hands": 10,
+     "dark": 5
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (9 times × 25, at most 50)",
+     "− 30: left Disha while filming (4 times × 15, at most 30)",
+     "− 10: hands not seen for a while (8 times in 60 min, 2 per 10 min × 5)",
+     "− 5: too dark (2 times in 60 min, 1 per 10 min × 5)",
+     "= 5 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "dark": 9,
+    "ai_noticed": 2
+   },
+   "seconds": 900,
+   "result": {
+    "score": 35,
+    "band": "low",
+    "minus": {
+     "ai_noticed": 50,
+     "dark": 15
+    },
+    "why": [
+     "start at 100",
+     "− 50: the AI noticed something (2 times × 25)",
+     "− 15: too dark (9 times in 15 min, 6 per 10 min × 5, at most 15)",
+     "= 35 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "dark": 11,
+    "no_hands": 5,
+    "screen": 9
+   },
+   "seconds": 754.5,
+   "result": {
+    "score": 15,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "no_hands": 20,
+     "dark": 15
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (9 times × 25, at most 50)",
+     "− 20: hands not seen for a while (5 times in 12 min, 4 per 10 min × 5)",
+     "− 15: too dark (11 times in 12 min, 9 per 10 min × 5, at most 15)",
+     "= 15 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "no_hands": 0,
+    "uploaded": 3,
+    "dark": 3,
+    "camera_lost": 0
+   },
+   "seconds": 754.5,
+   "result": {
+    "score": 60,
+    "band": "medium",
+    "minus": {
+     "uploaded": 25,
+     "dark": 15
+    },
+    "why": [
+     "start at 100",
+     "− 25: chosen from the gallery, not filmed live (3 times × 25, at most 25)",
+     "− 15: too dark (3 times in 12 min, 3 per 10 min × 5)",
+     "= 60 (medium)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "no_hands": 8,
+    "uploaded": 2,
+    "screen": 8,
+    "camera_lost": 9
+   },
+   "seconds": 2400,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "uploaded": 25,
+     "camera_lost": 20,
+     "no_hands": 10
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (8 times × 25, at most 50)",
+     "− 25: chosen from the gallery, not filmed live (2 times × 25, at most 25)",
+     "− 20: camera stopped (9 times × 10, at most 20)",
+     "− 10: hands not seen for a while (8 times in 40 min, 2 per 10 min × 5)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "ai_noticed": 11,
+    "dark": 2,
+    "uploaded": 1
+   },
+   "seconds": 754.5,
+   "result": {
+    "score": 15,
+    "band": "low",
+    "minus": {
+     "ai_noticed": 50,
+     "uploaded": 25,
+     "dark": 10
+    },
+    "why": [
+     "start at 100",
+     "− 50: the AI noticed something (11 times × 25, at most 50)",
+     "− 25: chosen from the gallery, not filmed live (1 time × 25)",
+     "− 10: too dark (2 times in 12 min, 2 per 10 min × 5)",
+     "= 15 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "multi_face": 6,
+    "screen": 12
+   },
+   "seconds": 2400,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "multi_face": 50
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (12 times × 25, at most 50)",
+     "− 50: another person in view (6 times × 25, at most 50)",
+     "= 0 (low)"
+    ]
+   }
+  },
+  {
+   "counts": {
+    "tab_away": 7,
+    "multi_face": 6,
+    "dark": 6,
+    "no_hands": 4,
+    "uploaded": 5,
+    "screen": 11,
+    "camera_lost": 10
+   },
+   "seconds": 120,
+   "result": {
+    "score": 0,
+    "band": "low",
+    "minus": {
+     "screen": 50,
+     "multi_face": 50,
+     "uploaded": 25,
+     "tab_away": 30,
+     "camera_lost": 20,
+     "no_hands": 20,
+     "dark": 15
+    },
+    "why": [
+     "start at 100",
+     "− 50: another phone or screen in view (11 times × 25, at most 50)",
+     "− 50: another person in view (6 times × 25, at most 50)",
+     "− 25: chosen from the gallery, not filmed live (5 times × 25, at most 25)",
+     "− 30: left Disha while filming (7 times × 15, at most 30)",
+     "− 20: camera stopped (10 times × 10, at most 20)",
+     "− 20: hands not seen for a while (4 times × 5)",
+     "− 15: too dark (6 times × 5, at most 15)",
+     "= 0 (low)"
+    ]
+   }
+  }
  ]
 }
