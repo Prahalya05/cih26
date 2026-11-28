@@ -534,7 +534,7 @@ def teacher_verify_order(event_id: str, body: TeacherVerifyIn, dev: Device = Dep
             (event_id,)).fetchone()
         if existing:
             raise HTTPException(409, "This job is already verified")
-        rater = dev.rater_id or f"teacher_{dev.id}"
+        rater = f"teacher_{dev.id}"
         con.execute("insert into rater(id, role) values (%s, 'teacher') on conflict (id) do nothing", (rater,))
         now = datetime.now(tz=timezone.utc)
         payload = {

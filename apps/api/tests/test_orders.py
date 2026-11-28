@@ -48,7 +48,7 @@ def test_self_confirm_is_flagged_unverified_and_capped_below_level_4(client):
     assert state["ss_stitch_machine"][3] <= 0.4 + 1e-9
 
 
-def test_teacher_verify_bypass_and_non_teacher_rejected(client, pg):
+def test_teacher_verify_bypass_and_non_teacher_rejected(client):
     from app import db
     # Student phone cannot call teacher-verify
     r_stud = client.post(f"/v2/orders/{ORDER_ID}/teacher-verify",
@@ -56,9 +56,9 @@ def test_teacher_verify_bypass_and_non_teacher_rejected(client, pg):
     assert r_stud.status_code == 403
 
     # Teacher phone from same school succeeds and unlocks Level 4 evidence weight
-    teacher = PhoneClient(client.app, pg, code="PSG01_T")
-    r_teach = teacher.post(f"/v2/orders/{ORDER_ID}/teacher-verify",
-                           json={"method": "phoned buyer", "reason": "Spoke to neighbour who bought blouse"})
+    r_teach = client.post(f"/v2/orders/{ORDER_ID}/teacher-verify",
+                          json={"method": "phoned buyer", "reason": "Spoke to neighbour who bought blouse"},
+                          headers=client.as_phone("phoneT"))
     assert r_teach.status_code == 200 and r_teach.json() == {"ok": True}
     with db.connect() as con:
         after = {r["subskill_id"]: r["p_level"] for r in con.execute("select * from skill_state where student_id='st1'")}

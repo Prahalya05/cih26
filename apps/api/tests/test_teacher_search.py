@@ -23,30 +23,30 @@ def test_districts_kb_and_haversine_unit():
     assert courses._resolve_district("Coimbatore")["code"] == "tn_coimbatore"
 
 
-def _seed_teacher(pg, school_id: str, school_name: str, phone: str, name: str,
+def _seed_teacher(pg_url: str, school_id: str, school_name: str, phone: str, name: str,
                   district_code: str, listed: bool, subjects: list[str], languages: list[str], published_courses: int = 0):
     from app.routers.accounts import login_hash
     from app import auth
+    import psycopg
     import secrets
-    with pg.cursor() as cur:
-        cur.execute("insert into school(id, name, district) values (%s, %s, %s) on conflict (id) do nothing",
+    with psycopg.connect(pg_url, autocommit=True) as con:
+        con.execute("insert into school(id, name, district) values (%s, %s, %s) on conflict (id) do nothing",
                     (school_id, school_name, district_code))
         acc_id = f"acc_{secrets.token_hex(4)}"
-        cur.execute("insert into account(id, role, name, login_kind, login_hash, login_mask, school_id) "
+        con.execute("insert into account(id, role, name, login_kind, login_hash, login_mask, school_id) "
                     "values (%s, 'teacher', %s, 'phone', %s, '98••••10', %s)",
                     (acc_id, name, login_hash(phone), school_id))
-        cur.execute("insert into teacher_profile(account_id, subjects, languages, district, district_code, pincode, listed) "
+        con.execute("insert into teacher_profile(account_id, subjects, languages, district, district_code, pincode, listed) "
                     "values (%s, %s, %s, %s, %s, '641001', %s)",
                     (acc_id, subjects, languages, kb.districts()[district_code]["name"]["en"], district_code, listed))
         for i in range(published_courses):
-            cur.execute("insert into course(id, teacher_id, school_id, title, language, skill_id, plan, price_inr, published) "
+            con.execute("insert into course(id, teacher_id, school_id, title, language, skill_id, plan, price_inr, published) "
                         "values (%s, %s, %s, %s, 'ta', 'sk_stitch', 'free', 0, true)",
                         (f"crs_{acc_id}_{i}", acc_id, school_id, f"Course {i}"))
         dev_id = f"dev_{acc_id}"
         tok = secrets.token_urlsafe(12)
-        cur.execute("insert into device(id, school_id, role, token_hash, account_id) values (%s, %s, 'teacher', %s, %s)",
+        con.execute("insert into device(id, school_id, role, token_hash, account_id) values (%s, %s, 'teacher', %s, %s)",
                     (dev_id, school_id, auth.hash_token(tok), acc_id))
-    pg.commit()
     return tok
 
 

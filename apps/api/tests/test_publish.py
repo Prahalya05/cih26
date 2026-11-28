@@ -66,7 +66,7 @@ def test_publish_minor_blocked_revoke_404_rls_and_rate_limit(pg):
     assert res.headers["cache-control"] == "no-store"
 
     # RLS: another school cannot preview/unpublish st_adu
-    other = PhoneClient(app, pg, code="OTHER01")
+    other = PhoneClient(app, pg, default="otherPhone", schools={"otherPhone": "sch_other"})
     assert other.post("/v2/profile/publish/preview", json={"student_id": "st_adu", "visibility": "public"}).status_code == 404
 
     # Revoking consent removes published profile -> 404
