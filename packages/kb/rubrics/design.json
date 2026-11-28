@@ -1,0 +1,48 @@
+{
+  "id": "rb_design",
+  "skill": "sk_colour_design",
+  "name": {
+    "en": "Colour and design work sample",
+    "ta": "வண்ணம் மற்றும் வடிவமைப்பு வேலை மாதிரி"
+  },
+  "media": "photo",
+  "capture": {
+    "en": "Photo of one thing you designed (a kolam, poster, card or pattern), in good light, the whole piece visible.",
+    "ta": "நீங்கள் வடிவமைத்த ஒன்றின் புகைப்படம் (கோலம், போஸ்டர், அட்டை அல்லது வடிவம்), நல்ல வெளிச்சத்தில், முழுவதும் தெரியும்படி."
+  },
+  "criteria": [
+    {
+      "id": "colour",
+      "name": {
+        "en": "Colours go well together"
+      },
+      "scores": {
+        "0": "Colours clash or are random",
+        "1": "Some colours work together",
+        "2": "Colours are chosen and work well together"
+      }
+    },
+    {
+      "id": "layout",
+      "name": {
+        "en": "Balanced layout"
+      },
+      "scores": {
+        "0": "Crowded or one-sided",
+        "1": "Partly balanced",
+        "2": "Balanced, with space used well"
+      }
+    },
+    {
+      "id": "finish",
+      "name": {
+        "en": "Neat finish"
+      },
+      "scores": {
+        "0": "Smudged or unfinished",
+        "1": "Mostly neat",
+        "2": "Clean lines and edges, finished"
+      }
+    }
+  ]
+}

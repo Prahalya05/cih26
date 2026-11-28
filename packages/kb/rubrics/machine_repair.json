@@ -1,0 +1,48 @@
+{
+  "id": "rb_machine_repair",
+  "skill": "sk_machine_repair",
+  "name": {
+    "en": "Machine repair work sample",
+    "ta": "இயந்திரம் பழுது பார்க்கும் வேலை மாதிரி"
+  },
+  "media": "video",
+  "capture": {
+    "en": "Short video (under 20 s) fixing one part of a cycle or a small machine that is switched off and unplugged: finding the problem, fixing it, checking it works.",
+    "ta": "அணைத்து, மின் இணைப்பை எடுத்த சைக்கிள் அல்லது சிறு இயந்திரத்தின் ஒரு பகுதியைச் சரி செய்யும் சிறு வீடியோ: பிரச்சனையைக் கண்டறிதல், சரி செய்தல், வேலை செய்கிறதா என்று பார்த்தல்."
+  },
+  "criteria": [
+    {
+      "id": "safe",
+      "name": {
+        "en": "Works safely"
+      },
+      "scores": {
+        "0": "Power on or unsafe handling",
+        "1": "Some care taken",
+        "2": "Switched off and unplugged, hands kept safe"
+      }
+    },
+    {
+      "id": "tools",
+      "name": {
+        "en": "Right tool for the job"
+      },
+      "scores": {
+        "0": "Wrong tool or forcing parts",
+        "1": "Mostly right tools",
+        "2": "Right tool used the right way"
+      }
+    },
+    {
+      "id": "check",
+      "name": {
+        "en": "Checks the fix"
+      },
+      "scores": {
+        "0": "No check",
+        "1": "Quick look only",
+        "2": "Tests that it works after fixing"
+      }
+    }
+  ]
+}

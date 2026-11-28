@@ -1,0 +1,48 @@
+{
+  "id": "rb_animal_care",
+  "skill": "sk_animal_care",
+  "name": {
+    "en": "Animal care work sample",
+    "ta": "கால்நடை பராமரிப்பு வேலை மாதிரி"
+  },
+  "media": "video",
+  "capture": {
+    "en": "Short video (under 20 s) caring for an animal you look after: feeding, giving water or cleaning its place.",
+    "ta": "நீங்கள் பராமரிக்கும் ஒரு விலங்கைக் கவனிக்கும் சிறு வீடியோ: உணவு கொடுத்தல், தண்ணீர் கொடுத்தல் அல்லது இடத்தைச் சுத்தம் செய்தல்."
+  },
+  "criteria": [
+    {
+      "id": "gentle",
+      "name": {
+        "en": "Handles the animal calmly"
+      },
+      "scores": {
+        "0": "Rough or scares the animal",
+        "1": "Partly calm",
+        "2": "Calm and gentle, animal stays at ease"
+      }
+    },
+    {
+      "id": "feed",
+      "name": {
+        "en": "Clean food and water"
+      },
+      "scores": {
+        "0": "Dirty or no water",
+        "1": "Food or water given",
+        "2": "Clean food and fresh water in clean vessels"
+      }
+    },
+    {
+      "id": "clean",
+      "name": {
+        "en": "Keeps the place clean"
+      },
+      "scores": {
+        "0": "Dirty place left as it is",
+        "1": "Partly cleaned",
+        "2": "Waste removed, place clean and dry"
+      }
+    }
+  ]
+}
