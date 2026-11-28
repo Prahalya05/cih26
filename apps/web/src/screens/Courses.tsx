@@ -4,7 +4,7 @@
 import { recommendCourses } from "@disha/engine";
 import { useEffect, useMemo, useState } from "react";
 import type { Go } from "../App";
-import { Card, Pill, Screen, useLive } from "../components/ui";
+import { Button, Card, Pill, Screen, useLive } from "../components/ui";
 import { Icon } from "../components/Icon";
 import { useT, type StringKey } from "../lib/i18n";
 import { kb } from "../lib/kb";
@@ -52,6 +52,7 @@ export default function Courses({ go }: { go: Go }) {
   return (
     <Screen title={t("learnTitle")}>
       <p className="text-muted">{t("learnHint")}</p>
+      <Button kind="soft" onClick={() => go({ name: "findTeacher" })}><Icon name="compass" className="size-5" />{t("findTeacher")}</Button>
       {error && <p className="rounded-xl bg-sun-soft p-3 text-sm text-warn">{error}</p>}
       {courses?.length === 0 && <p className="text-muted">{t("noCoursesYet")}</p>}
       {suggested.length > 0 && <p className="eyebrow !text-good">{t("suggestedForYou")}</p>}

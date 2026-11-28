@@ -8,29 +8,11 @@ from __future__ import annotations
 import math
 
 from .. import kb
+from .fitreach import _cos, mmr_rerank, occ_riasec_vec, student_riasec_vec
 
 WEIGHTS = {"embed": 0.35, "skill": 0.30, "riasec": 0.20, "feas": 0.15}
-RIASEC = "RIASEC"
 DEMAND = {"high": 1.0, "medium": 0.7, "low": 0.4}
 ADJACENT_CREDIT = 0.5  # partial credit for a skill in the same cluster as one the student has
-
-
-def _cos(a: list[float], b: list[float]) -> float:
-    na, nb = math.sqrt(sum(x * x for x in a)), math.sqrt(sum(x * x for x in b))
-    return 0.0 if na == 0 or nb == 0 else sum(x * y for x, y in zip(a, b)) / (na * nb)
-
-
-def occ_riasec_vec(code: str) -> list[float]:
-    weights = [1.0, 0.66, 0.33]
-    vec = [0.0] * 6
-    for i, letter in enumerate(code[:3]):
-        vec[RIASEC.index(letter)] = weights[i]
-    return vec
-
-
-def student_riasec_vec(persona: dict) -> list[float]:
-    r = persona.get("riasec") or {}
-    return [float(r.get(letter, 0.0)) for letter in RIASEC]
 
 
 def _skill_conf(persona: dict) -> dict[str, float]:
@@ -85,33 +67,6 @@ def score_all(persona: dict, embed_sims: dict[str, float] | None = None) -> list
                     "parts": {k: round(v, 3) for k, v in parts.items()}, "matched_skills": matched})
     out.sort(key=lambda r: r["score"], reverse=True)
     return out
-
-
-def mmr_rerank(scored: list[dict], k: int = 8, lam: float = 0.7, min_sectors: int = 4) -> list[dict]:
-    occs = kb.occupations()
-    pool, picked = list(scored), []
-    while pool and len(picked) < k:
-        sectors = {p["sector"] for p in picked}
-        need_new = min_sectors - len(sectors)
-        cand = pool
-        if need_new > 0 and k - len(picked) <= need_new:
-            fresh = [c for c in pool if c["sector"] not in sectors]
-            cand = fresh or pool
-
-        def mmr(c: dict) -> float:
-            if not picked:
-                return c["score"]
-            red = max(
-                1.0 if p["sector"] == c["sector"] else 0.5 * _cos(
-                    occ_riasec_vec(occs[p["occupation_id"]]["riasec"]),
-                    occ_riasec_vec(occs[c["occupation_id"]]["riasec"]))
-                for p in picked)
-            return lam * c["score"] - (1 - lam) * red
-
-        best = max(cand, key=mmr)
-        picked.append(best)
-        pool.remove(best)
-    return picked
 
 
 def what_if(persona: dict, k: int = 8, max_levers: int = 4) -> list[dict]:

@@ -38,3 +38,4 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER)
+APPLY_RATER_LENIENCY = os.getenv("APPLY_RATER_LENIENCY", "0") == "1"

@@ -4,15 +4,18 @@
 
 import { useEffect, useState } from "react";
 import type { Go } from "../App";
-import { Card, Pill, Screen, useLive } from "../components/ui";
+import { Button, Card, Pill, Screen, useLive } from "../components/ui";
 import { Icon, type IconName } from "../components/Icon";
 import { useT, type StringKey } from "../lib/i18n";
-import { db, scopesOf, type Action, type Student } from "../lib/db";
+import { db, hasScope, isMinorStudent, scopesOf, type Action, type Student } from "../lib/db";
 import { kb } from "../lib/kb";
 import { ageOf, analyse, EMPTY_PROFILE } from "../lib/profile";
 import { profileOf } from "../lib/skills";
 import { cachedDocs, fetchDocs, type DocRow } from "../lib/docs";
+import { apiFetch } from "../lib/api";
 import { call, isError, useAccount } from "../lib/auth";
+import { syncNow } from "../lib/sync";
+import type { PublishedSnapshot } from "./PublicProfile";
 
 const RIASEC: Record<string, string> = { R: "Hands-on", I: "Curious", A: "Creative", S: "Helping", E: "Leading", C: "Organised" };
 
@@ -87,12 +90,14 @@ export default function StudentProfile({ go, id }: { go: Go; id: string }) {
 
       <Section icon="shield" title={t("consentGiven")}>
         <div className="flex flex-wrap gap-1">
-          {(["assess", "photos", "share_portfolio"] as const).map((sc) => (
+          {(["assess", "photos", "share_portfolio", "publish_profile"] as const).map((sc) => (
             <Pill key={sc} tone={scopesOf(student).includes(sc) ? "good" : "neutral"}>{scopesOf(student).includes(sc) ? "✓" : "✗"} {t(`scope_${sc}` as StringKey)}</Pill>
           ))}
         </div>
         {!isTeacher && <button className="mt-2 text-sm font-bold text-accent-dark" onClick={() => go({ name: "privacy", id })}>{t("privacy")} →</button>}
       </Section>
+
+      {!isTeacher && <PublishPanel student={student} riasec={riasec.map(([k]) => k)} go={go} />}
 
       {teachers.length > 0 && !isTeacher && (
         <Section icon="teacher" title={t("myTeachers")}>
@@ -127,4 +132,93 @@ function Stat({ value, label, onClick }: { value: number; label: string; onClick
 }
 function Link({ icon, label, onClick }: { icon: IconName; label: string; onClick: () => void }) {
   return <button onClick={onClick} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-bold"><Icon name={icon} className="size-4" />{label}</button>;
+}
+
+type Vis = "private" | "school" | "verified_partners" | "public";
+
+function PublishPanel({ student, riasec, go }: { student: Student; riasec: string[]; go: Go }) {
+  const { t } = useT();
+  const minor = isMinorStudent(student);
+  const canPublish = hasScope(student, "publish_profile");
+  const [vis, setVis] = useState<Vis>("private");
+  const [preview, setPreview] = useState<PublishedSnapshot | null>(null);
+  const [slug, setSlug] = useState<string | null>(null);
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const levels: Vis[] = minor ? ["private", "school", "verified_partners"] : ["private", "school", "verified_partners", "public"];
+
+  const loadPreview = async () => {
+    setBusy(true); setErr("");
+    await syncNow();
+    const res = await apiFetch("/v2/profile/publish/preview", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ student_id: student.id, visibility: vis, avatar: student.avatar, interest_tags: riasec }),
+    });
+    const out = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) { setErr(typeof out.detail === "string" ? out.detail : out.detail?.message ?? "Error"); return; }
+    setPreview(out.snapshot);
+  };
+
+  const confirmPublish = async () => {
+    setBusy(true); setErr("");
+    await syncNow();
+    const res = await apiFetch("/v2/profile/publish", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ student_id: student.id, visibility: vis, avatar: student.avatar, interest_tags: riasec }),
+    });
+    const out = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) { setErr(typeof out.detail === "string" ? out.detail : out.detail?.message ?? "Error"); return; }
+    setSlug(out.slug ?? null);
+    if (out.snapshot) setPreview(out.snapshot);
+  };
+
+  const unpublish = async () => {
+    setBusy(true); setErr("");
+    await apiFetch(`/v2/profile/publish/${encodeURIComponent(student.id)}`, { method: "DELETE" });
+    setVis("private"); setSlug(null); setPreview(null); setBusy(false);
+  };
+
+  return (
+    <Section icon="globe" title={t("publishProfile")}>
+      {!canPublish ? (
+        <p className="text-sm text-muted">
+          {t("consentPublish")}{" "}
+          <button className="font-bold text-accent-dark underline" onClick={() => go({ name: "privacy", id: student.id })}>{t("privacy")}</button>
+        </p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {minor && <p className="text-xs text-muted"><Icon name="shield" className="mr-1 inline size-3.5 text-good" />{t("minorNoPublic")}</p>}
+          <div className="flex flex-wrap gap-1.5">
+            {levels.map((lv) => (
+              <button key={lv} onClick={() => setVis(lv)} aria-pressed={vis === lv}
+                className={`rounded-xl border px-3 py-1.5 text-sm font-semibold ${vis === lv ? "border-brand bg-brand text-white" : "border-line"}`}>
+                {t(`vis_${lv}` as StringKey)}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button kind="soft" disabled={busy || vis === "private"} onClick={() => void loadPreview()}>{t("previewPublic")}</Button>
+            {slug && <Button kind="ghost" disabled={busy} onClick={() => void unpublish()}>{t("unpublishNow")}</Button>}
+          </div>
+          {preview && (
+            <div className="rounded-xl border border-line bg-paper p-3 text-sm">
+              <p className="mb-1 text-xs font-bold text-muted">{t("exactPreviewHint")}</p>
+              <p className="font-mono font-bold">{preview.avatar} {preview.handle}</p>
+              <p className="text-xs text-muted">{[preview.district, preview.school, preview.age_band].filter(Boolean).join(" · ")}</p>
+              <p className="mt-1 text-xs">{preview.verified_skills.map((s) => `${s.name} (L${s.level})`).join(", ") || t("noSkillsYet")}</p>
+              <p className="mt-1 text-xs text-muted">{preview.contact_note}</p>
+              <Button className="mt-2 w-full" disabled={busy} onClick={() => void confirmPublish()}>{t("publishConfirm")}</Button>
+            </div>
+          )}
+          {slug && vis === "public" && (
+            <p className="rounded-lg bg-good-soft p-2 font-mono text-xs break-all">{`${location.origin}/#public=${encodeURIComponent(slug)}`}</p>
+          )}
+          {err && <p className="text-xs text-warn">{err}</p>}
+        </div>
+      )}
+    </Section>
+  );
 }

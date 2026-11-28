@@ -9,14 +9,17 @@ school. Phones get the token from POST /v2/devices with a join code.
 """
 from __future__ import annotations
 
+import hashlib
+import hmac
 import secrets
 from datetime import datetime, timedelta, timezone
+from typing import Literal
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel, Field
 
-from .. import auth, db, kb
+from .. import auth, db, kb, settings
 from ..ratelimit import limit
 from ..auth import Device
 from ..adapters import gemini_vision
@@ -146,11 +149,15 @@ def _save_students(con, students: list[StudentIn], default_school: str, room_sch
             (s.id, school_id, s.facilitator_code, s.district, s.class_, s.gender, s.medium, s.birth_year))
         guardian = s.consent.guardian_name if s.consent else None
         if s.name is not None or guardian is not None:
-            # Names are kept only in student_private (checked in CI by scripts/check_privacy.py).
-            con.execute("insert into student_private(student_id, name, guardian_name) values (%s, %s, %s) "
-                        "on conflict (student_id) do update set name = coalesce(excluded.name, student_private.name), "
-                        "guardian_name = coalesce(excluded.guardian_name, student_private.guardian_name)",
-                        (s.id, s.name, guardian))
+            # Names are kept only in student_private (checked in CI by scripts/check_privacy.py) and encrypted via pgcrypto.
+            con.execute(
+                "insert into student_private(student_id, name, guardian_name, name_enc, guardian_name_enc) "
+                "values (%s, %s, %s, pgp_sym_encrypt(%s::text, %s::text), pgp_sym_encrypt(%s::text, %s::text)) "
+                "on conflict (student_id) do update set name = coalesce(excluded.name, student_private.name), "
+                "guardian_name = coalesce(excluded.guardian_name, student_private.guardian_name), "
+                "name_enc = coalesce(excluded.name_enc, student_private.name_enc), "
+                "guardian_name_enc = coalesce(excluded.guardian_name_enc, student_private.guardian_name_enc)",
+                (s.id, s.name, guardian, s.name, settings.AUTH_SECRET, guardian, settings.AUTH_SECRET))
         if s.consent:
             c = s.consent
             con.execute(
@@ -158,6 +165,8 @@ def _save_students(con, students: list[StudentIn], default_school: str, room_sch
                 "values (%s, %s, %s, %s, %s, %s) on conflict (id) do update set scopes = excluded.scopes, "
                 "method = excluded.method, granted_at = excluded.granted_at, revoked_at = excluded.revoked_at",
                 (c.id, s.id, c.scopes, c.method, _ts(c.granted_at), _ts(c.revoked_at)))
+            if c.revoked_at is not None or "publish_profile" not in (c.scopes or []):
+                con.execute("delete from published_profile where student_id = %s", (s.id,))
 
 
 def _insert_rows(con, head: str, rows: list[tuple], tail: str = "", chunk: int = 20) -> None:
@@ -221,7 +230,9 @@ def refresh_state(con, student_ids: set[str]) -> None:
     """Rebuilds skill_state and aptitude_state for these students from all their events."""
     if not student_ids:
         return
-    raters = {r["id"]: r["agreement"] for r in con.execute("select id, agreement from rater")}
+    rater_rows = list(con.execute("select id, agreement, leniency from rater"))
+    raters = {r["id"]: r["agreement"] for r in rater_rows}
+    leniencies = {r["id"]: r["leniency"] for r in rater_rows if r.get("leniency") is not None}
     now = datetime.now(tz=timezone.utc)
     ids = sorted(student_ids)
     by_student: dict[str, list[dict]] = {sid: [] for sid in ids}
@@ -230,7 +241,8 @@ def refresh_state(con, student_ids: set[str]) -> None:
     skills, aptitudes = [], []
     for sid in ids:
         profile = tracing.fold_events(by_student[sid], {"now": _ms(now), "items": kb.items(), "rubrics": kb.rubrics(),
-                                                        "raterWeights": raters})
+                                                        "raterWeights": raters, "raterLeniency": leniencies,
+                                                        "applyLeniency": settings.APPLY_RATER_LENIENCY})
         skills += [(sid, uid, u["p"], now) for uid, u in profile["units"].items()]
         aptitudes += [(sid, d, a["theta"], a["se"]) for d, a in profile["aptitude"].items()]
     con.execute("delete from skill_state where student_id = any(%s)", (ids,))
@@ -329,6 +341,18 @@ async def score_work_sample(student_id: str = Form(...), rubric_id: str = Form(.
 # ---------- buyer confirmation of paid jobs ----------
 
 LINK_DAYS = 7
+MAX_LINKS_PER_DAY = 5
+MAX_CONFIRMS_PER_WEEK = 5
+OTP_TTL_MIN = 10
+OTP_MAX_TRIES = 5
+
+
+def _client_fp(request: Request) -> str:
+    """Salted fingerprint of the caller's network address and user-agent for anti-self-confirm."""
+    fwd = request.headers.get("x-forwarded-for", "")
+    ip = fwd.split(",")[0].strip() or (request.client.host if request.client else "unknown")
+    ua = request.headers.get("user-agent", "")[:160]
+    return hmac.new(settings.AUTH_SECRET.encode("utf-8"), f"fp|{ip}|{ua}".encode("utf-8"), hashlib.sha256).hexdigest()
 
 
 class ConfirmIn(BaseModel):
@@ -338,10 +362,32 @@ class ConfirmIn(BaseModel):
     # Customer privacy (guard.buyer_privacy): we keep the customer's name only if they say yes. Nothing else about them.
     share_name: bool = False
     buyer_name: str | None = Field(None, max_length=60)
+    otp_code: str | None = Field(None, max_length=12)
+
+
+class TokenIn(BaseModel):
+    token: str = Field(min_length=4, max_length=128)
+
+
+class ConfirmBodyIn(ConfirmIn):
+    token: str = Field(min_length=4, max_length=128)
+
+
+class ConfirmOtpIn(BaseModel):
+    token: str = Field(min_length=4, max_length=128)
+    phone: str = Field(min_length=6, max_length=32)
+
+
+class TeacherVerifyIn(BaseModel):
+    method: Literal["phoned buyer", "visited", "saw the product"]
+    reason: str = Field(min_length=5, max_length=300)
+    quality: bool = True
+    rehire: bool = True
 
 
 @router.post("/orders/{event_id}/link", summary="Make a one-time link the buyer opens to confirm a paid job")
-def order_link(event_id: str, dev: Device = Depends(auth.school_member)):
+def order_link(event_id: str, request: Request, dev: Device = Depends(auth.school_member)):
+    fp = _client_fp(request)
     with db.connect(dev.schools) as con:
         ev = con.execute("select id, student_id, kind from evidence_event where id = %s", (event_id,)).fetchone()
         if not ev or ev["kind"] != "order":
@@ -350,9 +396,14 @@ def order_link(event_id: str, dev: Device = Depends(auth.school_member)):
                           (event_id,)).fetchone()
         if old:
             return {"token": old["token"]}
+        daily = con.execute(
+            "select count(*) as n from confirm_token where student_id = %s and created_at > now() - interval '1 day'",
+            (ev["student_id"],)).fetchone()["n"]
+        if daily >= MAX_LINKS_PER_DAY:
+            raise HTTPException(429, "Too many buyer links created today for this student")
         token = secrets.token_urlsafe(12)
-        con.execute("insert into confirm_token(token, event_id, student_id, expires_at) values (%s, %s, %s, %s)",
-                    (token, event_id, ev["student_id"], datetime.now(tz=timezone.utc) + timedelta(days=LINK_DAYS)))
+        con.execute("insert into confirm_token(token, event_id, student_id, creator_fp, expires_at) values (%s, %s, %s, %s, %s)",
+                    (token, event_id, ev["student_id"], fp, datetime.now(tz=timezone.utc) + timedelta(days=LINK_DAYS)))
         return {"token": token}
 
 
@@ -368,8 +419,7 @@ def _token_row(con, token: str) -> dict:
     return row
 
 
-@router.get("/confirm/{token}", summary="What the buyer is asked to confirm (first name only)")
-def confirm_info(token: str):
+def _confirm_info_out(token: str) -> dict:
     with db.connect() as con:
         row = _token_row(con, token)
         name = con.execute("select name from student_private where student_id = %s", (row["student_id"],)).fetchone()
@@ -377,26 +427,128 @@ def confirm_info(token: str):
     skill = kb.skills().get(row["skill_id"], {}).get("name", {"en": row["skill_id"]})
     p = row["payload"] or {}
     return {"student": first, "skill": skill, "what": p.get("what", ""), "amount_inr": p.get("amount_inr"),
+            "otp_required": bool(row.get("otp_code_hash") and not row.get("otp_verified_at")),
             "privacy": {"kept": ["your three answers"], "optional": ["your name, shown to the student as a thank-you"],
                         "never": ["your phone number", "your address", "your location"], "delete_after_days": 365}}
 
 
-@router.post("/confirm/{token}", summary="The buyer's three answers; recorded as a rating of the job. Works once.")
-def confirm(token: str, body: ConfirmIn):
+@router.post("/confirm/info", summary="What the buyer is asked to confirm (token in body, never in URL logs)",
+             dependencies=[Depends(limit("confirm", per_minute=15))])
+def confirm_info_body(body: TokenIn):
+    return _confirm_info_out(body.token)
+
+
+@router.get("/confirm/{token}", summary="What the buyer is asked to confirm (first name only)",
+            dependencies=[Depends(limit("confirm", per_minute=15))])
+def confirm_info(token: str):
+    return _confirm_info_out(token)
+
+
+@router.post("/confirm/otp", summary="Optional buyer phone check: send a 6-digit OTP; keeps only HMAC(AUTH_SECRET, phone)",
+             dependencies=[Depends(limit("confirm", per_minute=15))])
+def confirm_otp(body: ConfirmOtpIn):
+    from .accounts import login_hash, normalise
+    kind, norm = normalise(body.phone)
+    if kind != "phone":
+        raise HTTPException(400, "Enter a valid phone number")
+    bhmac = login_hash(norm)
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    chash = hashlib.sha256(f"{bhmac}|{code}".encode("utf-8")).hexdigest()
+    exp = datetime.now(tz=timezone.utc) + timedelta(minutes=OTP_TTL_MIN)
+    with db.connect() as con:
+        _token_row(con, body.token)
+        con.execute("update confirm_token set buyer_hmac = %s, otp_code_hash = %s, otp_expires_at = %s, otp_tries = 0, otp_verified_at = null where token = %s",
+                    (bhmac, chash, exp, body.token))
+    return {"ok": True, **({"demo_code": code} if settings.OTP_DEMO else {})}
+
+
+def _apply_confirm(token: str, body: ConfirmIn, request: Request) -> dict:
+    fp = _client_fp(request)
     with db.connect() as con:
         row = _token_row(con, token)
+        now = datetime.now(tz=timezone.utc)
+        weekly = con.execute(
+            "select count(*) as n from evidence_event where student_id = %s and kind = 'rating' and refers_to is not null "
+            "and created_at > now() - interval '7 days' and coalesce(payload->>'unverified', 'false') != 'true'",
+            (row["student_id"],)).fetchone()["n"]
+        if weekly >= MAX_CONFIRMS_PER_WEEK:
+            raise HTTPException(429, "Too many job confirmations this week for this student")
+
+        phone_verified = False
+        if row.get("otp_code_hash") and not row.get("otp_verified_at"):
+            if not body.otp_code or not body.otp_code.strip():
+                raise HTTPException(400, "Enter the 6-digit code sent to your phone")
+            if row["otp_tries"] >= OTP_MAX_TRIES:
+                raise HTTPException(429, "Too many wrong codes. Request a new one.")
+            if row["otp_expires_at"] < now:
+                raise HTTPException(400, "That code expired. Request a new one.")
+            cand = hashlib.sha256(f"{row['buyer_hmac']}|{body.otp_code.strip()}".encode("utf-8")).hexdigest()
+            if not hmac.compare_digest(cand, row["otp_code_hash"]):
+                con.execute("update confirm_token set otp_tries = otp_tries + 1 where token = %s", (token,))
+                raise HTTPException(400, "That code is not right")
+            con.execute("update confirm_token set otp_verified_at = %s where token = %s", (now, token))
+            phone_verified = True
+
+        self_confirm = bool(row.get("creator_fp") and hmac.compare_digest(row["creator_fp"], fp))
         rater = f"buyer_{token[:8]}"
         con.execute("insert into rater(id, role) values (%s, 'buyer') on conflict (id) do nothing", (rater,))
-        now = datetime.now(tz=timezone.utc)
+        payload = {
+            "on_time": body.on_time,
+            "quality": body.quality,
+            "rehire": body.rehire,
+            **({"buyer_name": body.buyer_name.strip()[:60]} if body.share_name and body.buyer_name and body.buyer_name.strip() else {}),
+            **({"unverified": True, "self_confirm": True} if self_confirm else {}),
+            **({"buyer_phone_verified": True} if phone_verified else {}),
+        }
         con.execute(
             "insert into evidence_event(id, student_id, device_id, kind, skill_id, payload, rater_id, refers_to, created_at) "
             "values (%s, %s, 'buyer_link', 'rating', %s, %s, %s, %s, %s)",
-            (new_ulid(), row["student_id"], row["skill_id"],
-             Jsonb({"on_time": body.on_time, "quality": body.quality, "rehire": body.rehire,
-                    **({"buyer_name": body.buyer_name.strip()[:60]} if body.share_name and body.buyer_name and body.buyer_name.strip() else {})}),
-             rater, row["event_id"], now))
+            (new_ulid(), row["student_id"], row["skill_id"], Jsonb(payload), rater, row["event_id"], now))
         con.execute("update confirm_token set used_at = %s where token = %s", (now, token))
         refresh_state(con, {row["student_id"]})
+    return {"ok": True, "unverified": self_confirm, "buyer_phone_verified": phone_verified}
+
+
+@router.post("/confirm", summary="The buyer's answers (token in body, never in URL logs)",
+             dependencies=[Depends(limit("confirm", per_minute=15))])
+def confirm_body(body: ConfirmBodyIn, request: Request):
+    return _apply_confirm(body.token, body, request)
+
+
+@router.post("/confirm/{token}", summary="The buyer's three answers; recorded as a rating of the job. Works once.",
+             dependencies=[Depends(limit("confirm", per_minute=15))])
+def confirm(token: str, body: ConfirmIn, request: Request):
+    return _apply_confirm(token, body, request)
+
+
+@router.post("/orders/{event_id}/teacher-verify", summary="Teacher verification bypass for a paid job (same school only)")
+def teacher_verify_order(event_id: str, body: TeacherVerifyIn, dev: Device = Depends(auth.role_in("teacher"))):
+    with db.connect(dev.schools) as con:
+        ev = con.execute("select id, student_id, kind, skill_id from evidence_event where id = %s", (event_id,)).fetchone()
+        if not ev or ev["kind"] != "order":
+            raise HTTPException(404, "Unknown job; sync the phone first")
+        existing = con.execute(
+            "select id, payload from evidence_event where refers_to = %s and kind = 'rating' "
+            "and coalesce(payload->>'unverified', 'false') != 'true'",
+            (event_id,)).fetchone()
+        if existing:
+            raise HTTPException(409, "This job is already verified")
+        rater = f"teacher_{dev.id}"
+        con.execute("insert into rater(id, role) values (%s, 'teacher') on conflict (id) do nothing", (rater,))
+        now = datetime.now(tz=timezone.utc)
+        payload = {
+            "on_time": True,
+            "quality": body.quality,
+            "rehire": body.rehire,
+            "verified_by": "teacher",
+            "method": body.method,
+            "reason": body.reason.strip(),
+        }
+        con.execute(
+            "insert into evidence_event(id, student_id, device_id, kind, skill_id, payload, rater_id, refers_to, created_at) "
+            "values (%s, %s, %s, 'rating', %s, %s, %s, %s, %s)",
+            (new_ulid(), ev["student_id"], dev.id, ev["skill_id"], Jsonb(payload), rater, event_id, now))
+        refresh_state(con, {ev["student_id"]})
     return {"ok": True}
 
 
