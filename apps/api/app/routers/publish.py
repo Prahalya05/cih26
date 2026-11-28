@@ -118,8 +118,11 @@ def _check_publish_rules(con, student: dict, visibility: Visibility, is_minor: b
     if is_minor:
         if visibility == "public":
             raise HTTPException(403, {"rule": "rule.publish", "message": "Minors cannot publish publicly; verified_partners is the maximum"})
-        if visibility == "verified_partners" and consent["method"] not in ("paper_form", "otp"):
-            raise HTTPException(403, {"rule": "rule.publish", "message": "Guardian consent is required for minors"})
+        if visibility == "verified_partners":
+            gotp = con.execute("select verified_at from guardian_otp where student_id = %s", (student["id"],)).fetchone()
+            otp_ok = bool(gotp and gotp.get("verified_at") is not None)
+            if consent["method"] != "paper_form" and not otp_ok:
+                raise HTTPException(403, {"rule": "rule.publish", "message": "Guardian consent (paper form or verified guardian OTP) is required for minors"})
 
 
 def _load_student_and_events(con, student_id: str) -> tuple[dict, str | None, list[dict]]:
@@ -130,6 +133,30 @@ def _load_student_and_events(con, student_id: str) -> tuple[dict, str | None, li
     school = con.execute("select name from school where id = %s", (st["school_id"],)).fetchone() if st["school_id"] else None
     rows = con.execute("select * from evidence_event where student_id = %s order by created_at, id", (student_id,)).fetchall()
     return dict(st), (school["name"] if school else None), [_row_to_event(r) for r in rows]
+
+
+def refresh_published_snapshots(con, student_ids: set[str]) -> None:
+    """Rebuild allow-listed snapshots for any published students whose evidence state just changed."""
+    if not student_ids:
+        return
+    rows = con.execute(
+        "select student_id, snapshot from published_profile where student_id = any(%s)",
+        (sorted(student_ids),),
+    ).fetchall()
+    for r in rows:
+        sid = r["student_id"]
+        old_snap = r["snapshot"] or {}
+        st, school_name, events = _load_student_and_events(con, sid)
+        is_minor, age_band = _is_minor(st.get("birth_year"))
+        snap = build_snapshot(
+            st, school_name, events,
+            old_snap.get("avatar"), list(old_snap.get("interest_tags") or []),
+            is_minor, age_band,
+        )
+        con.execute(
+            "update published_profile set snapshot = %s, is_minor = %s, updated_at = now() where student_id = %s",
+            (Jsonb(snap.model_dump()), is_minor, sid),
+        )
 
 
 @router.post("/profile/publish/preview", summary="Build an exact allow-listed preview of what others will see")
@@ -181,8 +208,18 @@ def send_guardian_otp(body: GuardianOtpIn, dev: Device = Depends(auth.school_mem
     chash = hashlib.sha256(f"{ghmac}|{code}".encode("utf-8")).hexdigest()
     exp = datetime.now(tz=timezone.utc) + timedelta(minutes=OTP_TTL_MIN)
     with db.connect(dev.schools) as con:
-        if not con.execute("select 1 from student where id = %s", (body.student_id,)).fetchone():
+        st = con.execute("select id, birth_year from student where id = %s", (body.student_id,)).fetchone()
+        if not st:
             raise HTTPException(404, "Sync this student first")
+        is_minor, _ = _is_minor(st.get("birth_year"))
+        if is_minor and dev.role != "teacher":
+            raise HTTPException(403, "For under-18 students, a teacher/facilitator phone must request guardian OTP")
+        accs = con.execute("select login_hash from account where student_id = %s and disabled_at is null",
+                           (body.student_id,)).fetchall()
+        if dev.account_id and dev.role == "student":
+            accs = accs + con.execute("select login_hash from account where id = %s", (dev.account_id,)).fetchall()
+        if any(hmac.compare_digest(a["login_hash"], ghmac) for a in accs):
+            raise HTTPException(400, "Guardian phone must be different from the student's own phone")
         con.execute(
             "insert into guardian_otp(student_id, guardian_hmac, code_hash, expires_at, tries, verified_at) "
             "values (%s, %s, %s, %s, 0, null) on conflict (student_id) do update set "
@@ -192,7 +229,7 @@ def send_guardian_otp(body: GuardianOtpIn, dev: Device = Depends(auth.school_mem
     return {"ok": True, **({"demo_code": code} if settings.OTP_DEMO else {})}
 
 
-@router.post("/consent/guardian-otp/verify", summary="Verify guardian OTP and mark consent method as otp",
+@router.post("/consent/guardian-otp/verify", summary="Verify guardian OTP and record verification timestamp in guardian_otp",
              dependencies=[Depends(limit("guardian_otp", per_minute=10))])
 def verify_guardian_otp(body: GuardianOtpVerifyIn, dev: Device = Depends(auth.school_member)):
     now = datetime.now(tz=timezone.utc)
@@ -209,8 +246,69 @@ def verify_guardian_otp(body: GuardianOtpVerifyIn, dev: Device = Depends(auth.sc
             con.execute("update guardian_otp set tries = tries + 1 where student_id = %s", (body.student_id,))
             raise HTTPException(400, "Wrong code")
         con.execute("update guardian_otp set verified_at = %s where student_id = %s", (now, body.student_id))
-        con.execute("update consent set method = 'otp' where student_id = %s and revoked_at is null", (body.student_id,))
-    return {"ok": True, "method": "otp"}
+    return {"ok": True, "method": "otp", "verified_at": now.isoformat()}
+
+
+@router.get("/school/profiles", summary="Published profiles visible to same-school teachers")
+def school_profiles(dev: Device = Depends(auth.role_in("teacher"))):
+    with db.connect(dev.schools) as con:
+        rows = con.execute(
+            "select p.snapshot from published_profile p "
+            "join consent c on c.student_id = p.student_id "
+            "where p.visibility in ('school', 'verified_partners', 'public') "
+            "and c.revoked_at is null and 'publish_profile' = any(c.scopes) "
+            "order by p.updated_at desc limit 100"
+        ).fetchall()
+    return {"profiles": [r["snapshot"] for r in rows]}
+
+
+@router.get("/school/profiles/{student_id}", summary="Single published profile visible to a same-school teacher")
+def school_profile(student_id: str, dev: Device = Depends(auth.role_in("teacher"))):
+    with db.connect(dev.schools) as con:
+        row = con.execute(
+            "select p.snapshot from published_profile p "
+            "join consent c on c.student_id = p.student_id "
+            "where p.student_id = %s and p.visibility in ('school', 'verified_partners', 'public') "
+            "and c.revoked_at is null and 'publish_profile' = any(c.scopes)",
+            (student_id,),
+        ).fetchone()
+    if not row:
+        raise HTTPException(404, "Profile not found")
+    return row["snapshot"]
+
+
+@router.get("/partners/profiles", summary="Allow-listed profiles visible to signed-in employers and donors",
+            dependencies=[Depends(limit("partner_profile", per_minute=30))])
+def partner_profiles(dev: Device = Depends(auth.role_in("employer", "funder", "donor"))):
+    with db.connect() as con:
+        rows = con.execute(
+            "select p.snapshot from published_profile p "
+            "join consent c on c.student_id = p.student_id "
+            "left join guardian_otp g on g.student_id = p.student_id "
+            "where p.visibility in ('verified_partners', 'public') "
+            "and c.revoked_at is null and 'publish_profile' = any(c.scopes) "
+            "and (p.is_minor is false or c.method = 'paper_form' or g.verified_at is not null) "
+            "order by p.updated_at desc limit 100"
+        ).fetchall()
+    return {"profiles": [r["snapshot"] for r in rows]}
+
+
+@router.get("/partners/profiles/{slug}", summary="Single allow-listed profile for signed-in employers and donors",
+            dependencies=[Depends(limit("partner_profile", per_minute=30))])
+def partner_profile(slug: str, dev: Device = Depends(auth.role_in("employer", "funder", "donor"))):
+    with db.connect() as con:
+        row = con.execute(
+            "select p.snapshot from published_profile p "
+            "join consent c on c.student_id = p.student_id "
+            "left join guardian_otp g on g.student_id = p.student_id "
+            "where p.slug = %s and p.visibility in ('verified_partners', 'public') "
+            "and c.revoked_at is null and 'publish_profile' = any(c.scopes) "
+            "and (p.is_minor is false or c.method = 'paper_form' or g.verified_at is not null)",
+            (slug,),
+        ).fetchone()
+    if not row:
+        raise HTTPException(404, "Profile not found")
+    return row["snapshot"]
 
 
 @router.get("/public/profile/{slug}", summary="Public allow-listed profile snapshot (adults only, noindex, no-store)",

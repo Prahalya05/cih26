@@ -1,20 +1,16 @@
-"""A small in-memory rate limit (sliding window per client), so nobody can guess class codes or burn the AI budget.
+"""Postgres-backed sliding-window rate limit so counters work across multiple API instances.
 
 Used as a FastAPI dependency:  Depends(limit("devices", per_minute=10))
-One process only (enough for the pilot on one Render instance). With several instances, move the counters to Postgres
-or Redis. Limits can be raised with RATE_LIMIT_SCALE (e.g. 10 for load tests); 0 switches limiting off.
+Limits can be raised with RATE_LIMIT_SCALE (e.g. 10 for load tests); 0 switches limiting off.
 """
 from __future__ import annotations
 
 import os
-import threading
-import time
-from collections import defaultdict, deque
+from datetime import datetime, timezone
 
 from fastapi import HTTPException, Request
 
-_hits: dict[str, deque[float]] = defaultdict(deque)
-_lock = threading.Lock()
+from . import db
 
 
 def _client(request: Request) -> str:
@@ -30,19 +26,28 @@ def limit(bucket: str, per_minute: int):
             return
         allowed = max(1, int(per_minute * scale))
         key = f"{bucket}:{_client(request)}"
-        now = time.monotonic()
-        with _lock:
-            q = _hits[key]
-            while q and now - q[0] > 60:
-                q.popleft()
-            if len(q) >= allowed:
-                raise HTTPException(429, "Too many requests. Wait a minute and try again.",
-                                    headers={"Retry-After": str(int(60 - (now - q[0])) + 1)})
-            q.append(now)
+        with db.connect() as con:
+            con.execute("delete from rate_limit where key = %s and hit_at < now() - interval '60 seconds'", (key,))
+            row = con.execute(
+                "select count(*) as n, min(hit_at) as oldest from rate_limit where key = %s",
+                (key,),
+            ).fetchone()
+            if row["n"] >= allowed:
+                oldest = row["oldest"] or datetime.now(tz=timezone.utc)
+                retry_after = max(1, int(60 - (datetime.now(tz=timezone.utc) - oldest).total_seconds()) + 1)
+                raise HTTPException(
+                    429,
+                    "Too many requests. Wait a minute and try again.",
+                    headers={"Retry-After": str(retry_after)},
+                )
+            con.execute("insert into rate_limit(key, hit_at) values (%s, now())", (key,))
     return check
 
 
 def reset() -> None:
     """For tests."""
-    with _lock:
-        _hits.clear()
+    try:
+        with db.connect() as con:
+            con.execute("delete from rate_limit")
+    except Exception:
+        pass

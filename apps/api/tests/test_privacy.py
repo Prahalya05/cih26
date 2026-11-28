@@ -41,13 +41,50 @@ def test_withdrawn_consent_stops_sync_both_ways(client):
 
 
 def test_guardian_name_is_kept_only_in_student_private(client):
-    client.post("/v2/sync", json={"device_id": "phoneA", "students": [student(["assess"])]})
-    from app import db
+    client.post("/v2/sync", json={"device_id": "phoneA", "students": [{**student(["assess"]), "phone": "9876543210"}]})
+    from app import db, settings
     with db.connect() as con:
-        assert con.execute("select guardian_name from student_private where student_id='st1'").fetchone()["guardian_name"] == "Lakshmi"
+        key = settings.pii_key()
+        row = con.execute(
+            "select pgp_sym_decrypt(name_enc, %s::text) as name, "
+            "pgp_sym_decrypt(phone_enc, %s::text) as phone, "
+            "pgp_sym_decrypt(guardian_name_enc, %s::text) as guardian_name "
+            "from student_private where student_id='st1'",
+            (key, key, key),
+        ).fetchone()
+        assert row["name"] == "Meena Kumari"
+        assert row["phone"] == "9876543210"
+        assert row["guardian_name"] == "Lakshmi"
+        priv_cols = {r["column_name"] for r in con.execute(
+            "select column_name from information_schema.columns where table_name = 'student_private'")}
+        assert {"name", "phone", "guardian_name"}.isdisjoint(priv_cols)
+        assert {"name_enc", "phone_enc", "guardian_name_enc"} <= priv_cols
         cols = {r["column_name"] for r in con.execute(
             "select column_name from information_schema.columns where table_name = 'consent'")}
     assert "guardian_name" not in cols
+
+
+def test_student_private_uses_pii_key_not_auth_secret_and_reads_decrypt(client, monkeypatch):
+    from app import db, settings
+    monkeypatch.setattr(settings, "AUTH_SECRET", "auth-secret-only")
+    monkeypatch.setattr(settings, "PII_KEY", "distinct-pii-key-only")
+    client.post("/v2/sync", json={"device_id": "phoneA", "students": [
+        {**student(["assess"]), "facilitator_code": "PSG01", "phone": "9876500000"},
+    ], "events": [order(1)]})
+    # Confirm info decrypts first name
+    tok = client.post(f"/v2/orders/{uid(1)}/link").json()["token"]
+    info = client.post("/v2/confirm/info", json={"token": tok}).json()
+    assert info["student"] == "Meena"
+    # Teacher cohort view decrypts full name
+    t_hdr = client.as_phone("phoneT")
+    cohort = client.get("/v1/facilitator/PSG01/cohort", headers=t_hdr).json()
+    assert any(s["id"] == "st1" and s["name"] == "Meena Kumari" for s in cohort["students"])
+    # Decrypting with AUTH_SECRET must fail when PII_KEY differs
+    with db.connect() as con:
+        import psycopg
+        with pytest.raises(psycopg.errors.ExternalRoutineInvocationException):
+            con.execute("select pgp_sym_decrypt(name_enc, %s::text) from student_private where student_id='st1'",
+                        (settings.AUTH_SECRET,)).fetchone()
 
 
 def test_delete_needs_confirmation(client):
@@ -62,7 +99,7 @@ def test_delete_leaves_no_row_with_the_student_id(client):
                                                                      student(["assess"], sid="st2")],
                                   "events": [order(1), order(2, sid="st2")]})
     token = client.post(f"/v2/orders/{uid(1)}/link").json()["token"]
-    client.post(f"/v2/confirm/{token}", json={"on_time": True, "quality": True, "rehire": True})
+    client.post("/v2/confirm", json={"token": token, "on_time": True, "quality": True, "rehire": True})
     client.post("/v1/sync", json={"students": [{"id": "st1", "name": "Meena", "facilitator_code": "PSG01",
                                                 "cards": {}, "answers": {}, "factAnswers": {}, "updated_at": NOW}],
                                   "actions": [{"id": "a1", "student_id": "st1", "kind": "endorse",
@@ -125,6 +162,7 @@ def test_safety_rule_matches_engine():
 def test_privacy_check_passes_and_catches_a_name_column(tmp_path, monkeypatch):
     import check_privacy
     assert check_privacy.personal_columns_outside_private() == []
+    assert check_privacy.plaintext_private_columns() == []
     assert check_privacy.tracking_dependencies() == []
     for f in check_privacy.MIGRATIONS.glob("*.sql"):
         (tmp_path / f.name).write_text(f.read_text(encoding="utf-8"), encoding="utf-8")

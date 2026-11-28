@@ -63,6 +63,12 @@ def personal_columns_outside_private() -> list[str]:
             if (t != PRIVATE_TABLE and PERSONAL.search(c) and (t, c) not in ALLOWED) or LOCATION_PII.search(c)]
 
 
+def plaintext_private_columns() -> list[str]:
+    """student_private must only store *_enc encrypted columns beside student_id."""
+    return [f"{t}.{c}" for t, c in sorted(schema_columns())
+            if t == PRIVATE_TABLE and c != "student_id" and not c.endswith("_enc")]
+
+
 def tracking_dependencies() -> list[str]:
     found: list[str] = []
     for pkg in ROOT.glob("**/package.json"):
@@ -88,6 +94,7 @@ def tracking_dependencies() -> list[str]:
 
 def main() -> int:
     problems = [f"personal data column outside {PRIVATE_TABLE}: {c}" for c in personal_columns_outside_private()]
+    problems += [f"plaintext column in {PRIVATE_TABLE}: {c}" for c in plaintext_private_columns()]
     problems += [f"tracking SDK or host: {x}" for x in tracking_dependencies()]
     for p in problems:
         print("FAIL", p)

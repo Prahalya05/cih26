@@ -22,6 +22,7 @@ from .routers import accounts, classrooms, courses, proof, publish, see, trust, 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    settings.validate_pii_key()
     db.pool()  # one pool, made before the first request instead of by whichever request comes first
     yield
     db.close_pool()

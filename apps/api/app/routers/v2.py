@@ -82,6 +82,7 @@ class ConsentIn(BaseModel):
 class StudentIn(BaseModel):
     id: str
     name: str | None = None
+    phone: str | None = None
     facilitator_code: str | None = None
     school_id: str | None = None
     district: str | None = None
@@ -148,16 +149,18 @@ def _save_students(con, students: list[StudentIn], default_school: str, room_sch
             "birth_year = coalesce(excluded.birth_year, student.birth_year)",
             (s.id, school_id, s.facilitator_code, s.district, s.class_, s.gender, s.medium, s.birth_year))
         guardian = s.consent.guardian_name if s.consent else None
-        if s.name is not None or guardian is not None:
-            # Names are kept only in student_private (checked in CI by scripts/check_privacy.py) and encrypted via pgcrypto.
+        if s.name is not None or s.phone is not None or guardian is not None:
+            # Names and phone numbers are kept only in student_private (checked in CI by scripts/check_privacy.py)
+            # and encrypted at rest via pgcrypto using PII_KEY.
+            key = settings.pii_key()
             con.execute(
-                "insert into student_private(student_id, name, guardian_name, name_enc, guardian_name_enc) "
-                "values (%s, %s, %s, pgp_sym_encrypt(%s::text, %s::text), pgp_sym_encrypt(%s::text, %s::text)) "
-                "on conflict (student_id) do update set name = coalesce(excluded.name, student_private.name), "
-                "guardian_name = coalesce(excluded.guardian_name, student_private.guardian_name), "
+                "insert into student_private(student_id, name_enc, phone_enc, guardian_name_enc) "
+                "values (%s, pgp_sym_encrypt(%s::text, %s::text), pgp_sym_encrypt(%s::text, %s::text), pgp_sym_encrypt(%s::text, %s::text)) "
+                "on conflict (student_id) do update set "
                 "name_enc = coalesce(excluded.name_enc, student_private.name_enc), "
+                "phone_enc = coalesce(excluded.phone_enc, student_private.phone_enc), "
                 "guardian_name_enc = coalesce(excluded.guardian_name_enc, student_private.guardian_name_enc)",
-                (s.id, s.name, guardian, s.name, settings.AUTH_SECRET, guardian, settings.AUTH_SECRET))
+                (s.id, s.name, key, s.phone, key, guardian, key))
         if s.consent:
             c = s.consent
             con.execute(
@@ -249,6 +252,8 @@ def refresh_state(con, student_ids: set[str]) -> None:
     con.execute("delete from aptitude_state where student_id = any(%s)", (ids,))
     _insert_rows(con, "insert into skill_state(student_id, subskill_id, p_level, updated_at)", skills)
     _insert_rows(con, "insert into aptitude_state(student_id, domain, theta, se)", aptitudes)
+    from .publish import refresh_published_snapshots
+    refresh_published_snapshots(con, student_ids)
 
 
 def _row_to_event(r: dict) -> dict:
@@ -343,6 +348,8 @@ async def score_work_sample(student_id: str = Form(...), rubric_id: str = Form(.
 LINK_DAYS = 7
 MAX_LINKS_PER_DAY = 5
 MAX_CONFIRMS_PER_WEEK = 5
+MAX_TEACHER_VERIFIES_PER_WEEK = 10
+MAX_TEACHER_VERIFIES_PER_STUDENT = 2
 OTP_TTL_MIN = 10
 OTP_MAX_TRIES = 5
 
@@ -422,12 +429,21 @@ def _token_row(con, token: str) -> dict:
 def _confirm_info_out(token: str) -> dict:
     with db.connect() as con:
         row = _token_row(con, token)
-        name = con.execute("select name from student_private where student_id = %s", (row["student_id"],)).fetchone()
+        name = con.execute(
+            "select case when name_enc is not null then pgp_sym_decrypt(name_enc, %s::text) end as name "
+            "from student_private where student_id = %s",
+            (settings.pii_key(), row["student_id"]),
+        ).fetchone()
     first = (name["name"] if name and name["name"] else "").split(" ")[0]
     skill = kb.skills().get(row["skill_id"], {}).get("name", {"en": row["skill_id"]})
     p = row["payload"] or {}
-    return {"student": first, "skill": skill, "what": p.get("what", ""), "amount_inr": p.get("amount_inr"),
-            "otp_required": bool(row.get("otp_code_hash") and not row.get("otp_verified_at")),
+    amount = p.get("amount_inr")
+    otp_required = (
+        (isinstance(amount, (int, float)) and not isinstance(amount, bool) and amount > settings.ORDER_OTP_THRESHOLD_INR)
+        or bool(row.get("otp_code_hash") and not row.get("otp_verified_at"))
+    )
+    return {"student": first, "skill": skill, "what": p.get("what", ""), "amount_inr": amount,
+            "otp_required": otp_required,
             "privacy": {"kept": ["your three answers"], "optional": ["your name, shown to the student as a thank-you"],
                         "never": ["your phone number", "your address", "your location"], "delete_after_days": 365}}
 
@@ -438,13 +454,7 @@ def confirm_info_body(body: TokenIn):
     return _confirm_info_out(body.token)
 
 
-@router.get("/confirm/{token}", summary="What the buyer is asked to confirm (first name only)",
-            dependencies=[Depends(limit("confirm", per_minute=15))])
-def confirm_info(token: str):
-    return _confirm_info_out(token)
-
-
-@router.post("/confirm/otp", summary="Optional buyer phone check: send a 6-digit OTP; keeps only HMAC(AUTH_SECRET, phone)",
+@router.post("/confirm/otp", summary="Buyer phone check: send a 6-digit OTP; keeps only HMAC(AUTH_SECRET, phone)",
              dependencies=[Depends(limit("confirm", per_minute=15))])
 def confirm_otp(body: ConfirmOtpIn):
     from .accounts import login_hash, normalise
@@ -474,8 +484,12 @@ def _apply_confirm(token: str, body: ConfirmIn, request: Request) -> dict:
         if weekly >= MAX_CONFIRMS_PER_WEEK:
             raise HTTPException(429, "Too many job confirmations this week for this student")
 
-        phone_verified = False
-        if row.get("otp_code_hash") and not row.get("otp_verified_at"):
+        amount = (row["payload"] or {}).get("amount_inr")
+        requires_otp = isinstance(amount, (int, float)) and not isinstance(amount, bool) and amount > settings.ORDER_OTP_THRESHOLD_INR
+        phone_verified = bool(row.get("otp_verified_at"))
+        if requires_otp and not row.get("otp_code_hash") and not phone_verified:
+            raise HTTPException(400, f"Buyer phone OTP is required for orders above ₹{settings.ORDER_OTP_THRESHOLD_INR}")
+        if row.get("otp_code_hash") and not phone_verified:
             if not body.otp_code or not body.otp_code.strip():
                 raise HTTPException(400, "Enter the 6-digit code sent to your phone")
             if row["otp_tries"] >= OTP_MAX_TRIES:
@@ -489,7 +503,7 @@ def _apply_confirm(token: str, body: ConfirmIn, request: Request) -> dict:
             con.execute("update confirm_token set otp_verified_at = %s where token = %s", (now, token))
             phone_verified = True
 
-        self_confirm = bool(row.get("creator_fp") and hmac.compare_digest(row["creator_fp"], fp))
+        self_confirm = bool(row.get("creator_fp") and hmac.compare_digest(row["creator_fp"], fp)) and not phone_verified
         rater = f"buyer_{token[:8]}"
         con.execute("insert into rater(id, role) values (%s, 'buyer') on conflict (id) do nothing", (rater,))
         payload = {
@@ -515,12 +529,6 @@ def confirm_body(body: ConfirmBodyIn, request: Request):
     return _apply_confirm(body.token, body, request)
 
 
-@router.post("/confirm/{token}", summary="The buyer's three answers; recorded as a rating of the job. Works once.",
-             dependencies=[Depends(limit("confirm", per_minute=15))])
-def confirm(token: str, body: ConfirmIn, request: Request):
-    return _apply_confirm(token, body, request)
-
-
 @router.post("/orders/{event_id}/teacher-verify", summary="Teacher verification bypass for a paid job (same school only)")
 def teacher_verify_order(event_id: str, body: TeacherVerifyIn, dev: Device = Depends(auth.role_in("teacher"))):
     with db.connect(dev.schools) as con:
@@ -534,6 +542,18 @@ def teacher_verify_order(event_id: str, body: TeacherVerifyIn, dev: Device = Dep
         if existing:
             raise HTTPException(409, "This job is already verified")
         rater = f"teacher_{dev.id}"
+        teacher_weekly = con.execute(
+            "select count(*) as n from evidence_event where rater_id = %s and kind = 'rating' "
+            "and payload->>'verified_by' = 'teacher' and created_at > now() - interval '7 days'",
+            (rater,)).fetchone()["n"]
+        if teacher_weekly >= MAX_TEACHER_VERIFIES_PER_WEEK:
+            raise HTTPException(429, "Too many teacher verifications this week")
+        student_total = con.execute(
+            "select count(*) as n from evidence_event where student_id = %s and kind = 'rating' "
+            "and payload->>'verified_by' = 'teacher'",
+            (ev["student_id"],)).fetchone()["n"]
+        if student_total >= MAX_TEACHER_VERIFIES_PER_STUDENT:
+            raise HTTPException(429, "Too many teacher verifications for this student")
         con.execute("insert into rater(id, role) values (%s, 'teacher') on conflict (id) do nothing", (rater,))
         now = datetime.now(tz=timezone.utc)
         payload = {
@@ -552,6 +572,34 @@ def teacher_verify_order(event_id: str, body: TeacherVerifyIn, dev: Device = Dep
     return {"ok": True}
 
 
+@router.get("/orders/teacher-verifications", summary="Audit list of teacher-verified paid jobs in this school")
+def teacher_verifications_audit(dev: Device = Depends(auth.role_in("teacher"))):
+    with db.connect(dev.schools) as con:
+        rows = con.execute(
+            "select r.id, r.student_id, r.skill_id, r.rater_id, r.refers_to as order_id, r.payload, r.created_at, "
+            "o.payload as order_payload "
+            "from evidence_event r "
+            "left join evidence_event o on o.id = r.refers_to "
+            "where r.kind = 'rating' and r.payload->>'verified_by' = 'teacher' "
+            "order by r.created_at desc limit 50"
+        ).fetchall()
+    return {"verifications": [
+        {
+            "id": r["id"],
+            "student_id": r["student_id"],
+            "skill_id": r["skill_id"],
+            "order_id": r["order_id"],
+            "rater_id": r["rater_id"],
+            "method": (r["payload"] or {}).get("method"),
+            "reason": (r["payload"] or {}).get("reason"),
+            "amount_inr": (r["order_payload"] or {}).get("amount_inr"),
+            "what": (r["order_payload"] or {}).get("what"),
+            "created_at": _ms(r["created_at"]),
+        }
+        for r in rows
+    ]}
+
+
 # ---------- delete my data (Step 11.2) ----------
 
 class DeleteIn(BaseModel):
@@ -564,15 +612,13 @@ def delete_student(student_id: str, body: DeleteIn, dev: Device = Depends(auth.s
         raise HTTPException(400, "A guardian (or the student, if 18 or over) must confirm")
     with db.connect() as con:  # trusted look-up, so another school's student is refused rather than skipped
         auth.check_student_access(con, dev, student_id)
-        rows = [con.execute(f"select school_id from {t} where id = %s", (student_id,)).fetchone()
-                for t in ("student", "legacy_student_doc")]
+        rows = [con.execute("select school_id from student where id = %s", (student_id,)).fetchone()]
     if any(r and r["school_id"] is not None and r["school_id"] not in dev.schools for r in rows):
         raise HTTPException(403, "This student belongs to another school")
     with db.connect() as con:
-        # Every table with a student_id cascades from student (migrations 0001, 0005); the legacy v1
-        # tables have no foreign key, so they are cleared by hand.
+        # Every table with a student_id cascades from student (migrations 0001, 0005); legacy_action
+        # has no foreign key, so it is cleared by hand.
         con.execute("delete from legacy_action where student_id = %s", (student_id,))
-        con.execute("delete from legacy_student_doc where id = %s", (student_id,))
         gone = con.execute("delete from student where id = %s", (student_id,)).rowcount > 0
         if gone:
             con.execute("insert into deletion_count(day, n) values (current_date, 1) "

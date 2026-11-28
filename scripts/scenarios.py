@@ -65,7 +65,7 @@ def meena() -> tuple[list[dict], dict, list[tuple[str, int]]]:
     for k in range(5):
         order = s.add(20 + k * 4, "order", skill_id="sk_stitching", payload={"amount_inr": 350})
         s.add(21 + k * 4, "rating", rater_id=f"buyer_{k}", refers_to=order, device="buyer_link",
-              payload={"on_time": True, "quality": True, "rehire": True})
+              payload={"on_time": True, "quality": True, "rehire": True, "buyer_phone_verified": True})
     checkpoints.append(("orders", len(s.events)))
     opts = {"now": T0 + 42 * DAY, "items": ITEMS, "rubrics": RUBRICS}
     return s.events, opts, checkpoints

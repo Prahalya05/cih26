@@ -29,6 +29,7 @@ export const EVIDENCE_WEIGHTS = {
   rating_level: 3,
   taster: 4,
   order_unconfirmed: 1,
+  order_confirmed_no_otp: 1,
   order_confirmed: 2,
 };
 export const MAX_CONFIRMED_ORDERS = 5;  // up to 10 in total, then more orders add nothing
@@ -310,9 +311,12 @@ function evidencePieces(events: EvidenceEvent[], g: Graph, opts: TraceOptions): 
             const n = confirmedOrders.get(key) ?? 0;
             const good = p.quality === true;
             const lik = good && p.rehire === true ? ORDER_GOOD : good ? ORDER_OK : ORDER_POOR;
-            const weight = n < MAX_CONFIRMED_ORDERS ? EVIDENCE_WEIGHTS.order_confirmed : 0;
+            const otpOrTeacher = p.buyer_phone_verified === true || p.verified_by === "teacher";
+            const baseW = otpOrTeacher ? EVIDENCE_WEIGHTS.order_confirmed : EVIDENCE_WEIGHTS.order_confirmed_no_otp;
+            const weight = n < MAX_CONFIRMED_ORDERS ? baseW : 0;
             confirmedOrders.set(key, n + 1);
-            pieces.push({ ...base, kind: "order_confirmed", units, lik, weight, said: false, shown: true, paid: true,
+            pieces.push({ ...base, kind: otpOrTeacher ? "order_confirmed" : "order_confirmed_no_otp", units, lik, weight,
+              said: false, shown: true, paid: otpOrTeacher,
               undo: { lik: ORDER_UNCONFIRMED, weight: EVIDENCE_WEIGHTS.order_unconfirmed, at: target.created_at } });
           }
           break;

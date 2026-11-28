@@ -102,14 +102,11 @@ outside `student_private`, or if any analytics or tracking SDK is added to the a
   - `GET /v2/teachers/search` rejects raw coordinates (`lat`/`lng`/`gps`), is rate-limited (`30/min`), and returns only rating-free public fields (`name`, `avatar`, `subjects`, `languages`, `district`, `courses`, `distance_km`), never `pincode` or contact details.
   - `scripts/check_privacy.py` blocks any GPS/coordinate columns (`lat`, `lng`, `latitude`, `longitude`, `gps`, `coords`) from appearing in any database migration.
 - **Opt-in profile publishing (`rule.publish`, `guard.publish`, `0016_publish_profile.sql`, `publish.py`):**
-  - Off by default (`publish_profile` scope). Minors or unknown age can **never** publish `public` (`verified_partners` at most, with guardian consent via paper form or guardian OTP storing only `HMAC(AUTH_SECRET, phone)`).
-  - Server builds the snapshot from a strict allow-list (`ConfigDict(extra="forbid")`): pseudonym handle, avatar, district, age band, verified skills, interest tags, and school name for 18+ adults only. Never caste, income, gender, phone, birth date, documents, or free text.
-  - Public links use a 128-bit slug (`/#public=<slug>`), `X-Robots-Tag: noindex`, `Cache-Control: no-store`, rate-limiting (`20/min`), and aggregate-only daily view counts (`published_profile_views`). Unpublishing, withdrawing consent, or deleting the student removes the snapshot immediately.
-  - `student_private` columns are encrypted with `pgcrypto` (`pgp_sym_encrypt`).
-  - Teachers are **never** listed publicly unless they explicitly opt in (`listed = true`, default `false`).
-  - "Use my location" computes the nearest district centroid from `packages/kb/districts.json` **on the phone**, discards the GPS coordinates immediately, and sends only the coarse `district_code`.
-  - `GET /v2/teachers/search` rejects raw coordinates (`lat`/`lng`/`gps`), is rate-limited (`30/min`), and returns only rating-free public fields (`name`, `avatar`, `subjects`, `languages`, `district`, `courses`, `distance_km`), never `pincode` or contact details.
-  - `scripts/check_privacy.py` blocks any GPS/coordinate columns (`lat`, `lng`, `latitude`, `longitude`, `gps`, `coords`) from appearing in any database migration.
+  - Off by default (`publish_profile` scope). Minors or unknown age can **never** publish `public` (`verified_partners` at most, with guardian consent via `paper_form` or verified guardian OTP recorded in `guardian_otp.verified_at`).
+  - For under-18s, guardian OTP can only be requested from a teacher/facilitator phone, and the guardian phone HMAC must differ from the student's own account login HMAC.
+  - Server builds the snapshot from a strict allow-list (`ConfigDict(extra="forbid")`) and rebuilds published snapshots automatically whenever `refresh_state` updates skill state: pseudonym handle, avatar, district, age band, verified skills, interest tags, and school name for 18+ adults only. Never caste, income, gender, phone, birth date, documents, or free text.
+  - Dedicated readers enforce visibility: `'school'` (`GET /v2/school/profiles`, same-school teachers), `'verified_partners'` (`GET /v2/partners/profiles`, signed-in employers/donors, minors gated on `paper_form` or `guardian_otp.verified_at`), and `'public'` (`GET /v2/public/profile/{slug}`, 128-bit slug, `X-Robots-Tag: noindex`, `Cache-Control: no-store`, rate-limiting `20/min`, aggregate-only daily view counts). Unpublishing, withdrawing consent, or deleting the student removes the snapshot immediately.
+  - `student_private` stores only `pgcrypto`-encrypted columns (`name_enc`, `phone_enc`, `guardian_name_enc`) keyed by a dedicated `PII_KEY` (separate from `AUTH_SECRET`); plaintext columns were dropped in `0017_student_private_encryption.sql`, all reads use `pgp_sym_decrypt`, and startup fails outside demo mode (`OTP_DEMO=0`) if `PII_KEY` is missing.
 - **Teacher overrides** of a skill level need a written reason, keep the computed level beside them, and a raised level never counts as proof for a payout.
 
 - **Course payments** (`routers/courses.py`, `adapters/razorpay.py`): the server sets the price and creates the Razorpay order; a lesson unlocks only after the server checks `HMAC-SHA256(key_secret, order_id|payment_id)` against Razorpay's signature. No card or UPI data reaches Disha. Locked lessons are sent as titles only, and quiz answers never leave the server. Without Razorpay keys the app uses a labelled demo payment (`PAYMENTS_DEMO=1`) where no money moves.
@@ -118,9 +115,9 @@ outside `student_private`, or if any analytics or tracking SDK is added to the a
 
 1. Guardian OTP as a second consent method, in addition to the paper form.
 2. ~~Per-teacher PIN on shared phones~~ replaced by per-person sign-in (6a). Still open: a real SMS gateway for phone OTPs (today email via SMTP, or demo mode).
-3. ~~Encrypt `student_private` columns at rest with pgcrypto, with the key in the host's secret store.~~ Added `pgcrypto` `pgp_sym_encrypt` (`name_enc`, `phone_enc`, `guardian_name_enc`) in `0016_publish_profile.sql`.
+3. ~~Encrypt `student_private` columns at rest with pgcrypto, with the key in the host's secret store.~~ Added `pgcrypto` `pgp_sym_encrypt` (`name_enc`, `phone_enc`, `guardian_name_enc`) in `0016_publish_profile.sql`; dropped plaintext columns in `0017_student_private_encryption.sql` and switched all reads/writes to `pgp_sym_decrypt` / `pgp_sym_encrypt` with a separate required `PII_KEY` (`dev-only-pii-key-change-me` in demo mode only).
 4. ~~Move buyer-confirmation tokens out of URLs, so they never reach access logs.~~ Done via URL fragment (`/#confirm=`) and POST-body confirm endpoints (`POST /v2/confirm/info`, `POST /v2/confirm`).
-5. Drop the legacy `legacy_student_doc` table, which still holds names as JSON.
-6. Move rate-limit counters to Postgres or Redis if the API runs on more than one instance.
-7. Complete a DPDP checklist with the pilot NGO: privacy notice in Tamil and Hindi, grievance officer, breach procedure within 72 hours, retention period, and deletion at the end of the pilot.
-8. Run an outside security review and a dependency audit (`npm audit`, `pip-audit`) in CI.
+5. ~~Drop the legacy `legacy_student_doc` table, which still holds names as JSON.~~ Dropped in `0018_drop_legacy_student_doc_and_ratelimit.sql`.
+6. ~~Move rate-limit counters to Postgres or Redis if the API runs on more than one instance.~~ Moved to Postgres `rate_limit` table in `0018_drop_legacy_student_doc_and_ratelimit.sql` (`apps/api/app/ratelimit.py`).
+7. Complete a DPDP checklist with the pilot NGO (template in `docs/DPDP_CHECKLIST.md`): privacy notice in Tamil and Hindi, grievance officer, breach procedure within 72 hours, retention period, and deletion at the end of the pilot.
+8. ~~Run an outside security review and a dependency audit (`npm audit`, `pip-audit`) in CI.~~ Added `npm audit` and `pip-audit` to `.github/workflows/ci.yml`; outside security review still open.
