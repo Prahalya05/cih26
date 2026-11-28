@@ -265,20 +265,59 @@ function JobsQueue({ students, online }: { students: Student[]; online: boolean 
   const { t, pick } = useT();
   const events = useLive(() => db.events.toArray(), [], [] as StoredEvent[]);
   const studentSet = useMemo(() => new Set(students.map((s) => s.id)), [students]);
-  const awaiting = useMemo(() => {
+  const { awaiting, teacherAudit } = useMemo(() => {
     const verified = new Set(events.filter((e) => e.kind === "rating" && e.refers_to && e.payload.unverified !== true).map((e) => e.refers_to!));
     const selfFlagged = new Set(events.filter((e) => e.kind === "rating" && e.refers_to && e.payload.unverified === true).map((e) => e.refers_to!));
-    return events
-      .filter((e) => e.kind === "order" && studentSet.has(e.student_id) && !verified.has(e.id))
-      .map((e) => ({ order: e, flagged: selfFlagged.has(e.id) }));
+    const ordersById = new Map(events.filter((e) => e.kind === "order").map((e) => [e.id, e]));
+    const audit = events
+      .filter((e) => e.kind === "rating" && e.payload.verified_by === "teacher" && studentSet.has(e.student_id))
+      .sort((a, b) => b.created_at - a.created_at)
+      .map((r) => ({ rating: r, order: r.refers_to ? ordersById.get(r.refers_to) : undefined }));
+    return {
+      awaiting: events
+        .filter((e) => e.kind === "order" && studentSet.has(e.student_id) && !verified.has(e.id))
+        .map((e) => ({ order: e, flagged: selfFlagged.has(e.id) })),
+      teacherAudit: audit,
+    };
   }, [events, studentSet]);
-  if (!awaiting.length) return null;
+  if (!awaiting.length && !teacherAudit.length) return null;
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="flex items-center gap-2 text-xl font-extrabold"><Icon name="briefcase" className="size-5 text-accent-dark" />{t("jobsToCheck")} <span className="font-mono text-base text-muted">{awaiting.length}</span></h2>
-      {awaiting.map(({ order, flagged }) => (
-        <JobVerifyCard key={order.id} order={order} flagged={flagged} student={students.find((s) => s.id === order.student_id)} online={online} pick={pick} />
-      ))}
+      {awaiting.length > 0 && (
+        <>
+          <h2 className="flex items-center gap-2 text-xl font-extrabold"><Icon name="briefcase" className="size-5 text-accent-dark" />{t("jobsToCheck")} <span className="font-mono text-base text-muted">{awaiting.length}</span></h2>
+          {awaiting.map(({ order, flagged }) => (
+            <JobVerifyCard key={order.id} order={order} flagged={flagged} student={students.find((s) => s.id === order.student_id)} online={online} pick={pick} />
+          ))}
+        </>
+      )}
+      {teacherAudit.length > 0 && (
+        <details className="rounded-2xl border border-line bg-surface p-3">
+          <summary className="cursor-pointer font-bold text-sm flex items-center gap-2">
+            <Icon name="check" className="size-4 text-good" />
+            {t("teacherVerifications")} <span className="font-mono text-muted">{teacherAudit.length}</span>
+          </summary>
+          <ul className="mt-2 flex flex-col gap-2 text-xs">
+            {teacherAudit.map(({ rating, order }) => {
+              const st = students.find((s) => s.id === rating.student_id);
+              const skillName = pick(kb.skills[rating.skill_id ?? order?.skill_id ?? ""]?.name ?? { en: rating.skill_id ?? "Job" });
+              return (
+                <li key={rating.id} className="rounded-xl bg-paper p-2.5 border border-line">
+                  <p className="font-semibold">
+                    {st?.avatar} {st?.name ?? rating.student_id} · {skillName}
+                    {order?.payload.amount_inr != null ? ` · ₹${String(order.payload.amount_inr)}` : ""}
+                  </p>
+                  <p className="text-muted mt-0.5">
+                    <span className="font-semibold text-ink">{String(rating.payload.method ?? "")}</span>
+                    {rating.payload.reason ? ` — ${String(rating.payload.reason)}` : ""}
+                    {" · "}{new Date(rating.created_at).toLocaleDateString()}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        </details>
+      )}
     </section>
   );
 }

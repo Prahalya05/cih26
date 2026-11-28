@@ -25,9 +25,15 @@ def test_load_kb_twice_changes_nothing(pg):
 
 
 def _seed(con):
+    from app import settings
+    k = settings.pii_key()
     con.execute("insert into school values ('sch_a', 'School A', 'Dharmapuri'), ('sch_b', 'School B', 'Salem')")
     con.execute("insert into student(id, school_id) values ('st_a', 'sch_a'), ('st_b', 'sch_b')")
-    con.execute("insert into student_private values ('st_a', 'Meena', null), ('st_b', 'Kavya', null)")
+    con.execute(
+        "insert into student_private(student_id, name_enc) values "
+        "('st_a', pgp_sym_encrypt('Meena'::text, %s::text)), ('st_b', pgp_sym_encrypt('Kavya'::text, %s::text))",
+        (k, k),
+    )
     con.execute("insert into evidence_event(id, student_id, device_id, kind, created_at) values "
                 "('ev_a', 'st_a', 'dev1', 'self_report', now()), ('ev_b', 'st_b', 'dev2', 'self_report', now())")
 

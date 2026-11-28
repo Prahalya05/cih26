@@ -82,3 +82,94 @@ def test_publish_minor_blocked_revoke_404_rls_and_rate_limit(pg, monkeypatch):
             break
     else:
         pytest.fail("Expected 429 rate limit")
+
+
+def test_school_and_verified_partners_readers_and_refresh_snapshot(pg):
+    from fastapi.testclient import TestClient
+    from phones import PhoneClient
+    from app import db
+    from app.main import app
+    from app.routers.accounts import login_hash
+
+    c = PhoneClient(app, pg)
+    c.post("/v2/sync", json={"device_id": "p1", "students": [
+        {"id": "st_sch", "name": "Anu", "birth_year": 2012, "district": "Salem",
+         "consent": {"id": "c_sch", "scopes": ["assess", "publish_profile"], "method": "paper_form", "granted_at": NOW}},
+        {"id": "st_vp", "name": "Bala", "birth_year": 2012, "district": "Madurai",
+         "consent": {"id": "c_vp", "scopes": ["assess", "publish_profile"], "method": "paper_form", "granted_at": NOW}},
+        {"id": "st_fake_otp", "name": "Chitra", "birth_year": 2012, "district": "Erode",
+         "consent": {"id": "c_fake", "scopes": ["assess", "publish_profile"], "method": "otp", "granted_at": NOW}},
+    ], "events": []})
+
+    assert c.post("/v2/profile/publish", json={"student_id": "st_sch", "visibility": "school"}).status_code == 200
+    r_vp = c.post("/v2/profile/publish", json={"student_id": "st_vp", "visibility": "verified_partners"})
+    assert r_vp.status_code == 200
+    vp_slug = r_vp.json()["slug"]
+    # Minor with consent.method='otp' but NO verified guardian_otp cannot publish verified_partners
+    assert c.post("/v2/profile/publish", json={"student_id": "st_fake_otp", "visibility": "verified_partners"}).status_code == 403
+
+    # School reader: same-school teacher sees school & verified_partners; student and other school do not
+    t_hdr = c.as_phone("phoneT", role="teacher")
+    assert c.get("/v2/school/profiles").status_code == 403
+    sch_list = c.get("/v2/school/profiles", headers=t_hdr)
+    assert sch_list.status_code == 200 and len(sch_list.json()["profiles"]) == 2
+    assert c.get("/v2/school/profiles/st_sch", headers=t_hdr).status_code == 200
+    other = PhoneClient(app, pg, default="otherT", roles={"otherT": "teacher"}, schools={"otherT": "sch_other"})
+    assert other.get("/v2/school/profiles/st_sch").status_code == 404
+
+    # Verified partners reader: employer/donor only, sees verified_partners snapshot
+    with db.connect() as con:
+        con.execute("insert into account(id, role, name, login_kind, login_hash) values "
+                    "('acc_emp', 'employer', 'Emp', 'phone', %s)", (login_hash("9800000001"),))
+        con.execute("insert into device(id, role, account_id, token_hash) values "
+                    "('dev_emp', 'employer', 'acc_emp', 'tok_emp_hash')")
+    from app import auth
+    emp_tok = auth.new_token()
+    with db.connect() as con:
+        con.execute("update device set token_hash = %s where id = 'dev_emp'", (auth.hash_token(emp_tok),))
+    emp_hdr = {"Authorization": f"Bearer {emp_tok}"}
+    assert c.get("/v2/partners/profiles").status_code == 403
+    plist = TestClient(app).get("/v2/partners/profiles", headers=emp_hdr)
+    assert plist.status_code == 200 and len(plist.json()["profiles"]) == 1
+    assert TestClient(app).get(f"/v2/partners/profiles/{vp_slug}", headers=emp_hdr).status_code == 200
+
+    # Syncing new task evidence triggers refresh_state -> rebuilds published snapshot automatically
+    c.post("/v2/sync", json={"device_id": "p1", "events": [
+        {"id": "01KA0000000000000000000091", "student_id": "st_vp", "device_id": "p1", "kind": "task",
+         "skill_id": "sk_stitching", "subskill_id": "ss_stitch_machine", "payload": {"score": 0.95}, "created_at": NOW + 5},
+    ]})
+    rebuilt = TestClient(app).get(f"/v2/partners/profiles/{vp_slug}", headers=emp_hdr).json()
+    assert any(s["id"] == "ss_stitch_machine" for s in rebuilt["verified_skills"])
+
+
+def test_guardian_otp_teacher_only_differs_from_student_and_survives_sync(pg):
+    from phones import PhoneClient
+    from app import db
+    from app.main import app
+    from app.routers.accounts import login_hash
+
+    c = PhoneClient(app, pg)
+    c.post("/v2/sync", json={"device_id": "p1", "students": [
+        {"id": "st_m", "name": "Divya", "birth_year": 2012, "district": "Coimbatore",
+         "consent": {"id": "c_m", "scopes": ["assess", "publish_profile"], "method": "otp", "granted_at": NOW}},
+    ], "events": []})
+    with db.connect() as con:
+        con.execute("insert into account(id, role, name, login_kind, login_hash, student_id, school_id) values "
+                    "('acc_stu', 'student', 'Divya', 'phone', %s, 'st_m', 'sch_test')", (login_hash("9876543210"),))
+
+    # Student phone cannot request guardian OTP for under-18
+    assert c.post("/v2/consent/guardian-otp", json={"student_id": "st_m", "phone": "9811111111"}).status_code == 403
+
+    # Teacher phone cannot use student's own phone as guardian phone
+    t_hdr = c.as_phone("phoneT", role="teacher")
+    assert c.post("/v2/consent/guardian-otp", json={"student_id": "st_m", "phone": "9876543210"}, headers=t_hdr).status_code == 400
+
+    # Teacher phone with distinct guardian phone succeeds & verifies
+    otp = c.post("/v2/consent/guardian-otp", json={"student_id": "st_m", "phone": "9811111111"}, headers=t_hdr).json()
+    assert c.post("/v2/consent/guardian-otp/verify", json={"student_id": "st_m", "code": otp["demo_code"]}, headers=t_hdr).status_code == 200
+
+    # Subsequent consent upsert on sync does not erase guardian_otp.verified_at
+    c.post("/v2/sync", json={"device_id": "p1", "students": [
+        {"id": "st_m", "consent": {"id": "c_m", "scopes": ["assess", "publish_profile"], "method": "otp", "granted_at": NOW + 1}},
+    ], "events": []})
+    assert c.post("/v2/profile/publish", json={"student_id": "st_m", "visibility": "verified_partners"}).status_code == 200

@@ -21,7 +21,8 @@ This document records every constant, formula, invariant, and TypeScript/Python 
 | `EVIDENCE_WEIGHTS.rating_level` | `3` | Direct 1–4 level rating by teacher/mentor (`peaked` likelihood `[0.6, 0.25, 0.05]`). |
 | `EVIDENCE_WEIGHTS.taster` | `4` | Hands-on taster workshop observation (`peaked` likelihood). |
 | `EVIDENCE_WEIGHTS.order_unconfirmed` | `1` | Logged paid job before buyer confirmation (`ORDER_UNCONFIRMED`); replaced upon confirmation. |
-| `EVIDENCE_WEIGHTS.order_confirmed` | `2` | Buyer-confirmed paid job (`ORDER_GOOD` / `ORDER_OK` / `ORDER_POOR`). |
+| `EVIDENCE_WEIGHTS.order_confirmed_no_otp` | `1` | Buyer confirmation without phone OTP; downgraded weight and `paid = false` (cannot unlock Level 4). |
+| `EVIDENCE_WEIGHTS.order_confirmed` | `2` | OTP-verified or teacher-verified paid job (`ORDER_GOOD` / `ORDER_OK` / `ORDER_POOR`); sets `paid = true`. |
 | `MAX_CONFIRMED_ORDERS` | `5` | Caps cumulative paid-order weight at 5 orders (`5 × 2 = 10` max total weight) so repeat orders cannot swamp all other evidence. |
 | `HALF_LIFE_DAYS.said` | `365` | Self/family claims decay by half after 1 year. |
 | `HALF_LIFE_DAYS.shown` | `730` | Demonstrated performance evidence decays by half after 2 years. |
@@ -87,3 +88,56 @@ This document records every constant, formula, invariant, and TypeScript/Python 
    - Line 34 comments `// up to 10 in total` next to `MAX_CONFIRMED_ORDERS = 5` (reflecting the max total weight `5 × 2 = 10`, not 10 orders).
 5. **Duplicate `UNKNOWN_CREDIT` constant:**
    - `readiness.ts` defines its own `const UNKNOWN_CREDIT = 0.5` rather than importing it from `fitreach.ts` (values match).
+
+---
+
+## 6. Synthetic Simulation Benchmarks (`scripts/simulate.py`, n = 500 students / 2,500 ratings)
+
+| Codebase | `APPLY_RATER_LENIENCY` | Exact % | Within-One % | Mean Questions |
+| :--- | :--- | :--- | :--- | :--- |
+| Previous (`HEAD`, pre-OTP Level 4 gate) | Off (`false`) | `79.96%` | `99.80%` | `7.6448` |
+| Previous (`HEAD`, pre-OTP Level 4 gate) | On (`true`) | `79.96%` | `99.80%` | `7.6448` |
+| Current (OTP/teacher-gated Level 4) | Off (`false`) | `72.12%` | `99.80%` | `7.6448` |
+| Current (OTP/teacher-gated Level 4) | On (`true`) | `72.12%` | `99.80%` | `7.6448` |
+
+*Notes:*
+- `scripts/simulate.py` assigns `rater_id="buyer"` with no `raterLeniency` map, so toggling `applyLeniency` produces identical synthetic numbers until real rater-bias data is supplied.
+- On the current codebase, `scripts/simulate.py` generates buyer ratings without `buyer_phone_verified: true`, so all `239` true Level-4 students are intentionally capped at Level 3 (`P(L4) <= 0.4`) by the hardened Level-4 gate, reducing exact accuracy from `79.96%` to `72.12%` while keeping within-one accuracy at `99.80%`.
+
+---
+
+## 7. Sensitivity Analysis — Meena Example (`scenarios.meena()`, `ss_stitch_machine`)
+
+Baseline at the final checkpoint (`meena_orders`): **Level `4`**, **`P(L4) = 0.8171`**.
+
+| Evidence Weight | Base | `-25%` Level | `-25%` `P(L4)` | `+25%` Level | `+25%` `P(L4)` |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `self_report` | `0.5` | `4` | `0.8208` | `4` | `0.8134` |
+| `item_group` | `0.7` | `4` | `0.8171` | `4` | `0.8171` |
+| `work_sample_ai` | `3` | `4` | `0.8162` | `4` | `0.8178` |
+| `work_sample_teacher` | `4` | `4` | `0.8167` | `4` | `0.8172` |
+| `order_confirmed` | `2` | `4` | `0.7432` | `4` | `0.8737` |
+
+- `item_group` does not change `ss_stitch_machine` here because Meena's adaptive test items target `ss_stitch_fitting`.
+- `order_confirmed` is the dominant driver of Level 4 confidence (`0.7432` to `0.8737`, a `~13` percentage-point swing), while all other weights shift `P(L4)` by less than `0.01` and none alter the final Level `4`.
+
+---
+
+## 8. Team Estimates Awaiting Pilot Calibration
+
+The following constants are **uncalibrated team estimates** chosen for conservative behaviour and must be calibrated against real teacher/student pilot data (via `scripts/calibrate.py` and `scripts/rater_stats.py`):
+
+- **Tracing (`tracing.ts` / `tracing.py`):** `PRIOR` (`[0.4, 0.3, 0.2, 0.1]`), all `EVIDENCE_WEIGHTS` (`self_report`, `family_report`, `endorse`, `item_group`, `task`, `work_sample_ai`, `work_sample_teacher`, `rating_level`, `taster`, `order_unconfirmed`, `order_confirmed_no_otp`, `order_confirmed`), `MAX_CONFIRMED_ORDERS` (`5`), `HALF_LIFE_DAYS` (`365` / `730`), `LEARN_PER_WEEK` (`0.05`), `LEARN_MAX` (`0.2`), `SPREAD_HOP1` / `SPREAD_HOP2` (`0.5` / `0.25`), `STRONG_CONFIDENCE` (`0.8`), `LEVEL4_CAP_UNPAID` (`0.4`), `TASK_MU`, `WORK_MU`, and `SCORE_SD`.
+- **Adaptive Testing (`irt.ts` / `irt.py`):** `prior(0, 1.2)`, `STOP_SE` (`0.4`), `STOP_LEVEL_CONFIDENCE` (`0.85`), and item `(a, b)` parameters prior to running `scripts/calibrate.py --write`.
+- **Matching & Readiness (`fitreach.ts`, `readiness.ts`, `pathways.ts`):** `FRW_WEIGHTS`, `REACH_PARTS`, `WORTH_PARTS`, `UNKNOWN_LEVELS`, `UNKNOWN_CREDIT` (`0.5`), `MET` (`0.6`), `COULD_LEARN_APTITUDE` (`0.65`), `READY_SHARE` / `ALMOST_SHARE` (`0.8` / `0.5`), and `GROWTH_PER_MONTH` (`0.05`).
+
+---
+
+## 9. Recommendation on `APPLY_RATER_LENIENCY`
+
+**Keep `APPLY_RATER_LENIENCY=0` (`applyLeniency = false`) off** until sufficient overlapping pilot ratings are collected:
+
+1. **Confounding with cohort strength:** With small per-teacher sample sizes, a teacher whose cohort genuinely performs better looks "lenient"; subtracting `leniency` would unfairly penalise strong students.
+2. **Coarse rounding on discrete levels:** `round(level - clamp(leniency, -1.5, 1.5))` produces abrupt 1-level jumps when `leniency` crosses `±0.5`.
+3. **When to revisit:** Enable `APPLY_RATER_LENIENCY=1` only after pilot calibration shows stable `leniency` estimates across overlapping students/raters (`>= 20` paired ratings per rater) and improves agreement against teacher-reviewed ground truth.
+

@@ -32,10 +32,34 @@ DB_POOL_TIMEOUT = float(os.getenv("DB_POOL_TIMEOUT", "10"))
 # Sign-in (app/routers/accounts.py). AUTH_SECRET keys the HMAC that hides phone numbers and emails; set a long random
 # value in production. Without SMTP settings, codes are shown on screen (demo mode) instead of being emailed.
 AUTH_SECRET = os.getenv("AUTH_SECRET", "dev-only-auth-secret-change-me")
+DEV_PII_KEY = "dev-only-pii-key-change-me"
 OTP_DEMO = os.getenv("OTP_DEMO", "1") == "1"
+DEMO_MODE = os.getenv("DEMO_MODE", "1" if OTP_DEMO else "0") == "1"
+PII_KEY = os.getenv("PII_KEY", "") or (DEV_PII_KEY if (OTP_DEMO or DEMO_MODE) else "")
+
+
+def pii_key() -> str:
+    """Return the active PII encryption key; fail outside demo mode if PII_KEY is missing or left on the dev default."""
+    demo = OTP_DEMO or DEMO_MODE
+    key = PII_KEY
+    if not key:
+        if demo:
+            return DEV_PII_KEY
+        raise RuntimeError("PII_KEY must be set when running outside demo mode (OTP_DEMO=0)")
+    if not demo and key == DEV_PII_KEY:
+        raise RuntimeError("PII_KEY must not use the dev key outside demo mode")
+    return key
+
+
+def validate_pii_key() -> str:
+    """Startup check called from app lifespan."""
+    return pii_key()
+
+
 SMTP_HOST = os.getenv("SMTP_HOST", "")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER)
 APPLY_RATER_LENIENCY = os.getenv("APPLY_RATER_LENIENCY", "0") == "1"
+ORDER_OTP_THRESHOLD_INR = int(os.getenv("ORDER_OTP_THRESHOLD_INR", "500"))

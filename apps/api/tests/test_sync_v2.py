@@ -38,10 +38,13 @@ def test_same_batch_twice_is_harmless(client):
     r2 = client.post("/v2/sync", json=body).json()
     assert r1["accepted"] == r2["accepted"] == [uid(1), uid(2)]
     assert r1["rejected"] == []
-    from app import db
+    from app import db, settings
     with db.connect() as con:
         assert con.execute("select count(*) as n from evidence_event").fetchone()["n"] == 2
-        assert con.execute("select name from student_private").fetchone()["name"] == "Meena"
+        assert con.execute(
+            "select pgp_sym_decrypt(name_enc, %s::text) as name from student_private",
+            (settings.pii_key(),),
+        ).fetchone()["name"] == "Meena"
 
 
 def test_events_without_consent_are_rejected(client):

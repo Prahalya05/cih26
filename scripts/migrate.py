@@ -17,6 +17,8 @@ sys.path.insert(0, str(ROOT / "apps" / "api"))
 
 
 def migrate(url: str, quiet: bool = False) -> list[str]:
+    from app import settings
+
     applied_now: list[str] = []
     with psycopg.connect(url, autocommit=True) as con:
         con.execute("create table if not exists schema_migrations (name text primary key, applied_at timestamptz not null default now())")
@@ -25,6 +27,7 @@ def migrate(url: str, quiet: bool = False) -> list[str]:
             if path.name in done:
                 continue
             with con.transaction():
+                con.execute("select set_config('app.pii_key', %s, true)", (settings.pii_key(),))
                 con.execute(path.read_text(encoding="utf-8"))
                 con.execute("insert into schema_migrations(name) values (%s)", (path.name,))
             applied_now.append(path.name)

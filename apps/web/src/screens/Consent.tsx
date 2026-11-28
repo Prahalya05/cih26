@@ -24,6 +24,7 @@ export default function Consent({ go, id }: { go: Go; id: string }) {
   const [method, setMethod] = useState<ConsentMethod>("paper_form");
   const [guardian, setGuardian] = useState("");
   const [guardianPhone, setGuardianPhone] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
   const [otpDemo, setOtpDemo] = useState<string | null>(null);
   const [otpCode, setOtpCode] = useState("");
   const [otpVerified, setOtpVerified] = useState(false);
@@ -49,6 +50,7 @@ export default function Consent({ go, id }: { go: Go; id: string }) {
     });
     const out = await r.json().catch(() => ({}));
     if (!r.ok) { setOtpErr(out.detail ?? "Error"); return; }
+    setOtpSent(true);
     setOtpDemo(out.demo_code ?? null);
   };
 
@@ -126,7 +128,7 @@ export default function Consent({ go, id }: { go: Go; id: string }) {
               <Button kind="soft" disabled={guardianPhone.trim().length < 6} onClick={() => void sendGuardianOtp()}>{t("sendOtp")}</Button>
             </div>
             {otpDemo && <p className="rounded bg-brand-soft px-2 py-1 font-mono text-xs">{t("otpDemoCode")}: <strong>{otpDemo}</strong></p>}
-            {otpDemo && !otpVerified && (
+            {otpSent && !otpVerified && (
               <div className="flex gap-2">
                 <input value={otpCode} onChange={(e) => setOtpCode(e.target.value)} placeholder={t("enterOtp")} inputMode="numeric"
                   className="min-h-11 flex-1 rounded-lg border border-line px-3 font-mono" />
@@ -139,7 +141,7 @@ export default function Consent({ go, id }: { go: Go; id: string }) {
         )}
       </section>
 
-      <Button className="mt-auto" onClick={agree}><Icon name="check" className="size-5" />{t(by === "self_18plus" ? "consentAgreeSelf" : "consentAgree")}</Button>
+      <Button className="mt-auto" disabled={by === "otp" && !otpVerified} onClick={agree}><Icon name="check" className="size-5" />{t(by === "self_18plus" ? "consentAgreeSelf" : "consentAgree")}</Button>
     </Screen>
   );
 }

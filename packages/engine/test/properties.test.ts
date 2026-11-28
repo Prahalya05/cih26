@@ -204,4 +204,12 @@ test("property: unverified self-confirm order stays capped below level 4; teache
   ], kb.graph!, { now: NOW });
   assert.equal(teacherVerified.units.ss_stitch_machine.paid, true);
   assert.ok(teacherVerified.units.ss_stitch_machine.p[3] > selfRated.units.ss_stitch_machine.p[3]);
+
+  const noOtp = foldEvents([
+    orderEv,
+    { id: "r_no_otp", student_id: "s1", device_id: "buyer_link", kind: "rating", skill_id: "sk_stitch",
+      refers_to: "o_self", rater_id: "buyer_1", payload: { on_time: true, quality: true, rehire: true }, created_at: NOW - 1000 },
+  ], kb.graph!, { now: NOW });
+  assert.equal(noOtp.units.ss_stitch_machine.paid, false);
+  assert.ok(noOtp.units.ss_stitch_machine.p[3] <= 0.4 + 1e-9);
 });

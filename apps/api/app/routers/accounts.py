@@ -307,15 +307,19 @@ def my_profile(dev: Device = Depends(auth.role_in("student"))):
         return {"student": None, "actions": [], "events": []}
     from .v2 import _row_to_event
     with db.connect(dev.schools) as con:
-        leg = con.execute("select doc from legacy_student_doc where id = %s and school_id = any(%s)",
-                          (sid, dev.schools)).fetchone()
         st = con.execute("select * from student where id = %s", (sid,)).fetchone()
-        priv = con.execute("select name, guardian_name from student_private where student_id = %s", (sid,)).fetchone()
+        key = settings.pii_key()
+        priv = con.execute(
+            "select case when name_enc is not null then pgp_sym_decrypt(name_enc, %s::text) end as name, "
+            "case when guardian_name_enc is not null then pgp_sym_decrypt(guardian_name_enc, %s::text) end as guardian_name "
+            "from student_private where student_id = %s",
+            (key, key, sid),
+        ).fetchone()
         actions = db.actions_for(con, [sid])
         events = [_row_to_event(r) for r in con.execute(
             "select * from evidence_event where student_id = %s order by seq", (sid,)).fetchall()]
-    student_doc = leg["doc"] if leg else None
-    if not student_doc and st:
+    student_doc = None
+    if st:
         student_doc = {
             "id": st["id"],
             "name": (priv or {}).get("name") or acc["name"],

@@ -352,8 +352,6 @@ def leave(dev: Device = Depends(auth.device)):
             # and her old online teacher's cohort no longer lists her.
             con.execute("update student set school_id = null, facilitator_code = null where id = %s and school_id = %s",
                         (acc["student_id"], room["school_id"]))
-            con.execute("delete from legacy_student_doc where id = %s and school_id = %s",
-                        (acc["student_id"], room["school_id"]))
         fresh = con.execute("select * from account where id = %s", (acc["id"],)).fetchone()
         return {"account": _public(fresh, con)}
 

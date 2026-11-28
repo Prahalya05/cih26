@@ -16,7 +16,7 @@ DAY = 86_400_000
 EVIDENCE_WEIGHTS = {
     "self_report": 0.5, "family_report": 0.75, "endorse": 2, "item_group": 0.7, "task": 2,
     "work_sample_ai": 3, "work_sample_teacher": 4, "rating_level": 3, "taster": 4,
-    "order_unconfirmed": 1, "order_confirmed": 2,
+    "order_unconfirmed": 1, "order_confirmed_no_otp": 1, "order_confirmed": 2,
 }
 MAX_CONFIRMED_ORDERS = 5
 HALF_LIFE_SAID = 365
@@ -231,10 +231,13 @@ def _pieces(events: list[dict], g: dict, opts: dict) -> list[dict]:
                     n = confirmed_orders.get(key, 0)
                     good = p.get("quality") is True
                     lik = ORDER_GOOD if good and p.get("rehire") is True else ORDER_OK if good else ORDER_POOR
-                    weight = EVIDENCE_WEIGHTS["order_confirmed"] if n < MAX_CONFIRMED_ORDERS else 0
+                    otp_or_teacher = p.get("buyer_phone_verified") is True or p.get("verified_by") == "teacher"
+                    base_w = EVIDENCE_WEIGHTS["order_confirmed"] if otp_or_teacher else EVIDENCE_WEIGHTS["order_confirmed_no_otp"]
+                    weight = base_w if n < MAX_CONFIRMED_ORDERS else 0
                     confirmed_orders[key] = n + 1
-                    pieces.append({**base, "kind": "order_confirmed", "units": units, "lik": lik, "weight": weight,
-                                   "said": False, "shown": True, "paid": True,
+                    pieces.append({**base, "kind": "order_confirmed" if otp_or_teacher else "order_confirmed_no_otp",
+                                   "units": units, "lik": lik, "weight": weight,
+                                   "said": False, "shown": True, "paid": otp_or_teacher,
                                    "undo": {"lik": ORDER_UNCONFIRMED, "weight": EVIDENCE_WEIGHTS["order_unconfirmed"],
                                             "at": target["created_at"]}})
                 continue

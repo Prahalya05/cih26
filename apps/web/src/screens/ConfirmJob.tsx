@@ -76,7 +76,7 @@ export default function ConfirmJob({ token, onClose }: { token: string; onClose:
             {shareName && <input value={buyerName} onChange={(e) => setBuyerName(e.target.value)} placeholder={t("yourName")} className="mt-2 min-h-11 w-full rounded-lg border border-line px-3" />}
           </div>
           <div className="rounded-2xl border border-line bg-surface p-4 text-sm">
-            <p className="font-semibold">{t("buyerPhoneOptional")}</p>
+            <p className="font-semibold">{info.otp_required ? t("buyerPhoneRequired") : t("buyerPhoneOptional")}</p>
             <div className="mt-2 flex gap-2">
               <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="9876543210" inputMode="tel"
                 className="min-h-11 flex-1 rounded-lg border border-line px-3" />

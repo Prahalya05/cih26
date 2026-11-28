@@ -14,6 +14,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm audit --audit-level=high
       - run: npm test
       - run: npm run build
 
@@ -38,6 +39,7 @@ jobs:
           cache: pip
           cache-dependency-path: apps/api/requirements.txt
       - run: pip install -r apps/api/requirements.txt
+      - run: pip install pip-audit && pip-audit -r apps/api/requirements.txt
       - run: python scripts/validate_kb.py
       - run: python scripts/check_privacy.py
       - run: python -m pytest apps/api/tests -q
