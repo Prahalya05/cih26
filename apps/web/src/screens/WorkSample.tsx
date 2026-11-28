@@ -10,10 +10,11 @@ import { compressImage, rubricFor, saveSample, saveVideoSample, scoreSample, typ
 import { MAX_SECONDS, startFilming, startFromFile, type Filming, type LiveStatus, type Process, type VideoFlag } from "../lib/video";
 import type { IdentityInput } from "@disha/engine";
 import { IdentityGate } from "../components/IdentityGate";
+import { VideoRules } from "../components/VideoRules";
 import { emit } from "../lib/xray";
 import { Icon } from "../components/Icon";
 
-type Stage = "ready" | "identity" | "camera" | "filming" | "blurring" | "saving" | "scoring" | "scored" | "waiting";
+type Stage = "ready" | "rules" | "identity" | "camera" | "filming" | "blurring" | "saving" | "scoring" | "scored" | "waiting";
 
 export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: string; rubric: string }) {
   const { t, pick } = useT();
@@ -29,6 +30,9 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
   const [seconds, setSeconds] = useState(0);
   const [live, setLive] = useState<LiveStatus | null>(null);
   const [warnings, setWarnings] = useState<VideoFlag[]>([]);
+  // what the instruction page leads to: filming live, or choosing a video from the gallery
+  const [rulesNext, setRulesNext] = useState<"film" | "upload">("film");
+  const showRules = (next: "film" | "upload") => { setCameraError(false); setUploadError(false); setRulesNext(next); setStage("rules"); };
   const canvas = useRef<HTMLCanvasElement>(null);
   const player = useRef<HTMLVideoElement>(null);
   const filming = useRef<Filming | null>(null);
@@ -166,6 +170,9 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
         </div>
       )}
 
+      {stage === "rules" && (
+        <VideoRules next={rulesNext} onFilm={openCamera} onFile={(f) => void onVideoFile(f)} onCancel={() => setStage("ready")} />
+      )}
       {stage === "identity" && <IdentityGate studentId={id} onDone={(x) => void openTaskCamera(x)} />}
       {result?.autoconfirm && (
         <div className={`rounded-2xl p-3 text-sm ${result.autoconfirm.decision === "auto_confirm" ? "bg-good-soft text-good" : "bg-paper text-muted"}`}>
@@ -234,11 +241,8 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
           )}
           {(rubric as { media?: string }).media !== "photo" && (
             <>
-              <Button kind={(rubric as { media?: string }).media === "video" ? "primary" : "soft"} disabled={!photosAllowed} onClick={() => void openCamera()}><Icon name="video" className="size-5" />{t("filmTask")}</Button>
-              <label className={`flex min-h-12 items-center justify-center gap-2 rounded-xl border border-line px-5 text-sm font-bold ${photosAllowed ? "cursor-pointer" : "pointer-events-none opacity-40"}`}>
-                <Icon name="layers" className="size-4" />{t("chooseVideo")}
-                <input type="file" accept="video/*" className="hidden" disabled={!photosAllowed} onChange={(e) => { void onVideoFile(e.target.files?.[0]); e.target.value = ""; }} />
-              </label>
+              <Button kind={(rubric as { media?: string }).media === "video" ? "primary" : "soft"} disabled={!photosAllowed} onClick={() => showRules("film")}><Icon name="video" className="size-5" />{t("filmTask")}</Button>
+              <Button kind="soft" disabled={!photosAllowed} onClick={() => showRules("upload")}><Icon name="layers" className="size-4" />{t("chooseVideo")}</Button>
             </>
           )}
           {cameraError && <p className="rounded-xl bg-sun-soft p-3 text-warn">{t("cameraUnavailable")}</p>}
