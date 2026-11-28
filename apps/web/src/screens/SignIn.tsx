@@ -30,6 +30,8 @@ export default function SignIn({ onExplore }: { onExplore: () => void }) {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // Set by lib/api.ts when the server ended a session that was unused for too long.
+  const [idle] = useState(() => { try { return localStorage.getItem("disha.signin_reason") === "idle"; } catch { return false; } });
 
   const ask = async () => {
     setBusy(true); setError("");
@@ -68,6 +70,11 @@ export default function SignIn({ onExplore }: { onExplore: () => void }) {
           <p className="eyebrow !text-accent">Disha</p>
           <p className="relative mt-2 max-w-[17rem] text-[1.6rem] leading-[1.2] font-extrabold">{t("tagline")}</p>
         </section>
+        {idle && (
+          <p role="status" className="flex items-start gap-2 rounded-xl border border-dashed border-accent bg-brand-soft p-3 text-sm">
+            <Icon name="info" className="mt-0.5 size-5 shrink-0 text-accent-dark" />{t("sessionIdle")}
+          </p>
+        )}
         <div className="flex items-end justify-between pt-1">
           <h2 className="text-xl font-extrabold">{t("whoAreYou")}</h2>
           <SpeakButton text={t("whoAreYou")} />

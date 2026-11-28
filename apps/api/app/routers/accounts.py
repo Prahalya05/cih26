@@ -1,6 +1,6 @@
 """Sign-in for everyone: phone number or email plus a one-time code.
 
-    POST /v2/auth/otp      {login}                       -> sends a 6-digit code (or shows it, in demo mode)
+    POST /v2/auth/otp      {login}                       -> sends a 6-digit code by email or SMS (or shows it, in demo mode)
     POST /v2/auth/verify   {login, code, device_id, ...} -> signs in (or signs up) and returns a device token
     GET  /v2/auth/me                                     -> who this phone is signed in as
     POST /v2/auth/logout                                 -> the token stops working
@@ -9,6 +9,10 @@ Rules (also in packages/engine/src/registry.ts as rule.otp):
 - A code is 6 digits, lives 10 minutes, allows 5 tries, and works once. Only its hash is stored.
 - Asking for codes is rate limited per address, and a new code for the same login replaces the old ones.
 - The phone number or email is never stored in readable form: accounts are found by an HMAC of it.
+- Codes go to emails by SMTP and to mobile numbers by SMS (adapters/sms.py). If neither is set up, demo mode shows the
+  code on screen; with OTP_DEMO=0 the request is refused instead.
+- A code is needed at every sign-up and sign-in, and again after SESSION_IDLE_DAYS (default 30) without reaching the
+  server: the old token stops working (auth.py) and the phone shows the sign-in screen.
 - New students and teachers need their school's class or teacher code; the role comes from that code,
   never from what the phone asks for. Donors and employers get no school, so they never see student rows.
 """
@@ -28,6 +32,7 @@ from pydantic import BaseModel, Field
 
 from .. import auth, db, settings
 from ..auth import Device
+from ..adapters import sms
 from ..ratelimit import limit
 from ..schemas import new_ulid
 
@@ -106,9 +111,9 @@ def request_otp(body: OtpIn):
         con.execute("insert into login_otp(login_hash, code_hash, expires_at) values (%s, %s, %s)",
                     (lh, _code_hash(lh, code), now + timedelta(minutes=OTP_MINUTES)))
         known = con.execute("select role, name from account where login_hash = %s and disabled_at is null", (lh,)).fetchone()
-    sent = kind == "email" and _send_email(value, code)
+    sent = _send_email(value, code) if kind == "email" else sms.send_code(value, code, OTP_MINUTES)
     out = {"sent_to": mask(kind, value), "kind": kind, "new_account": known is None,
-           "delivery": "email" if sent else "demo", "minutes": OTP_MINUTES}
+           "delivery": ("email" if kind == "email" else "sms") if sent else "demo", "minutes": OTP_MINUTES}
     if not sent:
         if not settings.OTP_DEMO:
             raise HTTPException(503, "Sign-in codes cannot be sent right now")
@@ -200,9 +205,10 @@ def _sign_in(body: VerifyIn, kind: str, value: str, lh: str, otp_id: int) -> dic
         if old and old["revoked_at"] is not None:
             raise HTTPException(403, "This phone has been switched off; ask the school")
         token = auth.new_token()
-        con.execute("insert into device(id, school_id, role, token_hash, account_id) values (%s, %s, %s, %s, %s) "
+        con.execute("insert into device(id, school_id, role, token_hash, account_id, last_seen_at) "
+                    "values (%s, %s, %s, %s, %s, now()) "
                     "on conflict (id) do update set school_id = excluded.school_id, role = excluded.role, "
-                    "token_hash = excluded.token_hash, account_id = excluded.account_id",
+                    "token_hash = excluded.token_hash, account_id = excluded.account_id, last_seen_at = now()",
                     (body.device_id, acc["school_id"], acc["role"], auth.hash_token(token), acc["id"]))
         con.execute("update account set last_login_at = now() where id = %s", (acc["id"],))
         return {"token": token, "account": _public(acc, con)}

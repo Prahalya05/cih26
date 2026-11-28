@@ -63,5 +63,10 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER)
+# SMS codes for phone numbers (app/adapters/sms.py). Without these, phone codes are shown on screen in demo mode.
+MSG91_AUTH_KEY = os.getenv("MSG91_AUTH_KEY", "")
+MSG91_TEMPLATE_ID = os.getenv("MSG91_TEMPLATE_ID", "")  # a DLT-approved OTP template that contains ##OTP##
+# A signed-in phone that has not reached the server for this many days must sign in again with a new code.
+SESSION_IDLE_DAYS = int(os.getenv("SESSION_IDLE_DAYS", "30"))
 APPLY_RATER_LENIENCY = os.getenv("APPLY_RATER_LENIENCY", "0") == "1"
 ORDER_OTP_THRESHOLD_INR = int(os.getenv("ORDER_OTP_THRESHOLD_INR", "500"))

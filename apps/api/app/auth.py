@@ -7,6 +7,10 @@ other school's students (migrations/0003_security.sql).
 
 Open without a token: /health, /v1/kb, /v1/match, /v1/eligibility (no student data is stored) and the buyer's
 /v2/confirm/{token} pages (the one-time link is the proof).
+
+Idle sign-ins: a phone signed in to an account (phone number or email + one-time code) that has not reached the server
+for settings.SESSION_IDLE_DAYS stops working and must sign in again with a new code. Its token is replaced with a dead
+value (not revoked, so the same phone can still sign in). Phones registered with a class code only are not affected.
 """
 from __future__ import annotations
 
@@ -50,7 +54,7 @@ def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def _unauthorised(msg: str) -> HTTPException:
+def _unauthorised(msg: str | dict) -> HTTPException:
     return HTTPException(401, msg, headers={"WWW-Authenticate": "Bearer"})
 
 
@@ -59,17 +63,30 @@ def device(authorization: str | None = Header(None, description="Bearer <device 
     scheme, _, token = (authorization or "").partition(" ")
     if scheme.lower() != "bearer" or not token.strip():
         raise _unauthorised("This phone is not registered; enter the class code first")
+    extra: tuple[str, ...] = ()
     with db.connect() as con:
-        row = con.execute("select id, school_id, role, account_id from device where token_hash = %s and revoked_at is null",
-                          (hash_token(token.strip()),)).fetchone()
+        row = con.execute("select id, school_id, role, account_id, (account_id is not null and last_seen_at < now() - "
+                          "make_interval(days => %s)) as idle from device where token_hash = %s and revoked_at is null",
+                          (settings.SESSION_IDLE_DAYS, hash_token(token.strip()))).fetchone()
         if not row:
             raise _unauthorised("This phone's registration is not valid; enter the class code again")
-        extra: tuple[str, ...] = ()
-        if row["account_id"] and row["role"] == "teacher":
-            rooms = con.execute("select distinct school_id from classroom where teacher_account = %s",
-                                (row["account_id"],)).fetchall()
-            extra = tuple(r["school_id"] for r in rooms if r["school_id"] and r["school_id"] != row["school_id"])
-    return Device(**row, extra_schools=extra)
+        if row["idle"]:
+            # Too long away: this token dies; a new one-time code is needed (POST /v2/auth/otp, then /verify).
+            # Not raised here: raising inside connect() would roll this update back.
+            con.execute("update device set token_hash = %s where id = %s", ("expired:" + secrets.token_hex(16), row["id"]))
+        else:
+            con.execute("update device set last_seen_at = now() where id = %s and last_seen_at < now() - interval '1 hour'",
+                        (row["id"],))
+            if row["account_id"] and row["role"] == "teacher":
+                rooms = con.execute("select distinct school_id from classroom where teacher_account = %s",
+                                    (row["account_id"],)).fetchall()
+                extra = tuple(r["school_id"] for r in rooms if r["school_id"] and r["school_id"] != row["school_id"])
+    if row["idle"]:
+        raise _unauthorised({"code": "session_idle", "days": settings.SESSION_IDLE_DAYS,
+                             "message": f"You have not used Disha for {settings.SESSION_IDLE_DAYS} days. "
+                                        "Sign in again with a new code."})
+    return Device(id=row["id"], school_id=row["school_id"], role=row["role"], account_id=row["account_id"],
+                  extra_schools=extra)
 
 
 def school_member(dev: Device = Depends(device)) -> Device:

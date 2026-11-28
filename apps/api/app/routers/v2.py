@@ -65,7 +65,7 @@ def enrol(body: EnrolIn):
             raise HTTPException(409, "This is a teacher's phone; enter the teacher code")
         token = auth.new_token()
         con.execute("insert into device(id, school_id, role, token_hash) values (%s, %s, %s, %s) "
-                    "on conflict (id) do update set role = excluded.role, token_hash = excluded.token_hash",
+                    "on conflict (id) do update set role = excluded.role, token_hash = excluded.token_hash, last_seen_at = now()",
                     (body.device_id, jc["school_id"], jc["role"], auth.hash_token(token)))
     return {"token": token, "school_id": jc["school_id"], "role": jc["role"], "class_code": jc["class_code"]}
 
