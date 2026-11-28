@@ -31,11 +31,12 @@ def test_allow_list_and_extra_forbid_unit():
     assert d["handle"].startswith("S-")
 
 
-def test_publish_minor_blocked_revoke_404_rls_and_rate_limit(pg):
+def test_publish_minor_blocked_revoke_404_rls_and_rate_limit(pg, monkeypatch):
     from fastapi.testclient import TestClient
     from phones import PhoneClient
     from app.main import app
     from app import ratelimit
+    monkeypatch.setenv("RATE_LIMIT_SCALE", "1")
     ratelimit.reset()
 
     c = PhoneClient(app, pg)

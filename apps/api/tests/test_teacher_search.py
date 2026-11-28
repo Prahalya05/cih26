@@ -33,8 +33,8 @@ def _seed_teacher(pg_url: str, school_id: str, school_name: str, phone: str, nam
         con.execute("insert into school(id, name, district) values (%s, %s, %s) on conflict (id) do nothing",
                     (school_id, school_name, district_code))
         acc_id = f"acc_{secrets.token_hex(4)}"
-        con.execute("insert into account(id, role, name, login_kind, login_hash, login_mask, school_id) "
-                    "values (%s, 'teacher', %s, 'phone', %s, '98••••10', %s)",
+        con.execute("insert into account(id, role, name, login_kind, login_hash, login_masked, school_id, privacy_ok_at) "
+                    "values (%s, 'teacher', %s, 'phone', %s, '98••••10', %s, now())",
                     (acc_id, name, login_hash(phone), school_id))
         con.execute("insert into teacher_profile(account_id, subjects, languages, district, district_code, pincode, listed) "
                     "values (%s, %s, %s, %s, %s, '641001', %s)",
@@ -50,9 +50,10 @@ def _seed_teacher(pg_url: str, school_id: str, school_name: str, phone: str, nam
     return tok
 
 
-def test_teacher_search_opt_in_cross_school_distance_pagination_and_privacy(pg):
+def test_teacher_search_opt_in_cross_school_distance_pagination_and_privacy(pg, monkeypatch):
     from app.main import app
     from app import ratelimit
+    monkeypatch.setenv("RATE_LIMIT_SCALE", "1")
     ratelimit.reset()
 
     tok = _seed_teacher(pg, "sch_a", "School A", "+919000000001", "Anitha", "tn_coimbatore", True, ["Tailoring"], ["ta", "en"], 2)
