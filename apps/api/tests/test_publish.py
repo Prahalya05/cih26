@@ -119,8 +119,8 @@ def test_school_and_verified_partners_readers_and_refresh_snapshot(pg):
 
     # Verified partners reader: employer/donor only, sees verified_partners snapshot
     with db.connect() as con:
-        con.execute("insert into account(id, role, name, login_kind, login_hash, login_masked) values "
-                    "('acc_emp', 'employer', 'Emp', 'phone', %s, '98••••01')", (login_hash("9800000001"),))
+        con.execute("insert into account(id, role, name, login_kind, login_hash, login_masked, privacy_ok_at) values "
+                    "('acc_emp', 'employer', 'Emp', 'phone', %s, '98••••01', now())", (login_hash("9800000001"),))
         con.execute("insert into device(id, role, account_id, token_hash) values "
                     "('dev_emp', 'employer', 'acc_emp', 'tok_emp_hash')")
     from app import auth
@@ -154,8 +154,8 @@ def test_guardian_otp_teacher_only_differs_from_student_and_survives_sync(pg):
          "consent": {"id": "c_m", "scopes": ["assess", "publish_profile"], "method": "otp", "granted_at": NOW}},
     ], "events": []})
     with db.connect() as con:
-        con.execute("insert into account(id, role, name, login_kind, login_hash, login_masked, student_id, school_id) values "
-                    "('acc_stu', 'student', 'Divya', 'phone', %s, '98••••10', 'st_m', 'sch_test')", (login_hash("9876543210"),))
+        con.execute("insert into account(id, role, name, login_kind, login_hash, login_masked, privacy_ok_at, student_id, school_id) values "
+                    "('acc_stu', 'student', 'Divya', 'phone', %s, '98••••10', now(), 'st_m', 'sch_test')", (login_hash("9876543210"),))
 
     # Student phone cannot request guardian OTP for under-18
     assert c.post("/v2/consent/guardian-otp", json={"student_id": "st_m", "phone": "9811111111"}).status_code == 403

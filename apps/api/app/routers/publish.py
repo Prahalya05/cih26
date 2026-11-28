@@ -279,7 +279,7 @@ def school_profile(student_id: str, dev: Device = Depends(auth.role_in("teacher"
 
 @router.get("/partners/profiles", summary="Allow-listed profiles visible to signed-in employers and donors",
             dependencies=[Depends(limit("partner_profile", per_minute=30))])
-def partner_profiles(dev: Device = Depends(auth.role_in("employer", "donor"))):
+def partner_profiles(dev: Device = Depends(auth.role_in("employer", "funder", "donor"))):
     with db.connect() as con:
         rows = con.execute(
             "select p.snapshot from published_profile p "
@@ -295,7 +295,7 @@ def partner_profiles(dev: Device = Depends(auth.role_in("employer", "donor"))):
 
 @router.get("/partners/profiles/{slug}", summary="Single allow-listed profile for signed-in employers and donors",
             dependencies=[Depends(limit("partner_profile", per_minute=30))])
-def partner_profile(slug: str, dev: Device = Depends(auth.role_in("employer", "donor"))):
+def partner_profile(slug: str, dev: Device = Depends(auth.role_in("employer", "funder", "donor"))):
     with db.connect() as con:
         row = con.execute(
             "select p.snapshot from published_profile p "
