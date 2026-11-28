@@ -76,7 +76,7 @@ def test_student_private_uses_pii_key_not_auth_secret_and_reads_decrypt(client, 
     info = client.post("/v2/confirm/info", json={"token": tok}).json()
     assert info["student"] == "Meena"
     # Teacher cohort view decrypts full name
-    t_hdr = client.as_phone("phoneT", role="teacher")
+    t_hdr = client.as_phone("phoneT")
     cohort = client.get("/v1/facilitator/PSG01/cohort", headers=t_hdr).json()
     assert any(s["id"] == "st1" and s["name"] == "Meena Kumari" for s in cohort["students"])
     # Decrypting with AUTH_SECRET must fail when PII_KEY differs

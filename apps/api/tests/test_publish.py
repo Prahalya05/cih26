@@ -109,18 +109,18 @@ def test_school_and_verified_partners_readers_and_refresh_snapshot(pg):
     assert c.post("/v2/profile/publish", json={"student_id": "st_fake_otp", "visibility": "verified_partners"}).status_code == 403
 
     # School reader: same-school teacher sees school & verified_partners; student and other school do not
-    t_hdr = c.as_phone("phoneT", role="teacher")
+    t_hdr = c.as_phone("phoneT")
     assert c.get("/v2/school/profiles").status_code == 403
     sch_list = c.get("/v2/school/profiles", headers=t_hdr)
     assert sch_list.status_code == 200 and len(sch_list.json()["profiles"]) == 2
     assert c.get("/v2/school/profiles/st_sch", headers=t_hdr).status_code == 200
-    other = PhoneClient(app, pg, default="otherT", roles={"otherT": "teacher"}, schools={"otherT": "sch_other"})
+    other = PhoneClient(app, pg, teachers=("otherT",), default="otherT", schools={"otherT": "sch_other"})
     assert other.get("/v2/school/profiles/st_sch").status_code == 404
 
     # Verified partners reader: employer/donor only, sees verified_partners snapshot
     with db.connect() as con:
-        con.execute("insert into account(id, role, name, login_kind, login_hash) values "
-                    "('acc_emp', 'employer', 'Emp', 'phone', %s)", (login_hash("9800000001"),))
+        con.execute("insert into account(id, role, name, login_kind, login_hash, login_masked) values "
+                    "('acc_emp', 'employer', 'Emp', 'phone', %s, '98••••01')", (login_hash("9800000001"),))
         con.execute("insert into device(id, role, account_id, token_hash) values "
                     "('dev_emp', 'employer', 'acc_emp', 'tok_emp_hash')")
     from app import auth
@@ -154,14 +154,14 @@ def test_guardian_otp_teacher_only_differs_from_student_and_survives_sync(pg):
          "consent": {"id": "c_m", "scopes": ["assess", "publish_profile"], "method": "otp", "granted_at": NOW}},
     ], "events": []})
     with db.connect() as con:
-        con.execute("insert into account(id, role, name, login_kind, login_hash, student_id, school_id) values "
-                    "('acc_stu', 'student', 'Divya', 'phone', %s, 'st_m', 'sch_test')", (login_hash("9876543210"),))
+        con.execute("insert into account(id, role, name, login_kind, login_hash, login_masked, student_id, school_id) values "
+                    "('acc_stu', 'student', 'Divya', 'phone', %s, '98••••10', 'st_m', 'sch_test')", (login_hash("9876543210"),))
 
     # Student phone cannot request guardian OTP for under-18
     assert c.post("/v2/consent/guardian-otp", json={"student_id": "st_m", "phone": "9811111111"}).status_code == 403
 
     # Teacher phone cannot use student's own phone as guardian phone
-    t_hdr = c.as_phone("phoneT", role="teacher")
+    t_hdr = c.as_phone("phoneT")
     assert c.post("/v2/consent/guardian-otp", json={"student_id": "st_m", "phone": "9876543210"}, headers=t_hdr).status_code == 400
 
     # Teacher phone with distinct guardian phone succeeds & verifies
