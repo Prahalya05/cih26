@@ -64,7 +64,12 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   if (!tok) return new Response(null, { status: 401 });
   let res = await send(tok);
   if (res.status === 401 && (await db.meta.get("session"))) {
-    // A signed-in account whose token stopped working (signed out elsewhere, or switched off): sign in again.
+    // A signed-in account whose token stopped working (signed out elsewhere, switched off, or unused for too long):
+    // sign in again. Saved work stays on the phone and syncs after the same account signs in again.
+    try {
+      const detail = (await res.clone().json())?.detail;
+      if (detail?.code === "session_idle") localStorage.setItem("disha.signin_reason", "idle");
+    } catch { /* no body, or private mode */ }
     await db.meta.bulkDelete(["session", TOKEN, ROLE]);
     window.dispatchEvent(new Event("disha:session"));
     return res;

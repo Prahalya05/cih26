@@ -85,7 +85,8 @@ outside `student_private`, or if any analytics or tracking SDK is added to the a
   - Codes: only a hash is kept; 10 minutes, 5 tries, one use; a new code kills the old ones; rate limited per address.
   - The **role of a student or teacher comes from the school's code**, never from the phone. Donors and employers have no school, so row-level security shows them no student rows.
   - Sign-out kills the token on the server; "Delete my account" removes the sign-in.
-  - Without an SMS/email provider the code is shown on screen (`OTP_DEMO=1`). For a pilot: set `OTP_DEMO=0`, SMTP settings (or an SMS gateway), and a long random `AUTH_SECRET`.
+  - Codes go to emails by SMTP and to mobile numbers by SMS through MSG91 (`apps/api/app/adapters/sms.py`). Without a provider the code is shown on screen (`OTP_DEMO=1`). For a pilot: set `OTP_DEMO=0`, SMTP settings, `MSG91_AUTH_KEY` and a DLT-approved `MSG91_TEMPLATE_ID`, and a long random `AUTH_SECRET`.
+  - A signed-in phone that has not reached the server for `SESSION_IDLE_DAYS` (default 30) must sign in again with a new code (`apps/api/app/auth.py`, migration `0015_session_idle.sql`). Its saved work stays on the phone and syncs after the new sign-in. Phones registered with a class code only are not affected.
 - **Documents** (`routers/trust.py`, migration `0012_trust.sql`): the photo goes to the AI once for a first look and is **never stored on the server**. The AI's note has ID-like numbers removed. Only the status (uploaded / verified / rejected) is kept, and only a **teacher who saw the original** can mark it verified.
 - **Identity in task videos** (`apps/web/src/lib/identity.ts`, rule `rule.identity`): her face descriptor is made and kept **only on her phone**; a liveness challenge (show N fingers) and a face match run on the phone; only the distances and finger counts are sent, and the server re-runs the same rule.
 - **Donors** see a pseudonym (`S-3F9A1C`, an HMAC of the student id), district, skill and the ✓/✗ of each check (`GET /v2/funder/paycheck`), never a name, and only for students whose family agreed to share.
@@ -114,7 +115,7 @@ outside `student_private`, or if any analytics or tracking SDK is added to the a
 ## 7. Still open (before a real pilot)
 
 1. Guardian OTP as a second consent method, in addition to the paper form.
-2. ~~Per-teacher PIN on shared phones~~ replaced by per-person sign-in (6a). Still open: a real SMS gateway for phone OTPs (today email via SMTP, or demo mode).
+2. ~~Per-teacher PIN on shared phones~~ replaced by per-person sign-in (6a). SMS codes are wired to MSG91 but untested against the live service until an account and DLT template exist.
 3. ~~Encrypt `student_private` columns at rest with pgcrypto, with the key in the host's secret store.~~ Added `pgcrypto` `pgp_sym_encrypt` (`name_enc`, `phone_enc`, `guardian_name_enc`) in `0016_publish_profile.sql`; dropped plaintext columns in `0017_student_private_encryption.sql` and switched all reads/writes to `pgp_sym_decrypt` / `pgp_sym_encrypt` with a separate required `PII_KEY` (`dev-only-pii-key-change-me` in demo mode only).
 4. ~~Move buyer-confirmation tokens out of URLs, so they never reach access logs.~~ Done via URL fragment (`/#confirm=`) and POST-body confirm endpoints (`POST /v2/confirm/info`, `POST /v2/confirm`).
 5. ~~Drop the legacy `legacy_student_doc` table, which still holds names as JSON.~~ Dropped in `0018_drop_legacy_student_doc_and_ratelimit.sql`.

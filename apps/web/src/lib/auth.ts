@@ -36,7 +36,7 @@ const ROLE = "device_role";
 const LAST_ACCOUNT = "last_account_id";
 const EVENT = "disha:session";
 
-export interface OtpSent { sent_to: string; kind: "phone" | "email"; new_account: boolean; delivery: "email" | "demo"; minutes: number; demo_code?: string }
+export interface OtpSent { sent_to: string; kind: "phone" | "email"; new_account: boolean; delivery: "email" | "sms" | "demo"; minutes: number; demo_code?: string }
 
 /** Wipes all user-scoped records from IndexedDB and localStorage so accounts never leak data on shared phones. */
 export async function clearLocalUserData(): Promise<void> {
@@ -103,6 +103,7 @@ export async function verifyOtp(login: string, code: string, extra?: NewAccount)
     await db.meta.put({ key: SESSION, value: out.account });
     await db.meta.put({ key: LAST_ACCOUNT, value: out.account.id });
     try {
+      localStorage.removeItem("disha.signin_reason");
       if (out.account.class_code) localStorage.setItem("disha.code", out.account.class_code);
       else localStorage.removeItem("disha.code");
     } catch { /* private mode */ }

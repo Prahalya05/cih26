@@ -17,8 +17,20 @@ services:
         generateValue: true
       - key: AUTH_SECRET       # keys the HMAC that hides phone numbers and emails (accounts.py)
         generateValue: true
-      - key: OTP_DEMO          # 1 = show sign-in codes on screen (no SMS/email provider yet); 0 for a real pilot
+      - key: OTP_DEMO          # 1 = show sign-in codes on screen when they cannot be sent; 0 for a real pilot
         value: "1"
+      - key: SMTP_HOST         # email codes; with SMTP_USER, SMTP_PASSWORD (and SMTP_PORT, SMTP_FROM)
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: MSG91_AUTH_KEY    # SMS codes to mobile numbers (adapters/sms.py)
+        sync: false
+      - key: MSG91_TEMPLATE_ID # DLT-approved OTP template containing ##OTP##
+        sync: false
+      - key: SESSION_IDLE_DAYS # days without reaching the server before a new sign-in code is needed
+        value: "30"
       - key: PAYMENTS_DEMO     # 1 = labelled demo course payments when no Razorpay keys are set
         value: "1"
       - key: RAZORPAY_KEY_ID   # Razorpay test-mode keys (rzp_test_...); optional

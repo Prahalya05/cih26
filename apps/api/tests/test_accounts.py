@@ -140,6 +140,74 @@ def test_modes_link_school_and_student_isolation(api):
     assert prof["student"]["id"] == "stu_1" and len(prof["events"]) == 1
 
 
+
+# ---------- real delivery (SMS / email) and signing in again after a long gap ----------
+
+def test_phone_code_goes_by_sms_when_set_up(api, monkeypatch):
+    from app import settings
+    from app.adapters import sms
+    sent = []
+    monkeypatch.setattr(settings, "MSG91_AUTH_KEY", "k")
+    monkeypatch.setattr(settings, "MSG91_TEMPLATE_ID", "t")
+    monkeypatch.setattr(sms, "send_code", lambda mobile, code, minutes: sent.append((mobile, code)) or True)
+    out = api.post("/v2/auth/otp", json={"login": "+91 98765 43210"}).json()
+    assert out["delivery"] == "sms" and "demo_code" not in out
+    assert sent and sent[0][0] == "9876543210" and len(sent[0][1]) == 6
+
+
+def test_no_provider_and_demo_off_refuses(api, monkeypatch):
+    from app import settings
+    monkeypatch.setattr(settings, "OTP_DEMO", False)
+    assert api.post("/v2/auth/otp", json={"login": "9876500000"}).status_code == 503
+
+
+def test_sms_send_failure_is_quiet(monkeypatch):
+    import httpx
+    from app import settings
+    from app.adapters import sms
+    monkeypatch.setattr(settings, "MSG91_AUTH_KEY", "k")
+    monkeypatch.setattr(settings, "MSG91_TEMPLATE_ID", "t")
+
+    def boom(*a, **kw):
+        raise httpx.ConnectError("down")
+    monkeypatch.setattr(httpx, "post", boom)
+    assert sms.send_code("9876543210", "123456", 10) is False
+
+
+def _age_device(pg, device_id, days):
+    with psycopg.connect(pg, autocommit=True) as con:
+        con.execute("update device set last_seen_at = now() - make_interval(days => %s) where id = %s", (days, device_id))
+
+
+def test_idle_sign_in_needs_a_new_code(api, pg):
+    tok = sign_in(api, "idle@x.org", device="ph_idle", role="funder", name="Fund", privacy_ok=True).json()["token"]
+    h = {"Authorization": f"Bearer {tok}"}
+    _age_device(pg, "ph_idle", 29)
+    assert api.get("/v2/auth/me", headers=h).status_code == 200      # 29 days: still fine, and the clock restarts
+    _age_device(pg, "ph_idle", 31)
+    r = api.get("/v2/auth/me", headers=h)
+    assert r.status_code == 401 and r.json()["detail"]["code"] == "session_idle"
+    assert api.get("/v2/auth/me", headers=h).status_code == 401      # the old token stays dead
+    tok2 = sign_in(api, "idle@x.org", device="ph_idle").json()["token"]  # same phone signs in again with a new code
+    assert api.get("/v2/auth/me", headers={"Authorization": f"Bearer {tok2}"}).status_code == 200
+
+
+def test_use_keeps_a_sign_in_alive(api, pg):
+    tok = sign_in(api, "busy@x.org", device="ph_busy", role="funder", name="Fund", privacy_ok=True).json()["token"]
+    h = {"Authorization": f"Bearer {tok}"}
+    _age_device(pg, "ph_busy", 20)
+    assert api.get("/v2/auth/me", headers=h).status_code == 200
+    with psycopg.connect(pg) as con:
+        age = con.execute("select now() - last_seen_at < interval '1 hour' from device where id = 'ph_busy'").fetchone()[0]
+    assert age
+
+
+def test_class_code_phones_never_idle_out(api, pg):
+    r = api.post("/v2/devices", json={"code": "CLS-1", "device_id": "ph_class"})
+    h = {"Authorization": f"Bearer {r.json()['token']}"}
+    _age_device(pg, "ph_class", 400)
+    assert api.post("/v2/sync", headers=h, json={"device_id": "ph_class", "events": [], "students": [],
+                                                  "student_ids": [], "cursor": 0}).status_code == 200
 def test_one_student_account_holds_up_to_three_profiles(api, pg):
     """A student account may hold up to STUDENT_PROFILES_MAX (3) profiles; a 4th, or another account's, is refused."""
     me = sign_in(api, "9000000901", device="ph_m", role="student", mode="school", name="Meena", join_code="CLS-1", privacy_ok=True).json()
