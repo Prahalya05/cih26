@@ -1,16 +1,70 @@
 """Trust rules on the server. Keep in step with packages/engine/src/trust.ts (same thresholds, same answers).
 
 identity_check  is it really her in the task video (liveness + face-match numbers computed on her phone)
+trust_score     how far the video can be trusted as her own live work, from the warning counts (not the skill score)
 auto_confirm    may the system confirm the AI's video score itself, or must a teacher look
 pay_check       may a donor's money go to her
 overrides       the latest teacher override per sub-skill
 """
 from __future__ import annotations
 
+import math
+
 IDENTITY_RULE = {"maxFaceDistance": 0.5, "minMatchedShare": 0.6, "livenessRequired": True}
 AUTOCONFIRM_RULE = {"minKappa": 0.6, "maxCannotSee": 0.2, "auditShare": 0.1}
 PAYCHECK_RULE = {"maxIncomeInr": 250_000, "needDocs": ["income_certificate", "ration_card_bpl", "scholarship_letter"]}
 OVERRIDE_MIN_REASON = 8
+
+# Same numbers and labels as TRUST_RULE in packages/engine/src/trust.ts (golden.json checks they agree).
+TRUST_RULE = {
+    "start": 100, "high": 80, "medium": 50,
+    "penalty": {
+        "screen": {"each": 25, "max": 50, "label": "another phone or screen in view"},
+        "multi_face": {"each": 25, "max": 50, "label": "another person in view"},
+        "ai_noticed": {"each": 25, "max": 50, "label": "the AI noticed something"},
+        "uploaded": {"each": 25, "max": 25, "label": "chosen from the gallery, not filmed live"},
+        "tab_away": {"each": 15, "max": 30, "label": "left Disha while filming"},
+        "camera_lost": {"each": 10, "max": 20, "label": "camera stopped"},
+        "no_hands": {"each": 5, "max": 20, "label": "hands not seen for a while", "per10min": True},
+        "dark": {"each": 5, "max": 15, "label": "too dark", "per10min": True},
+    },
+}
+
+
+def _count(raw) -> int:
+    if isinstance(raw, bool) or not isinstance(raw, (int, float)) or raw != raw or raw in (float("inf"), float("-inf")):
+        return 0
+    return max(0, min(99, int(raw // 1)))
+
+
+def trust_score(counts: dict, seconds=None) -> dict:
+    """Trust score from warning counts. Separate from the skill score; never changes what was scored for the work.
+
+    seconds: how long the video is. Longer than 10 minutes, small warnings (per10min) count per 10 minutes."""
+    counts = counts if isinstance(counts, dict) else {}
+    ok_secs = isinstance(seconds, (int, float)) and not isinstance(seconds, bool) and seconds == seconds \
+        and seconds not in (float("inf"), float("-inf")) and seconds > 0
+    secs = seconds if ok_secs else 0
+    minus: dict[str, int] = {}
+    why = [f"start at {TRUST_RULE['start']}"]
+    score = TRUST_RULE["start"]
+    for kind, p in TRUST_RULE["penalty"].items():
+        n = _count(counts.get(kind))
+        if n == 0:
+            continue
+        spread = p.get("per10min") is True and secs > 600
+        k = math.ceil(n / (secs / 600)) if spread else n
+        off = min(p["max"], k * p["each"])
+        minus[kind] = off
+        score -= off
+        cap = f", at most {p['max']}" if k * p["each"] > p["max"] else ""
+        times = f"{n} {'time' if n == 1 else 'times'}"
+        how = f"{times} in {int(secs // 60)} min, {k} per 10 min" if spread else times
+        why.append(f"− {off}: {p['label']} ({how} × {p['each']}{cap})")
+    score = max(0, score)
+    band = "high" if score >= TRUST_RULE["high"] else "medium" if score >= TRUST_RULE["medium"] else "low"
+    why.append(f"= {score} ({band})")
+    return {"score": score, "band": band, "minus": minus, "why": why}
 
 
 def identity_check(x: dict) -> dict:
@@ -58,6 +112,8 @@ def auto_confirm(x: dict) -> dict:
          kappa is not None and kappa >= AUTOCONFIRM_RULE["minKappa"]),
         ("not a hazardous task for a minor", not x.get("minor_hazard")),
     ]
+    if x.get("trust_score") is not None:
+        checks.append((f"trust score {x['trust_score']} ≥ {TRUST_RULE['high']}", x["trust_score"] >= TRUST_RULE["high"]))
     why = [f"{t} {'✓' if ok else '✗'}" for t, ok in checks]
     all_ok = all(ok for _, ok in checks)
     audited = float(x.get("audit_draw", 1)) < AUTOCONFIRM_RULE["auditShare"]

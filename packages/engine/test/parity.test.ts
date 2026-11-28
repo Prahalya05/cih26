@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
-import { evaluateAll, recommend } from "../src/index.ts";
+import { evaluateAll, recommend, trustScore } from "../src/index.ts";
 import { loadKb } from "./loadKb.ts";
 
 const kb = loadKb();
@@ -25,5 +25,11 @@ test("career matching with embeddings gives the same result as Python", () => {
 test("eligibility gives the same result as Python", () => {
   for (const { facts, result } of golden.eligibility) {
     assert.deepEqual(evaluateAll(kb, facts), result, JSON.stringify(facts));
+  }
+});
+
+test("video trust score gives the same result as Python", () => {
+  for (const { counts, seconds, result } of golden.trust_score) {
+    assert.deepEqual(trustScore(counts, seconds), result, JSON.stringify({ counts, seconds }));
   }
 });

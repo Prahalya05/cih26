@@ -10,6 +10,9 @@
     "en": "Short video bandaging a pretend cut on a friend's arm, saying each step.",
     "ta": "நண்பரின் கையில் போலியான காயத்திற்குக் கட்டுப்போடும் சிறு வீடியோ, ஒவ்வொரு படியையும் சொல்லுங்கள்."
   },
+  "video_allows": [
+    "second_person"
+  ],
   "criteria": [
     {
       "id": "clean",

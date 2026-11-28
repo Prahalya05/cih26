@@ -138,3 +138,41 @@ def test_modes_link_school_and_student_isolation(api):
     again = sign_in(api, "9000000801", device="ph_s1_new").json()
     prof = api.get("/v2/auth/me/profile", headers={"Authorization": f"Bearer {again['token']}"}).json()
     assert prof["student"]["id"] == "stu_1" and len(prof["events"]) == 1
+
+
+def test_one_student_account_holds_up_to_three_profiles(api, pg):
+    """A student account may hold up to STUDENT_PROFILES_MAX (3) profiles; a 4th, or another account's, is refused."""
+    me = sign_in(api, "9000000901", device="ph_m", role="student", mode="school", name="Meena", join_code="CLS-1", privacy_ok=True).json()
+    other = sign_in(api, "9000000902", device="ph_o", role="student", mode="school", name="Other", join_code="CLS-1", privacy_ok=True).json()
+    h, ho = {"Authorization": f"Bearer {me['token']}"}, {"Authorization": f"Bearer {other['token']}"}
+    consent = {"id": "c_m", "scopes": ["assess"], "method": "paper_form", "granted_at": 1763000000000}
+
+    def sync(headers, device, sid):
+        return api.post("/v2/sync", headers=headers, json={
+            "device_id": device, "students": [{"id": sid, "name": sid, "facilitator_code": "CLS-1", "consent": {**consent, "id": f"c_{sid}"}}],
+            "events": [{"id": f"01KA00000000000000000009{'ABCD'.index(sid[-1].upper())}0", "student_id": sid, "device_id": device, "kind": "self_report",
+                        "skill_id": "sk_stitching", "payload": {"source": "tap"}, "created_at": 1763000000000}]})
+
+    for sid in ("stu_pa", "stu_pb", "stu_pc"):
+        assert sync(h, "ph_m", sid).status_code == 200
+    acc = api.get("/v2/auth/me", headers=h).json()
+    assert acc["student_ids"] == ["stu_pa", "stu_pb", "stu_pc"] and acc["student_id"] == "stu_pa"
+    assert acc["student_profiles_max"] == 3
+    # a 4th profile is refused, by sync and by the link endpoint
+    sync(h, "ph_m", "stu_pd")
+    assert "stu_pd" not in api.get("/v2/auth/me", headers=h).json()["student_ids"]
+    assert api.post("/v2/auth/me/student", headers=h, json={"student_id": "stu_pd"}).status_code == 409
+    # her own profiles are open to her; another account cannot take or read them
+    assert api.get("/v2/docs/stu_pb", headers=h).status_code != 403
+    assert api.get("/v2/docs/stu_pb", headers=ho).status_code == 403
+    assert api.post("/v2/auth/me/student", headers=ho, json={"student_id": "stu_pc"}).status_code == 409
+    # signing in on a new phone restores each profile, including a later one
+    again = sign_in(api, "9000000901", device="ph_m2").json()
+    h2 = {"Authorization": f"Bearer {again['token']}"}
+    assert api.get("/v2/auth/me/profile?student_id=stu_pc", headers=h2).json()["student"]["id"] == "stu_pc"
+    assert api.get("/v2/auth/me/profile", headers=h2).json()["student"]["id"] == "stu_pa"
+    assert api.get("/v2/auth/me/profile?student_id=stu_pd", headers=h2).json()["student"] is None  # not hers
+    # erasing a profile also removes its link, so there is room again
+    assert api.request("DELETE", "/v2/student/stu_pa", headers=h, json={"confirmed_by": "guardian"}).json()["deleted"] is True
+    after = api.get("/v2/auth/me", headers=h).json()
+    assert after["student_ids"] == ["stu_pb", "stu_pc"] and after["student_id"] == "stu_pb"

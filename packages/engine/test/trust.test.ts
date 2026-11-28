@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { applyCheck, applyOverrides, autoConfirm, drawFromId, identityCheck, payCheck, type EvidenceEvent, type Profile } from "../src/index.ts";
+import { applyCheck, applyOverrides, autoConfirm, drawFromId, identityCheck, payCheck, trustScore, TRUST_RULE, type EvidenceEvent, type Profile } from "../src/index.ts";
 
 const unit = (level: number, strong = false) => ({ id: "ss_x", p: [0.1, 0.2, 0.3, 0.4], level, confidence: 0.7, strong, performance: true, paid: false, n: 3, last_at: 0, history: [] });
 const ov = (level: number, at: number, id = `01KA0000000000000000000${at}`): EvidenceEvent => ({
@@ -63,4 +63,35 @@ test("course suggestion: skill below what a top career needs, or an Almost gap",
   assert.equal(recommendCourses(g, [c], { ss_x: unit(2) }, [{ id: "occ_a", name: "A" }], []).length, 1);
   assert.equal(recommendCourses(g, [c], { ss_x: unit(3) }, [{ id: "occ_a", name: "A" }], []).length, 0);
   assert.equal(recommendCourses(g, [c], {}, [], [{ opp: "Intern", gaps: ["ss_x"] }])[0].reason, "opportunity");
+});
+
+test("trust score: points off per warning, each kind capped, never below 0", () => {
+  assert.deepEqual(trustScore({}), { score: 100, band: "high", minus: {}, why: ["start at 100", "= 100 (high)"] });
+  assert.equal(trustScore({ screen: 1 }).score, 75);
+  assert.equal(trustScore({ screen: 5 }).score, 50); // screens take off at most 50
+  assert.equal(trustScore({ no_hands: 2, dark: 1 }).score, 85);
+  assert.equal(trustScore({ no_hands: 2, dark: 1 }).band, "high");
+  assert.equal(trustScore({ uploaded: 1 }).band, "medium"); // a gallery video is never "high" on its own
+  const worst = trustScore(Object.fromEntries(Object.keys(TRUST_RULE.penalty).map((k) => [k, 99])));
+  assert.equal(worst.score, 0);
+  assert.equal(worst.band, "low");
+});
+
+test("trust score: in a long video, small warnings count per 10 minutes; serious ones do not", () => {
+  assert.equal(trustScore({ no_hands: 6 }, 3600).score, 95); // 6 in an hour = 1 per 10 min
+  assert.equal(trustScore({ no_hands: 6 }).score, 80); // the same 6 in a short video
+  assert.equal(trustScore({ screen: 2 }, 3600).score, 50); // a screen counts every time, however long
+  assert.equal(trustScore({ no_hands: 4 }, 600).score, 80); // 10 minutes or less: counted as they are
+});
+
+test("trust score: bad counts are ignored, not trusted", () => {
+  assert.equal(trustScore({ screen: -2, dark: Number.NaN, multi_face: "3", unknown: 9 }).score, 100);
+  assert.equal(trustScore({ no_hands: 2.9 }).minus.no_hands, 10); // whole times only
+});
+
+test("auto-confirm: a low trust score sends the video to the teacher", () => {
+  const base = { identity: "verified" as const, integrity_flags: [], safety_flags: 0, cannot_see: 0, criteria: 5, ai_kappa: 0.72, audit_draw: 0.5 };
+  assert.equal(autoConfirm({ ...base, trust_score: 90 }).decision, "auto_confirm");
+  assert.equal(autoConfirm({ ...base, trust_score: 75 }).decision, "teacher");
+  assert.equal(autoConfirm({ ...base, trust_score: null }).decision, "auto_confirm"); // photos have no trust score
 });

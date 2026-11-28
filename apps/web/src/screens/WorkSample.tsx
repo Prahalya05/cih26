@@ -7,13 +7,18 @@ import { Button, Pill, Screen, useLive } from "../components/ui";
 import { db, hasScope, patchStudent, scopesOf } from "../lib/db";
 import { useT } from "../lib/i18n";
 import { compressImage, rubricFor, saveSample, saveVideoSample, scoreSample, type ScoreResult } from "../lib/samples";
-import { MAX_SECONDS, startFilming, startFromFile, type Filming, type LiveStatus, type Process, type VideoFlag } from "../lib/video";
+import { LONG_SECONDS, MAX_SECONDS, startFilming, startFromFile, type Filming, type LiveStatus, type Process, type VideoFlag } from "../lib/video";
 import type { IdentityInput } from "@disha/engine";
 import { IdentityGate } from "../components/IdentityGate";
+import { VideoRules } from "../components/VideoRules";
+import { addPart, beginParts, clearParts, joinParts, leftover, type PartsMeta } from "../lib/longParts";
 import { emit } from "../lib/xray";
 import { Icon } from "../components/Icon";
 
-type Stage = "ready" | "identity" | "camera" | "filming" | "blurring" | "saving" | "scoring" | "scored" | "waiting";
+type Stage = "ready" | "rules" | "identity" | "camera" | "filming" | "blurring" | "saving" | "scoring" | "scored" | "waiting";
+
+/** 754 seconds → "12:34". */
+const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
 export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: string; rubric: string }) {
   const { t, pick } = useT();
@@ -29,12 +34,23 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
   const [seconds, setSeconds] = useState(0);
   const [live, setLive] = useState<LiveStatus | null>(null);
   const [warnings, setWarnings] = useState<VideoFlag[]>([]);
+  // what the instruction page leads to: filming live, or choosing a video from the gallery
+  const [rulesNext, setRulesNext] = useState<"film" | "upload">("film");
+  // short task (a normal video, up to 3 min) or long task (up to an hour, one picture a second plus clips)
+  const [mode, setMode] = useState<"short" | "long">("short");
+  // an unfinished long recording left on this phone (the app or phone stopped while filming)
+  const [saved, setSaved] = useState<PartsMeta | null>(null);
+  const showRules = (next: "film" | "upload") => { setCameraError(false); setUploadError(false); setRulesNext(next); setStage("rules"); };
   const canvas = useRef<HTMLCanvasElement>(null);
   const player = useRef<HTMLVideoElement>(null);
   const filming = useRef<Filming | null>(null);
   const identity = useRef<IdentityInput | null>(null);
 
   useEffect(() => () => filming.current?.close(), []);
+  useEffect(() => { void leftover(id, rubricId).then(setSaved); }, [id, rubricId]);
+  // what this checklist's video may show without a warning (packages/kb/rubrics/*.json "video_allows")
+  const allows = ((rubric as { video_allows?: string[] } | null)?.video_allows) ?? [];
+  const filmOpts = { screensAllowed: allows.includes("screens"), othersAllowed: allows.includes("second_person") };
   // Live hints: read what the phone sees a few times a second while the camera is open.
   const cameraOpen = stage === "camera" || stage === "filming";
   useEffect(() => {
@@ -65,14 +81,14 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
   };
 
   // First a quick "is it you?" check on the front camera (rule.identity), then the back camera films the task.
-  const openCamera = () => { setCameraError(false); setStage("identity"); };
+  const openCamera = (m: "short" | "long") => { setCameraError(false); setMode(m); setStage("identity"); };
   const openTaskCamera = async (id_: IdentityInput | null) => {
     identity.current = id_;
     setStage("camera");
     try {
       // wait a frame so the canvas is on the page
       await new Promise((r) => requestAnimationFrame(r));
-      filming.current = await startFilming(canvas.current!);
+      filming.current = await startFilming(canvas.current!, { ...filmOpts, mode });
     } catch {
       setCameraError(true);
       setStage("ready");
@@ -84,8 +100,23 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
     if (!f) return;
     setStage("filming");
     setSeconds(0);
-    await recordAndSave(f, () => setCameraError(true));
+    await recordAndSave(f, () => setCameraError(true), mode === "long");
   };
+
+  // An unfinished long recording: send what was saved (a teacher checks it: it stopped part way), or throw it away.
+  const sendSaved = async () => {
+    if (!saved) return;
+    setStage("saving");
+    const blob = await joinParts(saved);
+    setVideoUrl(URL.createObjectURL(blob));
+    setWarnings(["camera_lost"]);
+    const eventId = await saveVideoSample(id, rubric, blob, { seconds: saved.parts * 10 }, null,
+      { flags: ["camera_lost"], counts: { camera_lost: 1 }, moments: [] }, "long", []);
+    await clearParts();
+    setSaved(null);
+    await score(eventId);
+  };
+  const discardSaved = async () => { await clearParts(); setSaved(null); };
 
   // A video from the gallery: played once through the face blur on this phone, and only the blurred copy is kept.
   // There is no live "is it you?" check for it, and a teacher always checks it (flag "uploaded").
@@ -99,7 +130,7 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
     let f: Filming;
     try {
       await new Promise((r) => requestAnimationFrame(r)); // the canvas must be on the page
-      f = await startFromFile(canvas.current!, file);
+      f = await startFromFile(canvas.current!, file, filmOpts);
     } catch {
       setUploadError(true);
       setStage("ready");
@@ -109,16 +140,21 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
     await recordAndSave(f, () => setUploadError(true));
   };
 
-  const recordAndSave = async (f: Filming, onFail: () => void) => {
+  const recordAndSave = async (f: Filming, onFail: () => void, long = false) => {
     try {
-      const clip = await f.record(setSeconds);
+      // a long task keeps each saved part on the phone as it goes (lib/longParts.ts), so a crash loses little
+      if (long) await beginParts(id, rubric.id, "");
+      const clip = await f.record(setSeconds, long ? (part) => void addPart(part) : undefined);
       f.close();
       filming.current = null;
       setProcess(clip.process);
       setWarnings(clip.flags);
       setVideoUrl(URL.createObjectURL(clip.blob));
       setStage("saving");
-      await score(await saveVideoSample(id, rubric, clip.blob, clip.process, identity.current, clip.flags));
+      const eventId = await saveVideoSample(id, rubric, clip.blob, clip.process, identity.current,
+        { flags: clip.flags, counts: clip.counts as Record<string, number>, moments: clip.moments }, clip.mode, clip.clips);
+      if (long) await clearParts();
+      await score(eventId);
     } catch {
       f.close();
       filming.current = null;
@@ -166,7 +202,29 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
         </div>
       )}
 
+      {saved && stage === "ready" && (
+        <div className="flex flex-col gap-2 rounded-2xl border border-sun/40 bg-sun-soft p-3 text-sm">
+          <p>{t("savedLong", { n: Math.max(1, Math.round((saved.parts * 10) / 60)) })}</p>
+          <div className="flex gap-2">
+            <Button onClick={() => void sendSaved()}>{t("savedSend")}</Button>
+            <Button kind="soft" onClick={() => void discardSaved()}>{t("savedDiscard")}</Button>
+          </div>
+        </div>
+      )}
+      {stage === "rules" && (
+        <VideoRules next={rulesNext} onFilm={openCamera} onFile={(f) => void onVideoFile(f)} onCancel={() => setStage("ready")} />
+      )}
       {stage === "identity" && <IdentityGate studentId={id} onDone={(x) => void openTaskCamera(x)} />}
+      {result?.trust && (
+        <div className={`rounded-2xl border p-3 text-sm ${result.trust.band === "high" ? "border-good/40 bg-good-soft" : result.trust.band === "medium" ? "border-sun/40 bg-sun-soft" : "border-bad/40 bg-paper"}`}>
+          <p className="font-bold">{t("trustScore", { n: result.trust.score })} · {t(`trust_${result.trust.band}` as "trust_high")}</p>
+          <p className="text-muted">{t("trustNotSkill")}</p>
+          <ul className="mt-1 font-mono text-xs text-muted">{result.trust.why.map((w, i) => <li key={i}>{w}</li>)}</ul>
+          {result.suspicious && result.suspicious.length > 0 && (
+            <ul className="mt-1">{result.suspicious.map((x, i) => <li key={i}><span className="font-mono">{x.time}</span> {x.note}</li>)}</ul>
+          )}
+        </div>
+      )}
       {result?.autoconfirm && (
         <div className={`rounded-2xl p-3 text-sm ${result.autoconfirm.decision === "auto_confirm" ? "bg-good-soft text-good" : "bg-paper text-muted"}`}>
           <p className="font-bold">{result.autoconfirm.decision === "auto_confirm" ? t("systemConfirmed") : t("needsTeacher")}</p>
@@ -178,7 +236,8 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
           <canvas ref={canvas} className="w-full" />
           {stage === "filming" && (
             <span className="absolute left-3 top-3 inline-flex items-center gap-2 rounded-md bg-bad px-2.5 py-1 font-mono text-sm font-bold text-white">
-              <span className="size-2 animate-pulse rounded-full bg-surface" />{Math.floor(seconds)} / {MAX_SECONDS} s
+              <span className="size-2 animate-pulse rounded-full bg-surface" />
+              {mode === "long" ? `${clock(seconds)} / ${clock(LONG_SECONDS)}` : `${Math.floor(seconds)} / ${MAX_SECONDS} s`}
             </span>
           )}
           <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md bg-brand-dark/75 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur"><Icon name="eyeOff" className="size-3.5" />{t("faceBlurOn")}</span>
@@ -186,6 +245,9 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
             <span className="absolute left-3 top-3 rounded-md bg-brand-dark/80 px-2.5 py-1 font-mono text-sm font-bold text-white">
               {t("blurringUpload", { s: Math.floor(seconds), max: MAX_SECONDS })}
             </span>
+          )}
+          {live?.finishing && (
+            <span className="absolute inset-x-3 top-12 rounded-md bg-good px-2.5 py-1.5 text-center text-sm font-bold text-white">{t("finishingNow")}</span>
           )}
           {live?.paused && (stage === "filming" || stage === "blurring") && (
             <span className="absolute inset-x-3 top-12 rounded-md bg-bad px-2.5 py-1.5 text-center text-sm font-bold text-white">{t("livePaused")}</span>
@@ -196,11 +258,14 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
         <ul className="flex flex-wrap gap-2 text-sm">
           <li><Pill tone={live.hands > 0 ? "good" : "sun"}>{live.hands > 0 ? t("liveHandsOk") : t("liveNoHands")}</Pill></li>
           {live.dark && <li><Pill tone="sun">{t("liveDark")}</Pill></li>}
-          {live.faces >= 2 && <li><Pill tone="sun">{t("liveTwoFaces")}</Pill></li>}
+          {live.faces >= 2 && !filmOpts.othersAllowed && <li><Pill tone="sun">{t("liveTwoFaces")}</Pill></li>}
+          {live.screen && <li><Pill tone="sun">{t("liveScreen")}</Pill></li>}
         </ul>
       )}
       {stage === "camera" && <Button onClick={() => void film()}><span className="size-3 rounded-full bg-bad" />{t("startFilming")}</Button>}
-      {stage === "filming" && <Button kind="soft" onClick={() => filming.current?.stop()}><Icon name="stop" className="size-5" />{t("stopFilming")}</Button>}
+      {stage === "filming" && !live?.finishing && (
+        <Button kind="soft" onClick={() => filming.current?.stop()}><Icon name="stop" className="size-5" />{mode === "long" ? t("finishTask") : t("stopFilming")}</Button>
+      )}
 
       {preview && <img src={preview} alt="" className="max-h-72 w-full rounded-2xl object-contain" />}
       {videoUrl && <video ref={player} src={videoUrl} controls playsInline className="max-h-72 w-full rounded-2xl bg-black" />}
@@ -234,11 +299,8 @@ export default function WorkSample({ go, id, rubric: rubricId }: { go: Go; id: s
           )}
           {(rubric as { media?: string }).media !== "photo" && (
             <>
-              <Button kind={(rubric as { media?: string }).media === "video" ? "primary" : "soft"} disabled={!photosAllowed} onClick={() => void openCamera()}><Icon name="video" className="size-5" />{t("filmTask")}</Button>
-              <label className={`flex min-h-12 items-center justify-center gap-2 rounded-xl border border-line px-5 text-sm font-bold ${photosAllowed ? "cursor-pointer" : "pointer-events-none opacity-40"}`}>
-                <Icon name="layers" className="size-4" />{t("chooseVideo")}
-                <input type="file" accept="video/*" className="hidden" disabled={!photosAllowed} onChange={(e) => { void onVideoFile(e.target.files?.[0]); e.target.value = ""; }} />
-              </label>
+              <Button kind={(rubric as { media?: string }).media === "video" ? "primary" : "soft"} disabled={!photosAllowed} onClick={() => showRules("film")}><Icon name="video" className="size-5" />{t("filmTask")}</Button>
+              <Button kind="soft" disabled={!photosAllowed} onClick={() => showRules("upload")}><Icon name="layers" className="size-4" />{t("chooseVideo")}</Button>
             </>
           )}
           {cameraError && <p className="rounded-xl bg-sun-soft p-3 text-warn">{t("cameraUnavailable")}</p>}

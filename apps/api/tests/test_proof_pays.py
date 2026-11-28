@@ -115,7 +115,7 @@ def test_video_scores_have_times_and_safety(client, monkeypatch):
     sync_student(client, ["assess", "photos"])
     seen = {}
 
-    def fake(rubric, data, mime, process):
+    def fake(rubric, data, mime, process, moments=None):
         seen["process"] = process
         return gemini_video.clean_video(rubric, {"criteria": [
             {"id": "seams", "score": 2, "time": "0:07", "reason": "straight", "cannot_see": False},
@@ -129,3 +129,67 @@ def test_video_scores_have_times_and_safety(client, monkeypatch):
     assert r["times"] == {"seams": "0:07"}  # an invalid time is dropped, the score kept
     assert r["safety"] == [{"time": "0:12", "note": "fingers close to the needle"}]
     assert r["media"] == "video" and seen["process"] == {"steadiness": 0.8}
+
+
+def test_video_trust_score_is_worked_out_on_the_server(client, monkeypatch):
+    """The trust score comes from the warning counts by a fixed rule; the AI only adds 'ai_noticed' warnings."""
+    sync_student(client, ["assess", "photos"])
+    seen = {}
+
+    def fake(rubric, data, mime, process, moments=None):
+        seen["moments"] = moments
+        return gemini_video.clean_video(rubric, {"criteria": [
+            {"id": "seams", "score": 2, "time": "0:07", "reason": "straight", "cannot_see": False}], "safety": [],
+            "suspicious": [{"time": "0:20", "note": "a phone screen shows other hands"}, {"time": "bad", "note": "x"}]})
+
+    monkeypatch.setattr(gemini_video, "score", fake)
+    r = client.post("/v2/work-sample/video", files={"video": ("work.webm", b"webm", "video/webm")}, data={
+        "student_id": "stu1", "rubric_id": "rb_stitching",
+        "integrity": '["screen"]', "integrity_counts": '{"screen": 1, "no_hands": 2, "ai_noticed": 9}',
+        "moments": '[{"kind": "screen", "at": 20}]'}).json()
+    assert seen["moments"] == [{"kind": "screen", "at": 20}]
+    assert r["suspicious"] == [{"time": "0:20", "note": "a phone screen shows other hands"}]
+    # 100 - 25 (screen) - 25 (the AI's one valid note; the phone's own ai_noticed count is ignored) - 10 (no hands)
+    assert r["trust"]["score"] == 40 and r["trust"]["band"] == "low"
+    assert r["scores"] == {"seams": 2}  # the skill score is not touched by the warnings
+    assert r["autoconfirm"]["decision"] == "teacher"
+    assert any("trust score 40" in w for w in r["autoconfirm"]["why"])
+
+
+def test_long_task_sends_its_clips_and_counts_small_warnings_per_10_minutes(client, monkeypatch):
+    """A long task: one-picture-a-second video plus full-speed clips; small warnings count per 10 minutes."""
+    sync_student(client, ["assess", "photos"])
+    seen = {}
+
+    def fake(rubric, data, mime, process, moments=None, clips=None):
+        seen["clips"] = clips
+        return gemini_video.clean_video(rubric, {"criteria": [
+            {"id": "seams", "score": 2, "time": "41:07", "reason": "straight", "cannot_see": False}], "safety": [], "suspicious": []})
+
+    monkeypatch.setattr(gemini_video, "score", fake)
+    files = [("video", ("long.webm", b"webm", "video/webm")),
+             ("clips", ("c1.webm", b"c1", "video/webm")), ("clips", ("c2.webm", b"c2", "video/webm"))]
+    r = client.post("/v2/work-sample/video", files=files, data={
+        "student_id": "stu1", "rubric_id": "rb_stitching", "mode": "long", "process": '{"seconds": 3600}',
+        "clip_info": '[{"at": 750, "why": "active"}, {"at": 3590, "why": "final"}]',
+        "integrity_counts": '{"no_hands": 6}'}).json()
+    assert [(b, info) for b, _, info in seen["clips"]] == [(b"c1", {"at": 750, "why": "active"}), (b"c2", {"at": 3590, "why": "final"})]
+    assert r["trust"]["score"] == 95  # 6 times in an hour = 1 per 10 minutes
+    assert r["times"]["seams"] == "41:07"  # times past an hour's first minutes are kept
+
+
+def test_long_task_limits(client):
+    sync_student(client, ["assess", "photos"])
+    many = [("clips", (f"c{i}.webm", b"c", "video/webm")) for i in range(7)]
+    r = client.post("/v2/work-sample/video", files=[("video", ("v.webm", b"v", "video/webm")), *many],
+                    data={"student_id": "stu1", "rubric_id": "rb_stitching", "mode": "long"})
+    assert r.status_code == 413
+
+
+def test_long_video_is_sampled_more_thinly_after_30_minutes():
+    part = gemini_video._video_part(b"x", "video/webm", 3600)
+    assert part["video_metadata"] == {"fps": 0.5}
+    assert "video_metadata" not in gemini_video._video_part(b"x", "video/webm", 1200)
+    assert "video_metadata" not in gemini_video._video_part(b"x", "video/webm")
+    assert "0:12:30" not in gemini_video._clips_text([{"at": 750, "why": "active"}])
+    assert "12:30" in gemini_video._clips_text([{"at": 750, "why": "active"}])

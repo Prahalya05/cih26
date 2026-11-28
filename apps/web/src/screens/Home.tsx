@@ -4,7 +4,7 @@ import { Screen, SpeakButton, useLive } from "../components/ui";
 import { CARDS } from "../data/cards";
 import { db, hasScope, type Student } from "../lib/db";
 import { useT } from "../lib/i18n";
-import { useAccount } from "../lib/auth";
+import { profileIds, useAccount } from "../lib/auth";
 
 /** Interests are done when every card is answered, or she told us in her own words, or chose "don't know yet". */
 export const interestsDone = (s: Student) => Object.keys(s.cards).length >= CARDS.length || !!s.interests;
@@ -26,10 +26,15 @@ export default function Home({ go }: { go: Go }) {
   const students = useLive(
     async () => {
       const all = await db.students.orderBy("updated_at").reverse().filter((s) => !s.simulated).toArray();
-      if (account?.role === "student" && account.student_id) return all.filter((s) => s.id === account.student_id);
+      // A student account sees her own profiles: the ones linked to her account, and any made on this phone that
+      // have not synced yet (this phone's data is cleared on sign-out, so those are hers too).
+      if (account?.role === "student") {
+        const mine = new Set(profileIds(account));
+        return all.filter((s) => mine.has(s.id) || !s.synced_at);
+      }
       return all;
     },
-    [account?.id, account?.student_id],
+    [account?.id, account?.student_id, account?.student_ids?.join()],
     [] as Student[],
   );
 
@@ -63,7 +68,7 @@ export default function Home({ go }: { go: Go }) {
             <span className="w-full truncate text-center text-sm font-bold">{s.name}</span>
           </button>
         ))}
-        {!(account?.role === "student" && account.student_id && students.length > 0) && (
+        {!(account?.role === "student" && students.length >= (account.student_profiles_max ?? 3)) && (
           <button
             onClick={() => go({ name: "new" })}
             className="flex aspect-[4/5] flex-col items-center justify-center gap-2 rounded-2xl border-[1.5px] border-dashed border-accent bg-brand-soft/60 p-2 text-accent-dark transition hover:bg-brand-soft active:scale-[0.98]"

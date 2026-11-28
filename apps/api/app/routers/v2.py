@@ -279,8 +279,8 @@ def sync(req: SyncIn, dev: Device = Depends(auth.school_member)):
         default_school = dev.school_id or dev.schools[0]
         valid_students = [s for s in req.students if s.id not in foreign]
         _save_students(con, valid_students, default_school, room_schools)
-        if len(valid_students) == 1:
-            auth.maybe_link_student(con, dev, valid_students[0].id)
+        for s in valid_students:  # a student account links each of her profiles (up to STUDENT_PROFILES_MAX)
+            auth.maybe_link_student(con, dev, s.id)
         if dev.is_teacher:
             for r in req.raters:
                 if r.role in PHONE_RATER_ROLES:
@@ -620,6 +620,10 @@ def delete_student(student_id: str, body: DeleteIn, dev: Device = Depends(auth.s
         # has no foreign key, so it is cleared by hand.
         con.execute("delete from legacy_action where student_id = %s", (student_id,))
         gone = con.execute("delete from student where id = %s", (student_id,)).rowcount > 0
+        # and the link from her account to this profile (migration 0016)
+        con.execute("delete from account_student where student_id = %s", (student_id,))
+        con.execute("update account set student_id = (select min(student_id) from account_student where account_id = account.id) "
+                    "where student_id = %s", (student_id,))
         if gone:
             con.execute("insert into deletion_count(day, n) values (current_date, 1) "
                         "on conflict (day) do update set n = deletion_count.n + 1")

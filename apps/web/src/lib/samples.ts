@@ -29,7 +29,17 @@ export interface ScoreResult {
   safety?: { time: string; note: string }[];
   identity?: { status: string; why: string[]; matched_share: number };
   autoconfirm?: { decision: "auto_confirm" | "teacher"; why: string[]; kappa_basis?: string };
+  /** video only: trust score worked out on the server by a fixed rule (engine trustScore), not by the AI */
+  trust?: { score: number; band: "high" | "medium" | "low"; minus: Record<string, number>; why: string[] };
+  /** video only: moments the AI found suspicious (each one is an "ai_noticed" warning in the trust score) */
+  suspicious?: { time: string; note: string }[];
 }
+
+/** What the live checks noticed while filming (lib/video.ts Clip). */
+export interface VideoChecks { flags: string[]; counts: Record<string, number>; moments: { kind: string; at: number }[] }
+
+/** A long task's full-speed clips (lib/video.ts Clip.clips): kept on the phone with the main video. */
+export interface VideoClip { blob: Blob; at: number; seconds: number; why: "active" | "final" }
 
 /**
  * The checklist this student may be given. Under 18 (or age unknown), items on hazardous sub-skills are
@@ -64,15 +74,22 @@ export async function saveSample(studentId: string, rubric: RubricFull, photo: B
 }
 
 /** Saves a filmed task (faces already blurred on the phone) as a pending work sample. Returns the event id. */
-export async function saveVideoSample(studentId: string, rubric: RubricFull, video: Blob, process: object, identity?: IdentityInput | null, integrity: string[] = []): Promise<string | null> {
+export async function saveVideoSample(studentId: string, rubric: RubricFull, video: Blob, process: object, identity?: IdentityInput | null,
+  checks: VideoChecks = { flags: [], counts: {}, moments: [] }, mode: "short" | "long" = "short", clips: VideoClip[] = []): Promise<string | null> {
   const mediaId = newId();
+  const clipRefs = clips.map((c) => ({ ref: newId(), at: c.at, seconds: c.seconds, why: c.why }));
   const ev = await recordEvent({
     student_id: studentId, kind: "work_sample", skill_id: rubric.skill,
     // integrity: warnings noted while filming (lib/video.ts). They decide who checks the video, never the score.
-    payload: { rubric_id: rubric.id, scorer: "pending", media_ref: mediaId, media: "video", process, integrity, ...(identity ? { identity_input: identity } : {}) },
+    payload: { rubric_id: rubric.id, scorer: "pending", media_ref: mediaId, media: "video", process, integrity: checks.flags,
+      integrity_counts: checks.counts, moments: checks.moments, mode, clip_refs: clipRefs,
+      ...(identity ? { identity_input: identity } : {}) },
   });
   if (!ev) return null;
   await db.media.put({ id: mediaId, student_id: studentId, event_id: ev.id, blob: video, created_at: Date.now() });
+  for (const [i, c] of clips.entries()) {
+    await db.media.put({ id: clipRefs[i].ref, student_id: studentId, event_id: ev.id, blob: c.blob, created_at: Date.now() });
+  }
   return ev.id;
 }
 
@@ -94,6 +111,19 @@ export async function scoreSample(pending: EvidenceEvent): Promise<ScoreResult |
     form.set("process", JSON.stringify(pending.payload.process ?? {}));
     form.set("identity", JSON.stringify(pending.payload.identity_input ?? {}));
     form.set("integrity", JSON.stringify(pending.payload.integrity ?? []));
+    form.set("integrity_counts", JSON.stringify(pending.payload.integrity_counts ?? {}));
+    form.set("moments", JSON.stringify(pending.payload.moments ?? []));
+    // long task: its full-speed clips go with it (each kept on this phone like the main video)
+    const refs = (pending.payload.clip_refs ?? []) as { ref: string; at: number; why: string }[];
+    form.set("mode", pending.payload.mode === "long" ? "long" : "short");
+    const info: { at: number; why: string }[] = [];
+    for (const r of refs) {
+      const clip = await db.media.get(r.ref);
+      if (!clip) continue;
+      form.append("clips", clip.blob, `clip${info.length + 1}.${clip.blob.type.includes("mp4") ? "mp4" : "webm"}`);
+      info.push({ at: r.at, why: r.why });
+    }
+    form.set("clip_info", JSON.stringify(info));
     form.set("sample_id", pending.id);
   } else {
     form.set("image", media.blob, "work.jpg");
@@ -108,7 +138,9 @@ export async function scoreSample(pending: EvidenceEvent): Promise<ScoreResult |
         payload: { rubric_id: pending.payload.rubric_id, scorer: "ai", scores: out.scores, reasons: out.reasons,
           cannot_see: out.cannot_see, media_ref: pending.payload.media_ref, replaces: pending.id,
           ...(isVideo ? { media: "video", times: out.times ?? {}, safety: out.safety ?? [], process: pending.payload.process,
-            integrity: pending.payload.integrity ?? [], identity: out.identity, autoconfirm: out.autoconfirm } : {}) },
+            integrity: pending.payload.integrity ?? [], integrity_counts: pending.payload.integrity_counts ?? {},
+            mode: pending.payload.mode ?? "short", clip_refs: pending.payload.clip_refs ?? [],
+            trust: out.trust, suspicious: out.suspicious ?? [], identity: out.identity, autoconfirm: out.autoconfirm } : {}) },
       });
     }
     return out;

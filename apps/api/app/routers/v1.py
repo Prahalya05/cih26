@@ -328,8 +328,8 @@ def sync(req: SyncRequest, dev: Device = Depends(auth.school_member)):
             for s in req.students if s["id"] not in others
         )
         valid_students = [s for s in req.students if s["id"] not in others]
-        if len(valid_students) == 1:
-            auth.maybe_link_student(con, dev, valid_students[0]["id"])
+        for s in valid_students:  # a student account links each of her profiles (up to STUDENT_PROFILES_MAX)
+            auth.maybe_link_student(con, dev, s["id"])
         # Endorsing and recommending are a teacher's actions.
         added = sum(db.add_action(con, a.model_dump()) for a in req.actions
                     if a.student_id not in others and (dev.is_teacher or a.kind not in ("endorse", "recommend")))

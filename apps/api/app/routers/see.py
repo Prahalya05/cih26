@@ -25,8 +25,13 @@ VIDEO_TYPES = {"video/webm", "video/mp4", "video/quicktime", "video/3gpp"}
 async def score_video(student_id: str = Form(...), rubric_id: str = Form(...), process: str = Form("{}"),
                       identity: str = Form("{}", description="Face-match numbers and liveness from her phone (rule.identity)"),
                       integrity: str = Form("[]", description="Integrity flags seen while filming"),
+                      integrity_counts: str = Form("{}", description="How many times each warning happened (trust score)"),
+                      moments: str = Form("[]", description="When each warning started, in seconds, so the AI can look there"),
                       sample_id: str = Form("", description="The sample's event id: picks the random spot check"),
-                      video: UploadFile = File(...), dev: Device = Depends(device)):
+                      mode: str = Form("short", description="short: one normal video; long: one picture a second plus clips"),
+                      clip_info: str = Form("[]", description="Long task: for each clip, {at: seconds, why: active|final}"),
+                      video: UploadFile = File(...), clips: list[UploadFile] = File(default=[]),
+                      dev: Device = Depends(device)):
     rubric = kb.rubrics().get(rubric_id)
     if not rubric:
         raise HTTPException(404, "Unknown checklist")
@@ -43,16 +48,34 @@ async def score_video(student_id: str = Form(...), rubric_id: str = Form(...), p
     mime = (video.content_type or "video/webm").split(";")[0]
     if mime not in VIDEO_TYPES:
         raise HTTPException(415, "Send a WebM or MP4 video")
+    long = mode == "long"
     data = await video.read()
-    if len(data) > gemini_video.MAX_VIDEO_BYTES:
-        raise HTTPException(413, "Video too large; keep it under 30 seconds")
+    if len(data) > (gemini_video.MAX_LONG_VIDEO_BYTES if long else gemini_video.MAX_VIDEO_BYTES):
+        raise HTTPException(413, "Video too large")
+    extra: list[tuple[bytes, str, dict]] = []
+    if long:
+        infos = [i for i in _json(clip_info, []) if isinstance(i, dict)]
+        if len(clips) > gemini_video.MAX_CLIPS:
+            raise HTTPException(413, "Too many clips")
+        for i, c in enumerate(clips):
+            cm = (c.content_type or "video/webm").split(";")[0]
+            if cm not in VIDEO_TYPES:
+                raise HTTPException(415, "Send WebM or MP4 clips")
+            b = await c.read()
+            if len(b) > gemini_video.MAX_CLIP_BYTES:
+                raise HTTPException(413, "Clip too large")
+            info = infos[i] if i < len(infos) else {}
+            at = info.get("at") if isinstance(info.get("at"), (int, float)) and not isinstance(info.get("at"), bool) else 0
+            extra.append((b, cm, {"at": max(0, at), "why": "final" if info.get("why") == "final" else "active"}))
     try:
         proc = json.loads(process)
         proc = proc if isinstance(proc, dict) else {}
     except json.JSONDecodeError:
         proc = {}
     try:
-        out = gemini_video.score(rubric, data, mime, proc)
+        marks = [m for m in _json(moments, []) if isinstance(m, dict)][:60]
+        # a short task is scored exactly as before; only a long task passes its clips
+        out = gemini_video.score(rubric, data, mime, proc, marks, **({"clips": extra} if long else {}))
     except GeminiUnavailable:
         raise HTTPException(503, "AI scoring unavailable; a teacher will score this video") from None
     # Rules after the AI: is it really her (rule.identity), and may the system confirm the score itself (rule.autoconfirm)?
@@ -63,11 +86,19 @@ async def score_video(student_id: str = Form(...), rubric_id: str = Form(...), p
     from .v2 import _row_to_event
     kappa, kappa_basis = ai_kappa([_row_to_event(r) for r in rows])
     flags = [str(f) for f in _json(integrity, []) if isinstance(f, str)][:10]
-    auto = trust.auto_confirm({"identity": ident["status"], "integrity_flags": flags, "safety_flags": len(out.get("safety") or []),
+    # Trust score (rule, not AI): worked out here again from the counts, never taken from the phone or the AI.
+    # The AI can only add one more warning, "ai_noticed", per suspicious moment it reports.
+    counts = {k: v for k, v in _json(integrity_counts, {}).items() if k != "ai_noticed"}
+    if out.get("suspicious"):
+        counts["ai_noticed"] = len(out["suspicious"])
+        flags.append("ai_noticed")
+    trusted = trust.trust_score(counts, proc.get("seconds"))
+    auto = trust.auto_confirm({"trust_score": trusted["score"],"identity": ident["status"], "integrity_flags": flags, "safety_flags": len(out.get("safety") or []),
                                "cannot_see": len(out.get("cannot_see") or []), "criteria": len(rubric["criteria"]),
                                "ai_kappa": kappa, "audit_draw": trust.draw_from_id(sample_id or student_id + rubric_id)})
     auto["kappa_basis"] = kappa_basis
-    return {**out, "rubric_id": rubric_id, "scorer": "ai", "media": "video", "identity": ident, "autoconfirm": auto}
+    return {**out, "rubric_id": rubric_id, "scorer": "ai", "media": "video", "identity": ident, "trust": trusted,
+            "autoconfirm": auto}
 
 
 def _json(raw: str, default):

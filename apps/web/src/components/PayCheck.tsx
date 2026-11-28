@@ -10,6 +10,8 @@ import { Icon } from "./Icon";
 import { Pill } from "./ui";
 
 interface Row { student: string; district?: string; unit: string; unit_name: { en: string; ta?: string }; level: number; ok: boolean;
+  /** trust score of her latest work video (a fixed rule over the warnings while filming), or null if none */
+  video_trust?: { score: number; band: "high" | "medium" | "low" } | null;
   checks: { name: string; ok: boolean | null; detail: string }[]; why: string[] }
 
 export function PayCheck() {
@@ -38,6 +40,11 @@ export function PayCheck() {
           <button className="flex w-full items-center gap-2 text-left" onClick={() => setOpen(open === r.student ? null : r.student)}>
             <span className="font-mono font-bold">{r.student}</span>
             <span className="min-w-0 flex-1 truncate text-sm text-muted">{pick(r.unit_name)} · L{r.level}{r.district ? ` · ${r.district}` : ""}</span>
+            {r.video_trust && (
+              <Pill tone={r.video_trust.band === "high" ? "good" : r.video_trust.band === "medium" ? "sun" : "bad"}>
+                {t("trustScore", { n: r.video_trust.score })}
+              </Pill>
+            )}
             <Pill tone={r.ok ? "good" : "sun"}>{r.ok ? t("mayBePaid") : t("hold")}</Pill>
           </button>
           <div className="mt-2 flex flex-wrap gap-1">

@@ -10,6 +10,9 @@
     "en": "Screen recording or video of you filling a simple online form (use made-up details) and checking a UPI payment request.",
     "ta": "எளிய இணையப் படிவத்தை நிரப்புவதை (போலி விவரங்களுடன்) வீடியோ எடுங்கள்."
   },
+  "video_allows": [
+    "screens"
+  ],
   "criteria": [
     {
       "id": "apps",

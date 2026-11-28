@@ -379,12 +379,24 @@ def paycheck(need_level: int = 3, dev: Device = Depends(auth.role_in("funder")))
         income = next((d["income_inr"] for d in mine if d["kind"] == "income_certificate" and d["status"] == "verified"), None)
         vids = [e for e in events if e["kind"] == "work_sample" and (e.get("payload") or {}).get("media") == "video"]
         ident = ((vids[-1].get("payload") or {}).get("identity") or {}).get("status", "unknown") if vids else "not_needed"
+        # Trust score of her latest scored video, worked out again here by the rule from its warning counts
+        # (and one "ai_noticed" per suspicious moment the AI reported), not read from a number the phone stored.
+        scored = [e for e in vids if isinstance((e.get("payload") or {}).get("integrity_counts"), dict)
+                  and (e.get("payload") or {}).get("scorer") != "pending"]
+        video_trust = None
+        if scored:
+            p = scored[-1]["payload"]
+            counts = {k: v for k, v in p["integrity_counts"].items() if k != "ai_noticed"}
+            if p.get("suspicious"):
+                counts["ai_noticed"] = len(p["suspicious"])
+            t_ = trust.trust_score(counts, (p.get("process") or {}).get("seconds"))
+            video_trust = {"score": t_["score"], "band": t_["band"]}
         check = trust.pay_check({"skill": {"unit": uid, "level": level, "needLevel": need_level, "performance": u["performance"],
                                            "overriddenUp": up},
                                  "income_inr": income, "verified_docs": verified, "consent_share": True,
                                  "identity": ident, "already_paid": False})
         out.append({"student": _pseudonym(sid), "district": districts.get(sid), "unit": uid,
                     "unit_name": (subs.get(uid) or kb.skills().get(uid) or {}).get("name", {"en": uid}),
-                    "level": level, **check})
+                    "level": level, "video_trust": video_trust, **check})
     out.sort(key=lambda r: (not r["ok"], -r["level"]))
     return {"students": out, "rule": trust.PAYCHECK_RULE, "need_level": need_level}

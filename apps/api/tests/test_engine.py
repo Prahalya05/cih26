@@ -56,3 +56,6 @@ def test_golden_is_current():
     from app.services import fitreach
     for case in golden["recommend_v2"]:
         assert _close(fitreach.recommend_v2(case["persona"]), case["result"])
+    from app.services import trust
+    for case in golden["trust_score"]:
+        assert trust.trust_score(case["counts"], case.get("seconds")) == case["result"], case

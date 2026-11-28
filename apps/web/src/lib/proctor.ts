@@ -65,9 +65,10 @@ function loadFace(): Promise<FaceDetector> {
 /** Optional: the face check still runs if this larger model cannot load (slow network, old phone). */
 function loadObjects(): Promise<ObjectDetector | null> {
   fileset ??= FilesetResolver.forVisionTasks("/mediapipe");
-  objectModel ??= fileset.then((vision) => withDelegate((delegate) => ObjectDetector.createFromOptions(vision, {
-    baseOptions: { modelAssetPath: OBJECT_MODEL, delegate }, runningMode: "VIDEO", scoreThreshold: 0.45, maxResults: 5,
-    categoryAllowlist: ["cell phone", "book", "person"] }))).catch(() => null);
+  // CPU only: the int8 object model can run on a laptop's graphics chip without an error yet find nothing (lib/video.ts).
+  objectModel ??= fileset.then((vision) => ObjectDetector.createFromOptions(vision, {
+    baseOptions: { modelAssetPath: OBJECT_MODEL, delegate: "CPU" }, runningMode: "VIDEO", scoreThreshold: 0.45, maxResults: 5,
+    categoryAllowlist: ["cell phone", "book", "person"] })).catch(() => null);
   return objectModel;
 }
 

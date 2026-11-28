@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { LangContext, type LangCode } from "./lib/i18n";
 import { stopSpeaking } from "./lib/speech";
+import { db } from "./lib/db";
 import { syncNow } from "./lib/sync";
 import { refreshSchemes } from "./lib/schemes";
 import { refreshPostings } from "./lib/postings";
@@ -103,9 +104,25 @@ export type Go = (r: Route) => void;
 const read = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
 const write = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* private mode */ } };
 
+// The open screen is kept for this browser tab only (sessionStorage), so a refresh comes back to it.
+// It holds only screen names and ids, never answers or names; closing the tab forgets it.
+const ROUTE_KEY = "disha.route";
+function savedRoute(): Route | null {
+  try {
+    const r = JSON.parse(sessionStorage.getItem(ROUTE_KEY) ?? "null") as Route | null;
+    return r && typeof r === "object" && typeof r.name === "string" ? r : null;
+  } catch { return null; }
+}
+
 export default function App() {
   // ?funder opens the funder dashboard directly (for a second screen in the demo).
-  const [route, setRoute] = useState<Route>(() => (new URLSearchParams(location.search).has("funder") ? { name: "funder" } : { name: "home" }));
+    const [route, setRoute] = useState<Route>(() => (new URLSearchParams(location.search).has("funder") ? { name: "funder" } : savedRoute() ?? { name: "home" }));
+  useEffect(() => { try { sessionStorage.setItem(ROUTE_KEY, JSON.stringify(route)); } catch { /* private mode */ } }, [route]);
+  // A saved screen for a student who is no longer on this phone (removed, signed out) goes home instead of a blank page.
+  useEffect(() => {
+    const id = (route as { id?: string }).id;
+    if (id) void db.students.get(id).then((s) => { if (!s) setRoute({ name: "home" }); });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   // A buyer opening a job-confirmation link (#confirm=token, never in query/server logs) sees only that page.
   const [confirmToken, setConfirmToken] = useState(() =>
     new URLSearchParams(location.hash.replace(/^#/, "")).get("confirm") ?? new URLSearchParams(location.search).get("confirm"));

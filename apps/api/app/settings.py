@@ -34,6 +34,8 @@ DB_POOL_TIMEOUT = float(os.getenv("DB_POOL_TIMEOUT", "10"))
 AUTH_SECRET = os.getenv("AUTH_SECRET", "dev-only-auth-secret-change-me")
 DEV_PII_KEY = "dev-only-pii-key-change-me"
 OTP_DEMO = os.getenv("OTP_DEMO", "1") == "1"
+# How many student profiles one student account may hold (app/auth.py, migration 0016).
+STUDENT_PROFILES_MAX = int(os.getenv("STUDENT_PROFILES_MAX", "3"))
 DEMO_MODE = os.getenv("DEMO_MODE", "1" if OTP_DEMO else "0") == "1"
 PII_KEY = os.getenv("PII_KEY", "") or (DEV_PII_KEY if (OTP_DEMO or DEMO_MODE) else "")
 
