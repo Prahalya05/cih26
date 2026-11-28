@@ -1,0 +1,19 @@
+{
+  "chain_id": 11155111,
+  "rpc_url": "https://ethereum-sepolia-rpc.publicnode.com",
+  "explorer": "https://sepolia.etherscan.io",
+  "verifier": "0x165491C90804A9fC3C3D4051ffaB3a9D61906a0a",
+  "token": "0x2d9c772BA851E3276C174588b35712D7Da282721",
+  "proofpays": "0x057Fe5ef6A6a0A03b15B17f520D688A45C3ed914",
+  "from_block": 12230529,
+  "issuer": [
+    "7183219533318251098815206104472702714654616615400969556554944863304885958847",
+    "7173044277321481850925148036551030802464595207233845530129698297843946295267"
+  ],
+  "funder": "0x06f8A6a2A9AE780ABD8EFe9096bFED3Eab97EB5a",
+  "abi_events": [
+    "MilestoneFunded",
+    "Paid",
+    "Closed"
+  ]
+}
