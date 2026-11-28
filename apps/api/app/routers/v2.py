@@ -152,13 +152,12 @@ def _save_students(con, students: list[StudentIn], default_school: str, room_sch
             # Names are kept only in student_private (checked in CI by scripts/check_privacy.py) and encrypted via pgcrypto.
             con.execute(
                 "insert into student_private(student_id, name, guardian_name, name_enc, guardian_name_enc) "
-                "values (%s, %s, %s, case when %s is not null then pgp_sym_encrypt(%s, %s) else null end, "
-                "case when %s is not null then pgp_sym_encrypt(%s, %s) else null end) "
+                "values (%s, %s, %s, pgp_sym_encrypt(%s::text, %s::text), pgp_sym_encrypt(%s::text, %s::text)) "
                 "on conflict (student_id) do update set name = coalesce(excluded.name, student_private.name), "
                 "guardian_name = coalesce(excluded.guardian_name, student_private.guardian_name), "
                 "name_enc = coalesce(excluded.name_enc, student_private.name_enc), "
                 "guardian_name_enc = coalesce(excluded.guardian_name_enc, student_private.guardian_name_enc)",
-                (s.id, s.name, guardian, s.name, s.name, settings.AUTH_SECRET, guardian, guardian, settings.AUTH_SECRET))
+                (s.id, s.name, guardian, s.name, settings.AUTH_SECRET, guardian, settings.AUTH_SECRET))
         if s.consent:
             c = s.consent
             con.execute(
